@@ -4,7 +4,7 @@ import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import { notify } from '../sdk/notify'
-import { subscribeOpenApp } from '../sdk/desktop'
+import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
 
 type Win = {
@@ -58,11 +58,10 @@ export default function WindowManager() {
         if (w.id !== id) return w
         if (!w.maximized) {
           const prev = { x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 600, h: w.h ?? 400 }
-          const toolbarH = 48
-          const pad = 16
-          const W = window.innerWidth - pad * 2
-          const H = window.innerHeight - toolbarH - pad * 2
-          return { ...w, prev, x: pad, y: toolbarH + pad, w: W, h: H, maximized: true }
+          const dockH = 48
+          const W = window.innerWidth
+          const H = window.innerHeight - dockH
+          return { ...w, prev, x: 0, y: 0, w: W, h: H, maximized: true }
         } else {
           const p = w.prev ?? { x: 60, y: 60, w: 600, h: 400 }
           return { ...w, x: p.x, y: p.y, w: p.w, h: p.h, maximized: false, prev: undefined }
@@ -141,6 +140,28 @@ export default function WindowManager() {
     }
   }, [])
 
+  React.useEffect(() => {
+    const maxId = zOrder.find(id => wins.find(w => w.id === id && w.maximized))
+    if (maxId) {
+      const w = wins.find(ww => ww.id === maxId)!
+      setMaximizedWindow({ id: w.id, title: w.title })
+    } else {
+      setMaximizedWindow(null)
+    }
+  }, [wins, zOrder])
+
+  React.useEffect(() => {
+    const unsub = subscribeWinAction((id, action) => {
+      if (action === 'minimize') {
+        minimize(id)
+      } else if (action === 'toggleMax') {
+        toggleMaximize(id)
+      } else if (action === 'close') {
+        close(id)
+      }
+    })
+    return () => unsub()
+  }, [minimize, toggleMaximize, close])
 React.useEffect(() => {
   const ws = wins.map(w => ({ id: w.id, title: w.title, appId: w.appId, iconUrl: w.iconUrl, x: w.x, y: w.y, w: w.w, h: w.h, minimized: w.minimized, maximized: w.maximized }))
   setPersistWins(ws)
@@ -191,6 +212,7 @@ React.useEffect(() => {
               }}
               onMouseDown={() => bringToFront(w.id)}
             >
+              {!w.maximized && (
               <div
                 className="puter-titlebar"
                 style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 4px', borderBottom: '1px solid var(--win-border)', cursor: 'move', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)', userSelect: 'none' }}
@@ -266,6 +288,7 @@ React.useEffect(() => {
                   </button>
                 </div>
               </div>
+              )}
               <div style={{ height: 'calc(100% - 36px)', color: 'var(--text)', position: 'relative', overflow: 'auto' }}>
                 {w.content}
                 <div
