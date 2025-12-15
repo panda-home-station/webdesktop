@@ -1,0 +1,10 @@
+{
+  "name": "user-center",
+  "title": "用户中心",
+  "version": "0.1.0",
+  "capabilities": [],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  }
+}

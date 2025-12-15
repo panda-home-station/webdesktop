@@ -1,0 +1,10 @@
+{
+  "name": "app-store",
+  "title": "应用商店",
+  "version": "0.1.0",
+  "capabilities": [],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  }
+}

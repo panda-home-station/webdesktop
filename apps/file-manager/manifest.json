@@ -1,0 +1,10 @@
+{
+  "name": "file-manager",
+  "title": "文件管理器",
+  "version": "0.1.0",
+  "capabilities": ["fs.read", "fs.write"],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  }
+}

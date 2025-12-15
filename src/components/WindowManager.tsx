@@ -1,0 +1,457 @@
+import React, { useCallback, useMemo, useState } from 'react'
+import { listApps, loadApp } from '../apps/registry'
+import { requestPermission } from '../sdk/permissions'
+import Launcher from './Launcher'
+import Taskbar from './Taskbar'
+import { notify } from '../sdk/notify'
+import { subscribeOpenApp } from '../sdk/desktop'
+import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
+
+type Win = {
+  id: string
+  title: string
+  content: React.ReactNode
+  appId?: string
+  iconUrl?: string
+  x?: number
+  y?: number
+  w?: number
+  h?: number
+  minimized?: boolean
+  maximized?: boolean
+  prev?: { x: number; y: number; w: number; h: number }
+}
+
+export default function WindowManager() {
+  const [wins, setWins] = useState<Win[]>([])
+  const [showLauncher, setShowLauncher] = useState<boolean>(false)
+  const [zOrder, setZOrder] = useState<string[]>([])
+
+  const open = useCallback((w: Win) => {
+    setWins(x => [...x, { ...w, x: 60, y: 60, w: 600, h: 400 }])
+    setZOrder(x => [...x.filter(id => id !== w.id), w.id])
+    notify(`已打开 ${w.title}`)
+  }, [])
+  const close = useCallback((id: string) => {
+    setWins(x => x.filter(w => w.id !== id))
+    setZOrder(x => x.filter(z => z !== id))
+  }, [])
+  const bringToFront = useCallback((id: string) => {
+    setZOrder(x => [...x.filter(z => z !== id), id])
+  }, [])
+  const setPos = useCallback((id: string, x: number, y: number) => {
+    setWins(ws => ws.map(w => (w.id === id ? { ...w, x, y } : w)))
+  }, [])
+  const minimize = useCallback((id: string) => {
+    setWins(ws => ws.map(w => (w.id === id ? { ...w, minimized: true } : w)))
+  }, [])
+  const restore = useCallback((id: string) => {
+    setWins(ws => ws.map(w => (w.id === id ? { ...w, minimized: false } : w)))
+    bringToFront(id)
+  }, [bringToFront])
+  const setSize = useCallback((id: string, w_: number, h_: number) => {
+    setWins(ws => ws.map(w => (w.id === id ? { ...w, w: Math.max(300, w_), h: Math.max(200, h_) } : w)))
+  }, [])
+  const toggleMaximize = useCallback((id: string) => {
+    setWins(ws =>
+      ws.map(w => {
+        if (w.id !== id) return w
+        if (!w.maximized) {
+          const prev = { x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 600, h: w.h ?? 400 }
+          const toolbarH = 48
+          const pad = 16
+          const W = window.innerWidth - pad * 2
+          const H = window.innerHeight - toolbarH - pad * 2
+          return { ...w, prev, x: pad, y: toolbarH + pad, w: W, h: H, maximized: true }
+        } else {
+          const p = w.prev ?? { x: 60, y: 60, w: 600, h: 400 }
+          return { ...w, x: p.x, y: p.y, w: p.w, h: p.h, maximized: false, prev: undefined }
+        }
+      })
+    )
+    bringToFront(id)
+  }, [bringToFront])
+
+  const apps = listApps()
+  const toolbar = useMemo(() => {
+    return null
+  }, [])
+
+  const openById = useCallback(async (id: string) => {
+    const a = apps.find(x => x.id === id)
+    if (!a) {
+      const Placeholder = () => (
+        <div style={{ padding: 16 }}>
+          <h3 style={{ margin: 0, marginBottom: 8 }}>未安装的应用</h3>
+          <div>应用 ID：{id}</div>
+          <div style={{ marginTop: 10, color: 'var(--muted)' }}>这是占位窗口，用于验证 Dock 点击行为。</div>
+        </div>
+      )
+      open({ id: `${id}-${Date.now()}`, title: id, content: <Placeholder />, appId: id })
+      return
+    }
+    const Comp = await loadApp(a.id)
+    open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp />, appId: a.id, iconUrl: a.iconUrl })
+  }, [apps, open])
+
+  React.useEffect(() => {
+    const pw = getPersistWins()
+    const pz = getPersistZOrder()
+    setZOrder(pz)
+    ;(async () => {
+      for (const w of pw) {
+        if (!w.appId) continue
+        const a = apps.find(x => x.id === w.appId)
+        if (!a) continue
+        const Comp = await loadApp(a.id)
+        const id = w.id || `${a.id}-${Date.now()}`
+        setWins(x => [...x, { id, title: w.title || a.title, content: <Comp />, appId: a.id, iconUrl: w.iconUrl ?? a.iconUrl, x: w.x ?? 60, y: w.y ?? 60, w: w.w ?? 600, h: w.h ?? 400, minimized: !!w.minimized, maximized: !!w.maximized }])
+      }
+    })()
+    const unsub = subscribeOpenApp(async (id) => {
+      const a = apps.find(x => x.id === id)
+      if (!a) return
+      const caps = (a as any).capabilities as string[] | undefined
+      if (Array.isArray(caps)) {
+        for (const cap of caps) {
+          const ok = requestPermission(a.id, cap)
+          if (!ok) return
+        }
+      }
+      const Comp = await loadApp(a.id)
+      open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp />, appId: a.id, iconUrl: a.iconUrl })
+    })
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey && e.code === 'Space') {
+        e.preventDefault()
+        setShowLauncher(true)
+      } else if (e.altKey && e.code === 'Tab') {
+        e.preventDefault()
+        if (!zOrder.length) return
+        const first = zOrder[0]
+        setZOrder((z) => [...z.slice(1), first])
+      } else if (e.key === 'Escape') {
+        setShowLauncher(false)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      unsub()
+    }
+  }, [])
+
+React.useEffect(() => {
+  const ws = wins.map(w => ({ id: w.id, title: w.title, appId: w.appId, iconUrl: w.iconUrl, x: w.x, y: w.y, w: w.w, h: w.h, minimized: w.minimized, maximized: w.maximized }))
+  setPersistWins(ws)
+}, [wins])
+
+React.useEffect(() => {
+  setPersistZOrder(zOrder)
+}, [zOrder])
+
+React.useEffect(() => {
+  if (wins.length > 0) return
+  const fm = apps.find(a => a.id === 'file-manager')
+  if (!fm) return
+  ;(async () => {
+    const Comp = await loadApp(fm.id)
+    open({ id: `${fm.id}-${Date.now()}`, title: fm.title, content: <Comp />, appId: fm.id, iconUrl: fm.iconUrl })
+  })()
+}, [wins, apps, open])
+
+  return (
+    <div style={{ position: 'relative', flex: 1 }}>
+      {toolbar}
+      {showLauncher && (
+        <Launcher
+          onOpen={(id, title, Comp, iconUrl) => open({ id: `${id}-${Date.now()}`, title, content: <Comp />, appId: id, iconUrl })}
+          onClose={() => setShowLauncher(false)}
+        />
+      )}
+      <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 48px)', overflow: 'hidden' }}>
+        {wins.map(w => {
+          if (w.minimized) return null
+          const z = zOrder.indexOf(w.id) + 10
+          return (
+            <div
+              key={w.id}
+              style={{
+                position: 'absolute',
+                top: w.y ?? 60,
+                left: w.x ?? 60,
+                width: w.w ?? 600,
+                height: w.h ?? 400,
+                background: 'var(--win-bg)',
+                border: '1px solid var(--win-border)',
+                borderRadius: 'var(--win-radius)',
+                boxShadow: 'var(--win-shadow)',
+                backdropFilter: 'blur(22px)',
+                zIndex: z
+              }}
+              onMouseDown={() => bringToFront(w.id)}
+            >
+              <div
+                className="puter-titlebar"
+                style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 4px', borderBottom: '1px solid var(--win-border)', cursor: 'move', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)', userSelect: 'none' }}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  const startX = e.clientX
+                  const startY = e.clientY
+                  const initX = w.x ?? 60
+                  const initY = w.y ?? 60
+                  const move = (ev: MouseEvent) => {
+                    const dx = ev.clientX - startX
+                    const dy = ev.clientY - startY
+                    const pad = 0
+                    const W = window.innerWidth
+                    const H = window.innerHeight - 48
+                    const ww = w.w ?? 600
+                    const hh = w.h ?? 400
+                    const nx = Math.max(pad, Math.min(initX + dx, W - ww - pad))
+                    const ny = Math.max(32, Math.min(initY + dy, H - hh - pad))
+                    setPos(w.id, nx, ny)
+                  }
+                  const up = () => {
+                    document.removeEventListener('mousemove', move)
+                    document.removeEventListener('mouseup', up)
+                  }
+                  document.addEventListener('mousemove', move)
+                  document.addEventListener('mouseup', up)
+                }}
+                onDoubleClick={() => toggleMaximize(w.id)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  {w.iconUrl ? (
+                    <img src={w.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 4 }} />
+                  ) : (
+                    <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
+                  )}
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.title}</span>
+                </div>
+                <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                  <button
+                    className="win-btn"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => minimize(w.id)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24">
+                      <rect x="5" y="12" width="14" height="2" rx="1" fill="currentColor" />
+                    </svg>
+                  </button>
+                  <button
+                    className="win-btn"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => toggleMaximize(w.id)}
+                  >
+                    {w.maximized ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                        <rect x="10" y="10" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" opacity="0.6" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    className="win-btn close"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => close(w.id)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div style={{ height: 'calc(100% - 36px)', color: 'var(--text)', position: 'relative', overflow: 'auto' }}>
+                {w.content}
+                <div
+                  style={{ position: 'absolute', right: 0, bottom: 0, width: 12, height: 12, cursor: 'nwse-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startX = e.clientX
+                    const startY = e.clientY
+                    const initW = w.w ?? 600
+                    const initH = w.h ?? 400
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const dy = ev.clientY - startY
+                      setSize(w.id, initW + dx, initH + dy)
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+                <div
+                  style={{ position: 'absolute', left: 0, bottom: 0, width: 12, height: 12, cursor: 'nesw-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startX = e.clientX
+                    const startY = e.clientY
+                    const initW = w.w ?? 600
+                    const initH = w.h ?? 400
+                    const initX = w.x ?? 60
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const dy = ev.clientY - startY
+                      const nextW = Math.max(300, initW - dx)
+                      const nextH = Math.max(200, initH + dy)
+                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, h: nextH, x: initX + dx } : ww))
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+                <div
+                  style={{ position: 'absolute', left: 0, top: 0, width: 12, height: 12, cursor: 'nwse-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startX = e.clientX
+                    const startY = e.clientY
+                    const initW = w.w ?? 600
+                    const initH = w.h ?? 400
+                    const initX = w.x ?? 60
+                    const initY = w.y ?? 60
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const dy = ev.clientY - startY
+                      const nextW = Math.max(300, initW - dx)
+                      const nextH = Math.max(200, initH - dy)
+                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, h: nextH, x: initX + dx, y: initY + dy } : ww))
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+                <div
+                  style={{ position: 'absolute', right: 0, top: 0, width: 12, height: 12, cursor: 'nesw-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startX = e.clientX
+                    const startY = e.clientY
+                    const initW = w.w ?? 600
+                    const initH = w.h ?? 400
+                    const initY = w.y ?? 60
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const dy = ev.clientY - startY
+                      const nextW = Math.max(300, initW + dx)
+                      const nextH = Math.max(200, initH - dy)
+                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, h: nextH, y: initY + dy } : ww))
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+                <div
+                  style={{ position: 'absolute', left: 0, top: '50%', width: 8, height: 32, transform: 'translateY(-50%)', cursor: 'ew-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startX = e.clientX
+                    const initW = w.w ?? 600
+                    const initX = w.x ?? 60
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const nextW = Math.max(300, initW - dx)
+                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, x: initX + dx } : ww))
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+                <div
+                  style={{ position: 'absolute', right: 0, top: '50%', width: 8, height: 32, transform: 'translateY(-50%)', cursor: 'ew-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startX = e.clientX
+                    const initW = w.w ?? 600
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const nextW = Math.max(300, initW + dx)
+                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW } : ww))
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+                <div
+                  style={{ position: 'absolute', top: 0, left: '50%', width: 32, height: 8, transform: 'translateX(-50%)', cursor: 'ns-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startY = e.clientY
+                    const initH = w.h ?? 400
+                    const initY = w.y ?? 60
+                    const move = (ev: MouseEvent) => {
+                      const dy = ev.clientY - startY
+                      const nextH = Math.max(200, initH - dy)
+                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, h: nextH, y: initY + dy } : ww))
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+                <div
+                  style={{ position: 'absolute', bottom: 0, left: '50%', width: 32, height: 8, transform: 'translateX(-50%)', cursor: 'ns-resize' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    const startY = e.clientY
+                    const initH = w.h ?? 400
+                    const move = (ev: MouseEvent) => {
+                      const dy = ev.clientY - startY
+                      const nextH = Math.max(200, initH + dy)
+                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, h: nextH } : ww))
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                />
+              </div>
+            </div>
+          )
+        })}
+      </div>
+      <Taskbar
+        wins={wins.map(w => ({ id: w.id, title: w.title, minimized: w.minimized, iconUrl: w.iconUrl }))}
+        onFocus={bringToFront}
+        onRestore={restore}
+        onOpenLauncher={() => setShowLauncher(true)}
+        onOpenApp={openById}
+      />
+    </div>
+  )
+}
