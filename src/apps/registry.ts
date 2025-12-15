@@ -17,14 +17,14 @@ type AppDef = {
 }
 
 const manifests: Record<string, Manifest> = Object.fromEntries(
-  Object.entries(import.meta.glob('../apps/**/manifest.json', { eager: true })).map(([p, m]) => [
+  Object.entries(import.meta.glob('../../apps/**/manifest.json', { eager: true })).map(([p, m]) => [
     p,
     (m as any).default ?? (m as any)
   ])
 )
 
-const entries = import.meta.glob('../apps/**/src/**')
-const assets = import.meta.glob('../apps/**', { eager: true, import: 'default', query: '?url' })
+const entries = import.meta.glob('../../apps/**/src/**')
+const assets = import.meta.glob('../../apps/**', { eager: true, import: 'default', query: '?url' })
 
 const apps: AppDef[] = Object.entries(manifests)
   .map(([mpath, m]) => {

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { api } from '../api/client'
 import { subscribeMaximizedWindow, requestWinAction } from '../sdk/desktop'
+import LoginForm from './LoginForm'
 
 export default function StatusBar() {
   const [healthy, setHealthy] = useState<boolean>(false)
@@ -9,6 +10,8 @@ export default function StatusBar() {
   const [open, setOpen] = useState<boolean>(false)
   const ref = useRef<HTMLDivElement | null>(null)
   const [maxWin, setMaxWin] = useState<{ id: string; title: string } | null>(null)
+  const [user, setUser] = useState<{ user_id: string; username: string } | null>(api.getUser())
+  const [showLogin, setShowLogin] = useState(false)
 
   useEffect(() => {
     let mounted = true
@@ -32,6 +35,12 @@ export default function StatusBar() {
     }
     poll()
     loadVersion()
+    if (api.getToken()) {
+      api.whoami().then(u => {
+        if (!mounted) return
+        setUser(u)
+      }).catch(() => {})
+    }
     const id = setInterval(poll, 5000)
     return () => {
       mounted = false
@@ -112,8 +121,45 @@ export default function StatusBar() {
             >
               <div style={{ padding: 12, background: 'rgba(0,0,0,0.06)', borderBottom: '1px solid var(--win-border)', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)' }}>
                 <div style={{ fontWeight: 600, marginBottom: 8, color: '#111827' }}>用户信息</div>
-                <div>用户名：guest</div>
-                <div>角色：标准用户</div>
+                {user ? (
+                  <>
+                    <div>用户名：{user.username}</div>
+                    <div style={{ marginTop: 8 }}>
+                      <button
+                        className="puter-button"
+                        style={{ height: 28 }}
+                        onClick={() => {
+                          api.logout()
+                          setUser(null)
+                          setShowLogin(false)
+                        }}
+                      >
+                        退出登录
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {!showLogin && (
+                      <button
+                        className="puter-button"
+                        style={{ height: 28 }}
+                        onClick={() => setShowLogin(true)}
+                      >
+                        登录
+                      </button>
+                    )}
+                    {showLogin && (
+                      <LoginForm
+                        onSuccess={() => {
+                          const u = api.getUser()
+                          setUser(u)
+                          setShowLogin(false)
+                        }}
+                      />
+                    )}
+                  </>
+                )}
               </div>
               <div style={{ padding: 12 }}>
                 <div style={{ fontWeight: 600, marginBottom: 8 }}>系统信息</div>

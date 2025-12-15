@@ -26,6 +26,7 @@ export default function WindowManager() {
   const [wins, setWins] = useState<Win[]>([])
   const [showLauncher, setShowLauncher] = useState<boolean>(false)
   const [zOrder, setZOrder] = useState<string[]>([])
+  const [autoOpened, setAutoOpened] = useState<boolean>(false)
 
   const open = useCallback((w: Win) => {
     setWins(x => [...x, { ...w, x: 60, y: 60, w: 600, h: 400 }])
@@ -58,9 +59,9 @@ export default function WindowManager() {
         if (w.id !== id) return w
         if (!w.maximized) {
           const prev = { x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 600, h: w.h ?? 400 }
-          const dockH = 48
+          const statusH = 32
           const W = window.innerWidth
-          const H = window.innerHeight - dockH
+          const H = window.innerHeight - statusH
           return { ...w, prev, x: 0, y: 0, w: W, h: H, maximized: true }
         } else {
           const p = w.prev ?? { x: 60, y: 60, w: 600, h: 400 }
@@ -172,14 +173,15 @@ React.useEffect(() => {
 }, [zOrder])
 
 React.useEffect(() => {
-  if (wins.length > 0) return
+  if (wins.length > 0 || autoOpened) return
   const fm = apps.find(a => a.id === 'file-manager')
   if (!fm) return
   ;(async () => {
     const Comp = await loadApp(fm.id)
     open({ id: `${fm.id}-${Date.now()}`, title: fm.title, content: <Comp />, appId: fm.id, iconUrl: fm.iconUrl })
+    setAutoOpened(true)
   })()
-}, [wins, apps, open])
+}, [wins, apps, open, autoOpened])
 
   return (
     <div style={{ position: 'relative', flex: 1 }}>
@@ -190,7 +192,7 @@ React.useEffect(() => {
           onClose={() => setShowLauncher(false)}
         />
       )}
-      <div style={{ position: 'relative', width: '100%', height: 'calc(100% - 48px)', overflow: 'hidden' }}>
+      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
         {wins.map(w => {
           if (w.minimized) return null
           const z = zOrder.indexOf(w.id) + 10
@@ -213,88 +215,90 @@ React.useEffect(() => {
               onMouseDown={() => bringToFront(w.id)}
             >
               {!w.maximized && (
-              <div
-                className="puter-titlebar"
-                style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 4px', borderBottom: '1px solid var(--win-border)', cursor: 'move', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)', userSelect: 'none' }}
-                onMouseDown={(e) => {
-                  e.preventDefault()
-                  const startX = e.clientX
-                  const startY = e.clientY
-                  const initX = w.x ?? 60
-                  const initY = w.y ?? 60
-                  const move = (ev: MouseEvent) => {
-                    const dx = ev.clientX - startX
-                    const dy = ev.clientY - startY
-                    const pad = 0
-                    const W = window.innerWidth
-                    const H = window.innerHeight - 48
-                    const ww = w.w ?? 600
-                    const hh = w.h ?? 400
-                    const nx = Math.max(pad, Math.min(initX + dx, W - ww - pad))
-                    const ny = Math.max(32, Math.min(initY + dy, H - hh - pad))
-                    setPos(w.id, nx, ny)
-                  }
-                  const up = () => {
-                    document.removeEventListener('mousemove', move)
-                    document.removeEventListener('mouseup', up)
-                  }
-                  document.addEventListener('mousemove', move)
-                  document.addEventListener('mouseup', up)
-                }}
-                onDoubleClick={() => toggleMaximize(w.id)}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                  {w.iconUrl ? (
-                    <img src={w.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 4 }} />
-                  ) : (
-                    <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
-                  )}
-                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.title}</span>
-                </div>
-                <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-                  <button
-                    className="win-btn"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => minimize(w.id)}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24">
-                      <rect x="5" y="12" width="14" height="2" rx="1" fill="currentColor" />
-                    </svg>
-                  </button>
-                  <button
-                    className="win-btn"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => toggleMaximize(w.id)}
-                  >
-                    {w.maximized ? (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
-                        <rect x="10" y="10" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" opacity="0.6" />
-                      </svg>
-                    ) : (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
-                      </svg>
-                    )}
-                  </button>
-                  <button
-                    className="win-btn close"
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => close(w.id)}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                      <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              )}
-              <div style={{ height: 'calc(100% - 36px)', color: 'var(--text)', position: 'relative', overflow: 'auto' }}>
-                {w.content}
                 <div
-                  style={{ position: 'absolute', right: 0, bottom: 0, width: 12, height: 12, cursor: 'nwse-resize' }}
+                  className="puter-titlebar"
+                  style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 4px', borderBottom: '1px solid var(--win-border)', cursor: 'move', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)', userSelect: 'none' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
+                    const startX = e.clientX
+                    const startY = e.clientY
+                    const initX = w.x ?? 60
+                    const initY = w.y ?? 60
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const dy = ev.clientY - startY
+                      const pad = 0
+                      const W = window.innerWidth
+                      const H = window.innerHeight - 32
+                      const ww = w.w ?? 600
+                      const hh = w.h ?? 400
+                      const nx = Math.max(pad, Math.min(initX + dx, W - ww - pad))
+                      const ny = Math.max(0, Math.min(initY + dy, H - hh - pad))
+                      setPos(w.id, nx, ny)
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                  onDoubleClick={() => toggleMaximize(w.id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    {w.iconUrl ? (
+                      <img src={w.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 4 }} />
+                    ) : (
+                      <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
+                    )}
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.title}</span>
+                  </div>
+                  <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                    <button
+                      className="win-btn"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => minimize(w.id)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24">
+                        <rect x="5" y="12" width="14" height="2" rx="1" fill="currentColor" />
+                      </svg>
+                    </button>
+                    <button
+                      className="win-btn"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => toggleMaximize(w.id)}
+                    >
+                      {w.maximized ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                          <rect x="10" y="10" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" opacity="0.6" />
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      className="win-btn close"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => close(w.id)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div style={{ height: w.maximized ? '100%' : 'calc(100% - 36px)', color: 'var(--text)', position: 'relative', overflow: 'auto', background: '#ffffff' }}>
+                {w.content}
+                <div
+                  style={{ position: 'absolute', right: 0, bottom: 0, width: 14, height: 14, cursor: 'nwse-resize', background: 'transparent', zIndex: 5 }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    if (w.maximized) return
                     const startX = e.clientX
                     const startY = e.clientY
                     const initW = w.w ?? 600
@@ -313,9 +317,10 @@ React.useEffect(() => {
                   }}
                 />
                 <div
-                  style={{ position: 'absolute', left: 0, bottom: 0, width: 12, height: 12, cursor: 'nesw-resize' }}
+                  style={{ position: 'absolute', left: 0, bottom: 0, width: 14, height: 14, cursor: 'nesw-resize' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
                     const startX = e.clientX
                     const startY = e.clientY
                     const initW = w.w ?? 600
@@ -337,9 +342,10 @@ React.useEffect(() => {
                   }}
                 />
                 <div
-                  style={{ position: 'absolute', left: 0, top: 0, width: 12, height: 12, cursor: 'nwse-resize' }}
+                  style={{ position: 'absolute', left: 0, top: 0, width: 14, height: 14, cursor: 'nwse-resize' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
                     const startX = e.clientX
                     const startY = e.clientY
                     const initW = w.w ?? 600
@@ -362,9 +368,10 @@ React.useEffect(() => {
                   }}
                 />
                 <div
-                  style={{ position: 'absolute', right: 0, top: 0, width: 12, height: 12, cursor: 'nesw-resize' }}
+                  style={{ position: 'absolute', right: 0, top: 0, width: 14, height: 14, cursor: 'nesw-resize' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
                     const startX = e.clientX
                     const startY = e.clientY
                     const initW = w.w ?? 600
@@ -386,9 +393,10 @@ React.useEffect(() => {
                   }}
                 />
                 <div
-                  style={{ position: 'absolute', left: 0, top: '50%', width: 8, height: 32, transform: 'translateY(-50%)', cursor: 'ew-resize' }}
+                  style={{ position: 'absolute', left: 0, top: 0, width: 10, height: '100%', cursor: 'ew-resize' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
                     const startX = e.clientX
                     const initW = w.w ?? 600
                     const initX = w.x ?? 60
@@ -406,9 +414,10 @@ React.useEffect(() => {
                   }}
                 />
                 <div
-                  style={{ position: 'absolute', right: 0, top: '50%', width: 8, height: 32, transform: 'translateY(-50%)', cursor: 'ew-resize' }}
+                  style={{ position: 'absolute', right: 0, top: 0, width: 10, height: '100%', cursor: 'ew-resize' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
                     const startX = e.clientX
                     const initW = w.w ?? 600
                     const move = (ev: MouseEvent) => {
@@ -425,9 +434,10 @@ React.useEffect(() => {
                   }}
                 />
                 <div
-                  style={{ position: 'absolute', top: 0, left: '50%', width: 32, height: 8, transform: 'translateX(-50%)', cursor: 'ns-resize' }}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 8, cursor: 'ns-resize' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
                     const startY = e.clientY
                     const initH = w.h ?? 400
                     const initY = w.y ?? 60
@@ -445,9 +455,10 @@ React.useEffect(() => {
                   }}
                 />
                 <div
-                  style={{ position: 'absolute', bottom: 0, left: '50%', width: 32, height: 8, transform: 'translateX(-50%)', cursor: 'ns-resize' }}
+                  style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 8, cursor: 'ns-resize' }}
                   onMouseDown={(e) => {
                     e.preventDefault()
+                    if (w.maximized) return
                     const startY = e.clientY
                     const initH = w.h ?? 400
                     const move = (ev: MouseEvent) => {
@@ -469,7 +480,7 @@ React.useEffect(() => {
         })}
       </div>
       <Taskbar
-        wins={wins.map(w => ({ id: w.id, title: w.title, minimized: w.minimized, iconUrl: w.iconUrl }))}
+        wins={wins.map(w => ({ id: w.id, title: w.title, minimized: w.minimized, iconUrl: w.iconUrl, appId: w.appId }))}
         onFocus={bringToFront}
         onRestore={restore}
         onOpenLauncher={() => setShowLauncher(true)}

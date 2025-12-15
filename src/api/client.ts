@@ -4,8 +4,40 @@ const host = window.location.hostname || 'localhost'
 const base = `http://${host}:8000`
 
 let offline = false
+const TOKEN_KEY = 'authToken'
+const USER_KEY = 'authUser'
 type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
 type Node = { type: 'dir' | 'file'; children?: Record<string, Node>; size?: number; modified_ts?: number }
+type User = { user_id: string; username: string }
+let token = localStorage.getItem(TOKEN_KEY) || ''
+let currentUser: User | null = null
+try {
+  const rawUser = localStorage.getItem(USER_KEY)
+  currentUser = rawUser ? JSON.parse(rawUser) : null
+} catch {
+  currentUser = null
+}
+if (token) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
+}
+function setToken(t: string) {
+  token = t
+  localStorage.setItem(TOKEN_KEY, t)
+  axios.defaults.headers.common['Authorization'] = `Bearer ${t}`
+}
+function clearToken() {
+  token = ''
+  localStorage.removeItem(TOKEN_KEY)
+  delete axios.defaults.headers.common['Authorization']
+}
+function setUser(u: User | null) {
+  currentUser = u
+  if (u) {
+    localStorage.setItem(USER_KEY, JSON.stringify(u))
+  } else {
+    localStorage.removeItem(USER_KEY)
+  }
+}
 function getMock(): { base: string; path: string; entries: Entry[] } {
   const raw = localStorage.getItem('mockfs')
   let root: Node
@@ -55,6 +87,44 @@ export const api = {
       offline = true
       return { version: 'frontend-only' }
     }
+  },
+  async initState() {
+    const r = await axios.get(`${base}/api/system/init/state`)
+    return r.data as { initialized: boolean }
+  },
+  async initSystem(username: string, password: string) {
+    const r = await axios.post(`${base}/api/system/init`, { username, password })
+    return r.data as { ok: boolean }
+  },
+  async signup(username: string, password: string) {
+    const r = await axios.post(`${base}/api/auth/signup`, { username, password })
+    return r.data as { user_id: string }
+  },
+  async login(username: string, password: string) {
+    const r = await axios.post(`${base}/api/auth/login`, { username, password })
+    const data = r.data as { user_id: string; token: string }
+    setToken(data.token)
+    try {
+      const me = await this.whoami()
+      setUser({ user_id: me.user_id, username: me.username })
+    } catch {
+      setUser({ user_id: data.user_id, username })
+    }
+    return { ok: true }
+  },
+  async whoami() {
+    const r = await axios.get(`${base}/api/auth/whoami`)
+    return r.data as { user_id: string; username: string }
+  },
+  logout() {
+    clearToken()
+    setUser(null)
+  },
+  getToken() {
+    return token
+  },
+  getUser() {
+    return currentUser
   },
   async fsList(path: string) {
     try {
@@ -106,6 +176,15 @@ export const api = {
       }
       return { ok: true }
     }
+  },
+  async fsRename(from: string, to: string) {
+    const r = await axios.post(`${base}/api/fs/rename`, { from, to })
+    return r.data as { ok: boolean }
+  },
+  fsDownloadUrl(path: string) {
+    const u = new URL(`${base}/api/fs/download`)
+    u.searchParams.set('path', path)
+    return u.toString()
   },
   isOffline() {
     return offline

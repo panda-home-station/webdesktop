@@ -7,6 +7,7 @@ type WinItem = {
   title: string
   minimized?: boolean
   iconUrl?: string
+  appId?: string
 }
 
 type Props = {
@@ -22,6 +23,27 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
   const uc = apps.find(a => a.id === 'user-center')
   const store = apps.find(a => a.id === 'app-store')
   const fm = apps.find(a => a.id === 'file-manager')
+  const pinned = new Set(['user-center', 'app-store', 'file-manager'])
+  const byApp: Record<string, WinItem[]> = {}
+  for (const w of wins) {
+    const aid = w.appId || ''
+    if (!aid) continue
+    byApp[aid] = byApp[aid] || []
+    byApp[aid].push(w)
+  }
+  const dynamicAppIds = Object.keys(byApp).filter(id => !pinned.has(id))
+  const isRunning = (id?: string) => !!(id && byApp[id] && byApp[id].length > 0)
+  const focusOrOpen = (appId: string) => {
+    const arr = byApp[appId]
+    if (arr && arr.length > 0) {
+      const w = arr.find(x => !x.minimized) || arr[0]
+      if (w.minimized) onRestore(w.id)
+      else onFocus(w.id)
+    } else {
+      onOpenApp(appId)
+      openApp(appId)
+    }
+  }
   return (
     <div
       className="puter-taskbar"
@@ -43,10 +65,9 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
       <button
         className="puter-button dock-item"
         title="用户"
-        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
         onClick={() => {
-          onOpenApp('user-center')
-          openApp('user-center')
+          focusOrOpen('user-center')
         }}
       >
         {uc?.iconUrl ? (
@@ -57,14 +78,14 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
             <path d="M4 20a8 8 0 0 1 16 0" fill="#94a3b8" />
           </svg>
         )}
+        {isRunning('user-center') && <span className="dock-dot dock-dot-active" />}
       </button>
       <button
         className="puter-button dock-item"
         title="应用程序"
-        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
         onClick={() => {
-          onOpenApp('app-store')
-          openApp('app-store')
+          focusOrOpen('app-store')
         }}
       >
         {store?.iconUrl ? (
@@ -75,14 +96,14 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
             <path d="M7 9V7a5 5 0 0 1 10 0v2" fill="#93c5fd" />
           </svg>
         )}
+        {isRunning('app-store') && <span className="dock-dot dock-dot-active" />}
       </button>
       <button
         className="puter-button dock-item"
         title="文件管理器"
-        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
         onClick={() => {
-          onOpenApp('file-manager')
-          openApp('file-manager')
+          focusOrOpen('file-manager')
         }}
       >
         {fm?.iconUrl ? (
@@ -96,19 +117,35 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
             <path fill="url(#gf)" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
           </svg>
         )}
+        {isRunning('file-manager') && <span className="dock-dot dock-dot-active" />}
       </button>
-      {wins.map(w => (
-        <button
-          key={`tb-${w.id}`}
-          onClick={() => (w.minimized ? onRestore(w.id) : onFocus(w.id))}
-          className="puter-button dock-item"
-          title={w.title}
-          style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
-        >
-          {w.iconUrl ? <img src={w.iconUrl} alt="" width={20} height={20} style={{ borderRadius: 6 }} /> : <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(0,0,0,0.06)' }} />}
-          <span className={`dock-dot${w.minimized ? '' : ' dock-dot-active'}`} />
-        </button>
-      ))}
+      {dynamicAppIds.map(id => {
+        const a = apps.find(x => x.id === id)
+        const arr = byApp[id] || []
+        const title = a?.title || id
+        const iconUrl = a?.iconUrl
+        const anyMin = arr.find(x => x.minimized)
+        const anyWin = arr.find(x => !x.minimized) || arr[0]
+        return (
+          <button
+            key={`tb-${id}`}
+            onClick={() => {
+              if (anyMin && anyMin.id) onRestore(anyMin.id)
+              else if (anyWin && anyWin.id) onFocus(anyWin.id)
+              else {
+                onOpenApp(id)
+                openApp(id)
+              }
+            }}
+            className="puter-button dock-item"
+            title={title}
+            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
+          >
+            {iconUrl ? <img src={iconUrl} alt="" width={20} height={20} style={{ borderRadius: 6 }} /> : <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(0,0,0,0.06)' }} />}
+            <span className="dock-dot dock-dot-active" />
+          </button>
+        )
+      })}
     </div>
   )
 }
