@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../../../src/api/client'
 
 export default function FileManager() {
@@ -14,6 +14,8 @@ export default function FileManager() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [navHist, setNavHist] = useState<string[]>(['/'])
   const [navIndex, setNavIndex] = useState<number>(0)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const [uploads, setUploads] = useState<{ id: string; name: string; dir: string; progress: number; speed?: number; total?: number; status: 'uploading' | 'done' | 'error' }[]>([])
 
   useEffect(() => {
     let mounted = true
@@ -32,6 +34,16 @@ export default function FileManager() {
       mounted = false
     }
   }, [path])
+  const navigate = (to: string) => {
+    const target = to || '/'
+    setSelected(new Set())
+    if (navHist[navIndex] !== target) {
+      const nextHist = [...navHist.slice(0, navIndex + 1), target]
+      setNavHist(nextHist)
+      setNavIndex(nextHist.length - 1)
+    }
+    setPath(target)
+  }
 
   const up = useMemo(() => {
     if (path === '/' || path === '') return '/'
@@ -68,6 +80,10 @@ export default function FileManager() {
       setNavIndex(nextHist.length - 1)
     }
     setPath(to)
+  }
+  const showUploads = () => {
+    setActive('uploads')
+    setSelected(new Set())
   }
 
   const back = () => {
@@ -114,12 +130,12 @@ export default function FileManager() {
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', height: '100%' }}>
-      <div style={{ borderRight: '1px solid var(--win-border)', padding: 8, color: '#111827' }}>
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>位置</div>
+      <div style={{ borderRight: '1px solid var(--win-border)', padding: 8, color: '#111827', background: 'var(--titlebar-bg)' }}>
         <div style={{ display: 'grid', gap: 6 }}>
           <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'home' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/', 'home')}>主文件夹</button>
           <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'recent' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Recent', 'recent')}>最近访问</button>
           <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'appdata' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/AppData', 'appdata')}>应用文件</button>
+          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'uploads' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={showUploads}>上传列表</button>
           <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'trash' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Trash', 'trash')}>回收站</button>
           <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'downloads' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Downloads', 'downloads')}>下载</button>
           <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'documents' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Documents', 'documents')}>文档</button>
@@ -130,18 +146,118 @@ export default function FileManager() {
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
-          <button className="puter-button" style={{ height: 28 }} onClick={back} disabled={navIndex === 0}>{'<'}</button>
-          <button className="puter-button" style={{ height: 28 }} onClick={forward} disabled={navIndex >= navHist.length - 1}>{'>'}</button>
-          <button className="puter-button" style={{ height: 28 }} onClick={refresh}>刷新</button>
+          <button
+            className="puter-button"
+            style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={back}
+            disabled={navIndex === 0}
+            title="后退"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            className="puter-button"
+            style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={forward}
+            disabled={navIndex >= navHist.length - 1}
+            title="前进"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+          <button
+            className="puter-button"
+            style={{ height: 28, width: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={refresh}
+            title="刷新"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 6v-3l4 4-4 4V8a4 4 0 1 0 4 4h2a6 6 0 1 1-6-6z" fill="currentColor" />
+            </svg>
+          </button>
+          <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                width: '100%',
+                minWidth: 0,
+                height: 28,
+                padding: '0 6px',
+                borderRadius: 8,
+                border: '1px solid var(--button-border)',
+                background: 'var(--button-bg)'
+              }}
+            >
+              <button
+                className="puter-button"
+                style={{ height: 28, width: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none' }}
+                onClick={() => navigate('/')}
+                title="主文件夹"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor" />
+                </svg>
+              </button>
+              {crumbs.slice(1).map((c, i) => (
+                <React.Fragment key={`crumb-${i}-${c.to}`}>
+                  <span style={{ color: 'var(--muted)', padding: i === 0 ? '0 2px' : '0 6px' }}>{'/'}</span>
+                  <button
+                    className="puter-button"
+                    style={{ height: 28, padding: i === 0 ? '0 6px' : '0 8px', whiteSpace: 'nowrap', maxWidth: '30%', overflow: 'hidden', textOverflow: 'ellipsis', background: 'transparent', border: 'none' }}
+                    onClick={() => navigate(c.to)}
+                    title={c.label}
+                  >
+                    {c.label}
+                  </button>
+                </React.Fragment>
+              ))}
+            </div>
+          </div>
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="搜索"
-            style={{ flex: 1, height: 28, padding: '0 8px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: '#111827' }}
+            style={{ width: 220, height: 28, padding: '0 8px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: '#111827' }}
           />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
-          <button className="puter-button" style={{ height: 28 }} onClick={() => alert('上传未实现')}>上传</button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            style={{ display: 'none' }}
+            onChange={async (e) => {
+              const files = e.target.files
+              if (!files || files.length === 0) return
+              for (const f of Array.from(files)) {
+                const id = `${f.name}-${Date.now()}`
+                setUploads(u => [...u, { id, name: f.name, dir: path, progress: 0, speed: 0, total: f.size, status: 'uploading' }])
+                try {
+                  await api.fsUpload(path, f, (info) => {
+                    setUploads(u => u.map(x => x.id === id ? { ...x, progress: info.percent, speed: info.bps ?? 0, total: info.total } : x))
+                  })
+                  setUploads(u => u.map(x => x.id === id ? { ...x, progress: 100, status: 'done' } : x))
+                } catch {
+                  setUploads(u => u.map(x => x.id === id ? { ...x, status: 'error' } : x))
+                }
+              }
+              const rs = await api.fsList(path)
+              setEntries(rs.entries)
+              e.currentTarget.value = ''
+            }}
+          />
+          <button
+            className="puter-button"
+            style={{ height: 28 }}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            上传
+          </button>
           <button
             className="puter-button"
             style={{ height: 28 }}
@@ -188,7 +304,49 @@ export default function FileManager() {
           </span>
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827' }}>
-          {loading ? (
+          {active === 'uploads' ? (
+            <div style={{ border: '1px solid var(--win-border)', borderRadius: 8, padding: 8, background: '#fff' }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <strong>上传列表</strong>
+                <button
+                  className="puter-button"
+                  style={{ height: 24, marginLeft: 'auto' }}
+                  onClick={() => setUploads(u => u.filter(x => x.status === 'uploading'))}
+                >
+                  清除已完成
+                </button>
+              </div>
+              <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
+                {uploads.length === 0 ? (
+                  <div style={{ color: 'var(--muted)' }}>暂无上传任务</div>
+                ) : (
+                  uploads.map(u => (
+                    <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px 60px 90px', alignItems: 'center', gap: 8 }}>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{u.dir}</div>
+                      <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ width: `${u.progress}%`, height: '100%', background: '#60a5fa' }} />
+                      </div>
+                      <div style={{ textAlign: 'right', color: u.status === 'error' ? '#ef4444' : '#111827' }}>
+                        {u.status === 'error' ? '失败' : `${u.progress}%`}
+                      </div>
+                      <div style={{ textAlign: 'right', color: '#111827' }}>
+                        {(() => {
+                          const bps = u.speed || 0
+                          if (!bps) return '-'
+                          const kb = bps / 1024
+                          const mb = kb / 1024
+                          if (mb >= 1) return `${mb.toFixed(2)} MB/s`
+                          if (kb >= 1) return `${kb.toFixed(0)} KB/s`
+                          return `${bps.toFixed(0)} B/s`
+                        })()}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : loading ? (
             <div>加载中…</div>
           ) : view === 'list' ? (
             <table style={{ width: '100%' }}>

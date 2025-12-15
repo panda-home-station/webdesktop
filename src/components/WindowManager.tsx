@@ -27,12 +27,34 @@ export default function WindowManager() {
   const [showLauncher, setShowLauncher] = useState<boolean>(false)
   const [zOrder, setZOrder] = useState<string[]>([])
   const [autoOpened, setAutoOpened] = useState<boolean>(false)
+  const [persistLoaded, setPersistLoaded] = useState<boolean>(false)
+  const apps = listApps()
+  const ensureUniqueId = (id: string, existing: Win[]) => {
+    if (!existing.some(xx => xx.id === id)) return id
+    let suffix = 1
+    let next = `${id}-${suffix}`
+    while (existing.some(xx => xx.id === next)) {
+      suffix++
+      next = `${id}-${suffix}`
+    }
+    return next
+  }
 
   const open = useCallback((w: Win) => {
-    setWins(x => [...x, { ...w, x: 60, y: 60, w: 600, h: 400 }])
-    setZOrder(x => [...x.filter(id => id !== w.id), w.id])
+    const a = apps.find(x => x.id === w.appId)
+    const minW = (a as any)?.minW ?? 300
+    const minH = (a as any)?.minH ?? 200
+    const defW = Math.max(600, minW)
+    const defH = Math.max(400, minH)
+    let newId = w.id
+    setWins(x => {
+      const uid = ensureUniqueId(w.id, x)
+      newId = uid
+      return [...x, { ...w, id: uid, x: 60, y: 60, w: w.w ?? defW, h: w.h ?? defH }]
+    })
+    setZOrder(x => [...x.filter(id => id !== newId), newId])
     notify(`已打开 ${w.title}`)
-  }, [])
+  }, [apps])
   const close = useCallback((id: string) => {
     setWins(x => x.filter(w => w.id !== id))
     setZOrder(x => x.filter(z => z !== id))
@@ -51,7 +73,13 @@ export default function WindowManager() {
     bringToFront(id)
   }, [bringToFront])
   const setSize = useCallback((id: string, w_: number, h_: number) => {
-    setWins(ws => ws.map(w => (w.id === id ? { ...w, w: Math.max(300, w_), h: Math.max(200, h_) } : w)))
+    setWins(ws => ws.map(w => {
+      if (w.id !== id) return w
+      const a = apps.find(x => x.id === w.appId)
+      const minW = (a as any)?.minW ?? 300
+      const minH = (a as any)?.minH ?? 200
+      return { ...w, w: Math.max(minW, w_), h: Math.max(minH, h_) }
+    }))
   }, [])
   const toggleMaximize = useCallback((id: string) => {
     setWins(ws =>
@@ -72,7 +100,6 @@ export default function WindowManager() {
     bringToFront(id)
   }, [bringToFront])
 
-  const apps = listApps()
   const toolbar = useMemo(() => {
     return null
   }, [])
@@ -104,9 +131,13 @@ export default function WindowManager() {
         const a = apps.find(x => x.id === w.appId)
         if (!a) continue
         const Comp = await loadApp(a.id)
-        const id = w.id || `${a.id}-${Date.now()}`
-        setWins(x => [...x, { id, title: w.title || a.title, content: <Comp />, appId: a.id, iconUrl: w.iconUrl ?? a.iconUrl, x: w.x ?? 60, y: w.y ?? 60, w: w.w ?? 600, h: w.h ?? 400, minimized: !!w.minimized, maximized: !!w.maximized }])
+        const baseId = w.id || `${a.id}-${Date.now()}`
+        setWins(x => {
+          const uid = ensureUniqueId(baseId, x)
+          return [...x, { id: uid, title: w.title || a.title, content: <Comp />, appId: a.id, iconUrl: w.iconUrl ?? a.iconUrl, x: w.x ?? 60, y: w.y ?? 60, w: w.w ?? 600, h: w.h ?? 400, minimized: !!w.minimized, maximized: !!w.maximized }]
+        })
       }
+      setPersistLoaded(true)
     })()
     const unsub = subscribeOpenApp(async (id) => {
       const a = apps.find(x => x.id === id)
@@ -142,9 +173,12 @@ export default function WindowManager() {
   }, [])
 
   React.useEffect(() => {
-    const maxId = zOrder.find(id => wins.find(w => w.id === id && w.maximized))
-    if (maxId) {
-      const w = wins.find(ww => ww.id === maxId)!
+    const frontId = [...zOrder].reverse().find(id => {
+      const w = wins.find(ww => ww.id === id)
+      return w && !w.minimized
+    })
+    if (frontId) {
+      const w = wins.find(ww => ww.id === frontId)!
       setMaximizedWindow({ id: w.id, title: w.title })
     } else {
       setMaximizedWindow(null)
@@ -173,15 +207,8 @@ React.useEffect(() => {
 }, [zOrder])
 
 React.useEffect(() => {
-  if (wins.length > 0 || autoOpened) return
-  const fm = apps.find(a => a.id === 'file-manager')
-  if (!fm) return
-  ;(async () => {
-    const Comp = await loadApp(fm.id)
-    open({ id: `${fm.id}-${Date.now()}`, title: fm.title, content: <Comp />, appId: fm.id, iconUrl: fm.iconUrl })
-    setAutoOpened(true)
-  })()
-}, [wins, apps, open, autoOpened])
+  // 不自动打开任何应用，严格按照持久化状态恢复
+}, [persistLoaded, wins, apps, open, autoOpened])
 
   return (
     <div style={{ position: 'relative', flex: 1 }}>
@@ -205,8 +232,13 @@ React.useEffect(() => {
                 left: w.x ?? 60,
                 width: w.w ?? 600,
                 height: w.h ?? 400,
+                display: 'flex',
+                flexDirection: 'column',
                 background: 'var(--win-bg)',
-                border: '1px solid var(--win-border)',
+                borderLeft: '1px solid var(--win-border)',
+                borderRight: '1px solid var(--win-border)',
+                borderBottom: '1px solid var(--win-border)',
+                borderTop: w.maximized ? 'none' : '1px solid var(--win-border)',
                 borderRadius: 'var(--win-radius)',
                 boxShadow: 'var(--win-shadow)',
                 backdropFilter: 'blur(22px)',
@@ -214,85 +246,8 @@ React.useEffect(() => {
               }}
               onMouseDown={() => bringToFront(w.id)}
             >
-              {!w.maximized && (
-                <div
-                  className="puter-titlebar"
-                  style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 4px', borderBottom: '1px solid var(--win-border)', cursor: 'move', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)', userSelect: 'none' }}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    if (w.maximized) return
-                    const startX = e.clientX
-                    const startY = e.clientY
-                    const initX = w.x ?? 60
-                    const initY = w.y ?? 60
-                    const move = (ev: MouseEvent) => {
-                      const dx = ev.clientX - startX
-                      const dy = ev.clientY - startY
-                      const pad = 0
-                      const W = window.innerWidth
-                      const H = window.innerHeight - 32
-                      const ww = w.w ?? 600
-                      const hh = w.h ?? 400
-                      const nx = Math.max(pad, Math.min(initX + dx, W - ww - pad))
-                      const ny = Math.max(0, Math.min(initY + dy, H - hh - pad))
-                      setPos(w.id, nx, ny)
-                    }
-                    const up = () => {
-                      document.removeEventListener('mousemove', move)
-                      document.removeEventListener('mouseup', up)
-                    }
-                    document.addEventListener('mousemove', move)
-                    document.addEventListener('mouseup', up)
-                  }}
-                  onDoubleClick={() => toggleMaximize(w.id)}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {w.iconUrl ? (
-                      <img src={w.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 4 }} />
-                    ) : (
-                      <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
-                    )}
-                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.title}</span>
-                  </div>
-                  <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
-                    <button
-                      className="win-btn"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => minimize(w.id)}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24">
-                        <rect x="5" y="12" width="14" height="2" rx="1" fill="currentColor" />
-                      </svg>
-                    </button>
-                    <button
-                      className="win-btn"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => toggleMaximize(w.id)}
-                    >
-                      {w.maximized ? (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                          <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
-                          <rect x="10" y="10" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" opacity="0.6" />
-                        </svg>
-                      ) : (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                          <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
-                        </svg>
-                      )}
-                    </button>
-                    <button
-                      className="win-btn close"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onClick={() => close(w.id)}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-              )}
-              <div style={{ height: w.maximized ? '100%' : 'calc(100% - 36px)', color: 'var(--text)', position: 'relative', overflow: 'auto', background: '#ffffff' }}>
+              {/* title bar removed; controls shown on global top bar */}
+              <div style={{ flex: 1, color: 'var(--text)', position: 'relative', overflow: 'auto', background: '#ffffff', borderBottomLeftRadius: 'var(--win-radius)', borderBottomRightRadius: 'var(--win-radius)' }}>
                 {w.content}
                 <div
                   style={{ position: 'absolute', right: 0, bottom: 0, width: 14, height: 14, cursor: 'nwse-resize', background: 'transparent', zIndex: 5 }}
@@ -329,8 +284,11 @@ React.useEffect(() => {
                     const move = (ev: MouseEvent) => {
                       const dx = ev.clientX - startX
                       const dy = ev.clientY - startY
-                      const nextW = Math.max(300, initW - dx)
-                      const nextH = Math.max(200, initH + dy)
+                      const a = apps.find(x => x.id === w.appId)
+                      const minW = (a as any)?.minW ?? 300
+                      const minH = (a as any)?.minH ?? 200
+                      const nextW = Math.max(minW, initW - dx)
+                      const nextH = Math.max(minH, initH + dy)
                       setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, h: nextH, x: initX + dx } : ww))
                     }
                     const up = () => {
@@ -355,8 +313,11 @@ React.useEffect(() => {
                     const move = (ev: MouseEvent) => {
                       const dx = ev.clientX - startX
                       const dy = ev.clientY - startY
-                      const nextW = Math.max(300, initW - dx)
-                      const nextH = Math.max(200, initH - dy)
+                      const a = apps.find(x => x.id === w.appId)
+                      const minW = (a as any)?.minW ?? 300
+                      const minH = (a as any)?.minH ?? 200
+                      const nextW = Math.max(minW, initW - dx)
+                      const nextH = Math.max(minH, initH - dy)
                       setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, h: nextH, x: initX + dx, y: initY + dy } : ww))
                     }
                     const up = () => {
@@ -380,8 +341,11 @@ React.useEffect(() => {
                     const move = (ev: MouseEvent) => {
                       const dx = ev.clientX - startX
                       const dy = ev.clientY - startY
-                      const nextW = Math.max(300, initW + dx)
-                      const nextH = Math.max(200, initH - dy)
+                      const a = apps.find(x => x.id === w.appId)
+                      const minW = (a as any)?.minW ?? 300
+                      const minH = (a as any)?.minH ?? 200
+                      const nextW = Math.max(minW, initW + dx)
+                      const nextH = Math.max(minH, initH - dy)
                       setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, h: nextH, y: initY + dy } : ww))
                     }
                     const up = () => {
@@ -402,7 +366,9 @@ React.useEffect(() => {
                     const initX = w.x ?? 60
                     const move = (ev: MouseEvent) => {
                       const dx = ev.clientX - startX
-                      const nextW = Math.max(300, initW - dx)
+                      const a = apps.find(x => x.id === w.appId)
+                      const minW = (a as any)?.minW ?? 300
+                      const nextW = Math.max(minW, initW - dx)
                       setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW, x: initX + dx } : ww))
                     }
                     const up = () => {
@@ -422,29 +388,10 @@ React.useEffect(() => {
                     const initW = w.w ?? 600
                     const move = (ev: MouseEvent) => {
                       const dx = ev.clientX - startX
-                      const nextW = Math.max(300, initW + dx)
+                      const a = apps.find(x => x.id === w.appId)
+                      const minW = (a as any)?.minW ?? 300
+                      const nextW = Math.max(minW, initW + dx)
                       setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, w: nextW } : ww))
-                    }
-                    const up = () => {
-                      document.removeEventListener('mousemove', move)
-                      document.removeEventListener('mouseup', up)
-                    }
-                    document.addEventListener('mousemove', move)
-                    document.addEventListener('mouseup', up)
-                  }}
-                />
-                <div
-                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 8, cursor: 'ns-resize' }}
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    if (w.maximized) return
-                    const startY = e.clientY
-                    const initH = w.h ?? 400
-                    const initY = w.y ?? 60
-                    const move = (ev: MouseEvent) => {
-                      const dy = ev.clientY - startY
-                      const nextH = Math.max(200, initH - dy)
-                      setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, h: nextH, y: initY + dy } : ww))
                     }
                     const up = () => {
                       document.removeEventListener('mousemove', move)
@@ -463,7 +410,9 @@ React.useEffect(() => {
                     const initH = w.h ?? 400
                     const move = (ev: MouseEvent) => {
                       const dy = ev.clientY - startY
-                      const nextH = Math.max(200, initH + dy)
+                      const a = apps.find(x => x.id === w.appId)
+                      const minH = (a as any)?.minH ?? 200
+                      const nextH = Math.max(minH, initH + dy)
                       setWins(ws => ws.map(ww => ww.id === w.id ? { ...ww, h: nextH } : ww))
                     }
                     const up = () => {

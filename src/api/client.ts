@@ -1,7 +1,16 @@
 import axios from 'axios'
 
 const host = window.location.hostname || 'localhost'
-const base = `http://${host}:8000`
+const overridePort = (() => {
+  try {
+    const v = localStorage.getItem('apiPort')
+    return v && /^\d+$/.test(v) ? v : null
+  } catch {
+    return null
+  }
+})()
+const port = overridePort || '8000'
+const base = `http://${host}:${port}`
 
 let offline = false
 const TOKEN_KEY = 'authToken'
@@ -38,7 +47,7 @@ function setUser(u: User | null) {
     localStorage.removeItem(USER_KEY)
   }
 }
-function getMock(): { base: string; path: string; entries: Entry[] } {
+function mockLoadRoot(): Node {
   const raw = localStorage.getItem('mockfs')
   let root: Node
   if (raw) {
@@ -58,13 +67,48 @@ function getMock(): { base: string; path: string; entries: Entry[] } {
     }
     localStorage.setItem('mockfs', JSON.stringify(root))
   }
-  const entries: Entry[] = Object.entries(root.children || {}).map(([name, node]) => ({
+  return root
+}
+function mockSaveRoot(root: Node) {
+  localStorage.setItem('mockfs', JSON.stringify(root))
+}
+function mockEnsureDir(path: string) {
+  const root = mockLoadRoot()
+  const parts = (path || '/').split('/').filter(Boolean)
+  let cur: Node = root
+  for (const p of parts) {
+    cur.children = cur.children || {}
+    if (!cur.children[p]) {
+      cur.children[p] = { type: 'dir', children: {}, modified_ts: Math.floor(Date.now() / 1000) }
+    }
+    cur = cur.children[p]
+  }
+  mockSaveRoot(root)
+}
+function mockTraverse(path: string): { root: Node; node: Node; parent: Node | null; name: string } {
+  const root = mockLoadRoot()
+  const parts = (path || '/').split('/').filter(Boolean)
+  let cur: Node = root
+  let parent: Node | null = null
+  let name = ''
+  for (const p of parts) {
+    parent = cur
+    name = p
+    cur.children = cur.children || {}
+    cur = cur.children[p] || { type: 'dir', children: {} }
+  }
+  return { root, node: cur, parent, name }
+}
+function getMockList(path: string): { base: string; path: string; entries: Entry[] } {
+  const { node } = mockTraverse(path)
+  const children = node.children || {}
+  const entries: Entry[] = Object.entries(children).map(([name, n]) => ({
     name,
-    is_dir: node.type === 'dir',
-    size: node.type === 'file' ? node.size || 0 : 0,
-    modified_ts: node.modified_ts || Math.floor(Date.now() / 1000)
+    is_dir: n.type === 'dir',
+    size: n.type === 'file' ? n.size || 0 : 0,
+    modified_ts: n.modified_ts || Math.floor(Date.now() / 1000)
   }))
-  return { base: '/', path: '/', entries }
+  return { base: '/', path, entries }
 }
 
 export const api = {
@@ -137,7 +181,7 @@ export const api = {
       }
     } catch {
       offline = true
-      return getMock()
+      return getMockList(path)
     }
   },
   async fsMkdir(path: string) {
@@ -147,16 +191,7 @@ export const api = {
       return r.data as { ok: boolean }
     } catch {
       offline = true
-      const raw = localStorage.getItem('mockfs')
-      const root: Node = raw ? JSON.parse(raw) : { type: 'dir', children: {} }
-      const name = (path || '').split('/').filter(Boolean).pop()
-      if (name) {
-        root.children = root.children || {}
-        if (!root.children[name]) {
-          root.children[name] = { type: 'dir', children: {}, modified_ts: Math.floor(Date.now() / 1000) }
-          localStorage.setItem('mockfs', JSON.stringify(root))
-        }
-      }
+      mockEnsureDir(path)
       return { ok: true }
     }
   },
@@ -167,19 +202,73 @@ export const api = {
       return r.data as { ok: boolean }
     } catch {
       offline = true
-      const raw = localStorage.getItem('mockfs')
-      const root: Node = raw ? JSON.parse(raw) : { type: 'dir', children: {} }
-      const name = (path || '').split('/').filter(Boolean).pop()
-      if (name && root.children && root.children[name]) {
-        delete root.children[name]
-        localStorage.setItem('mockfs', JSON.stringify(root))
+      const { root, parent, name } = mockTraverse(path)
+      if (parent && parent.children && name && parent.children[name]) {
+        delete parent.children[name]
+        mockSaveRoot(root)
       }
       return { ok: true }
     }
   },
   async fsRename(from: string, to: string) {
-    const r = await axios.post(`${base}/api/fs/rename`, { from, to })
-    return r.data as { ok: boolean }
+    try {
+      const r = await axios.post(`${base}/api/fs/rename`, { from, to })
+      return r.data as { ok: boolean }
+    } catch {
+      const { root, parent, name } = mockTraverse(from)
+      if (!parent || !parent.children || !parent.children[name]) return { ok: false }
+      const node = parent.children[name]
+      delete parent.children[name]
+      const toParts = (to || '').split('/').filter(Boolean)
+      const newName = toParts.pop() || name
+      let cur = root
+      for (const p of toParts) {
+        cur.children = cur.children || {}
+        cur.children[p] = cur.children[p] || { type: 'dir', children: {} }
+        cur = cur.children[p]
+      }
+      cur.children = cur.children || {}
+      cur.children[newName] = node
+      node.modified_ts = Math.floor(Date.now() / 1000)
+      mockSaveRoot(root)
+      return { ok: true }
+    }
+  },
+  async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void) {
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('path', path)
+      let lastLoaded = 0
+      let lastTs = Date.now()
+      if (onProgress) onProgress({ percent: 0, loaded: 0, total: file.size, bps: 0 })
+      const r = await axios.post(`${base}/api/fs/upload`, fd, {
+        onUploadProgress: (e) => {
+          if (onProgress && e.loaded != null) {
+            const now = Date.now()
+            const dt = Math.max(1, now - lastTs)
+            const dbytes = Math.max(0, e.loaded - lastLoaded)
+            const bps = (dbytes / dt) * 1000
+            lastLoaded = e.loaded
+            lastTs = now
+            const total = e.total ?? file.size
+            const pct = total > 0 ? Math.round((e.loaded / total) * 100) : 0
+            onProgress({ percent: pct, loaded: e.loaded, total, bps })
+          }
+        }
+      })
+      offline = false
+      return r.data as { ok: boolean }
+    } catch {
+      offline = true
+      mockEnsureDir(path)
+      const { root, node } = mockTraverse(path)
+      node.children = node.children || {}
+      node.children[file.name] = { type: 'file', size: file.size, modified_ts: Math.floor(Date.now() / 1000) }
+      mockSaveRoot(root)
+      if (onProgress) onProgress({ percent: 100, loaded: file.size, total: file.size, bps: undefined })
+      return { ok: true }
+    }
   },
   fsDownloadUrl(path: string) {
     const u = new URL(`${base}/api/fs/download`)

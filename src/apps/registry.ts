@@ -6,6 +6,8 @@ type Manifest = {
   entry: string
   capabilities?: string[]
   icons?: { default?: string }
+  minWidth?: number
+  minHeight?: number
 }
 
 type AppDef = {
@@ -14,6 +16,8 @@ type AppDef = {
   capabilities: string[]
   iconUrl?: string
   load: () => Promise<React.ComponentType<any>>
+  minW?: number
+  minH?: number
 }
 
 const manifests: Record<string, Manifest> = Object.fromEntries(
@@ -41,6 +45,8 @@ const apps: AppDef[] = Object.entries(manifests)
       title: m.title ?? m.name,
       capabilities: Array.isArray(m.capabilities) ? m.capabilities : [],
       iconUrl,
+      minW: typeof m.minWidth === 'number' ? m.minWidth : undefined,
+      minH: typeof m.minHeight === 'number' ? m.minHeight : undefined,
       load: async () => {
         const mod = await (loader as () => Promise<any>)()
         return mod.default as React.ComponentType<any>

@@ -17,3 +17,5 @@ pnpm-debug.log*
 *.local
 *.tmp
 *.swp
+src/**/*.js
+src/**/*.js.map
