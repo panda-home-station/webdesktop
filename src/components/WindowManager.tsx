@@ -173,12 +173,9 @@ export default function WindowManager() {
   }, [])
 
   React.useEffect(() => {
-    const frontId = [...zOrder].reverse().find(id => {
-      const w = wins.find(ww => ww.id === id)
-      return w && !w.minimized
-    })
-    if (frontId) {
-      const w = wins.find(ww => ww.id === frontId)!
+    const maxId = zOrder.find(id => wins.find(w => w.id === id && w.maximized))
+    if (maxId) {
+      const w = wins.find(ww => ww.id === maxId)!
       setMaximizedWindow({ id: w.id, title: w.title })
     } else {
       setMaximizedWindow(null)
@@ -246,7 +243,84 @@ React.useEffect(() => {
               }}
               onMouseDown={() => bringToFront(w.id)}
             >
-              {/* title bar removed; controls shown on global top bar */}
+              {!w.maximized && (
+                <div
+                  className="puter-titlebar"
+                  style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 4px', cursor: 'move', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)', userSelect: 'none' }}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    if (w.maximized) return
+                    const startX = e.clientX
+                    const startY = e.clientY
+                    const initX = w.x ?? 60
+                    const initY = w.y ?? 60
+                    const move = (ev: MouseEvent) => {
+                      const dx = ev.clientX - startX
+                      const dy = ev.clientY - startY
+                      const pad = 0
+                      const W = window.innerWidth
+                      const H = window.innerHeight - 32
+                      const ww = w.w ?? 600
+                      const hh = w.h ?? 400
+                      const nx = Math.max(pad, Math.min(initX + dx, W - ww - pad))
+                      const ny = Math.max(0, Math.min(initY + dy, H - hh - pad))
+                      setPos(w.id, nx, ny)
+                    }
+                    const up = () => {
+                      document.removeEventListener('mousemove', move)
+                      document.removeEventListener('mouseup', up)
+                    }
+                    document.addEventListener('mousemove', move)
+                    document.addEventListener('mouseup', up)
+                  }}
+                  onDoubleClick={() => toggleMaximize(w.id)}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    {w.iconUrl ? (
+                      <img src={w.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 4 }} />
+                    ) : (
+                      <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
+                    )}
+                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.title}</span>
+                  </div>
+                  <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                    <button
+                      className="win-btn"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => minimize(w.id)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24">
+                        <rect x="5" y="12" width="14" height="2" rx="1" fill="currentColor" />
+                      </svg>
+                    </button>
+                    <button
+                      className="win-btn"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => toggleMaximize(w.id)}
+                    >
+                      {w.maximized ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                          <rect x="10" y="10" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" opacity="0.6" />
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                          <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      className="win-btn close"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={() => close(w.id)}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
               <div style={{ flex: 1, color: 'var(--text)', position: 'relative', overflow: 'auto', background: '#ffffff', borderBottomLeftRadius: 'var(--win-radius)', borderBottomRightRadius: 'var(--win-radius)' }}>
                 {w.content}
                 <div

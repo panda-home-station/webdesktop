@@ -248,7 +248,9 @@ export default function FileManager() {
               }
               const rs = await api.fsList(path)
               setEntries(rs.entries)
-              e.currentTarget.value = ''
+              if (fileInputRef.current) {
+                fileInputRef.current.value = ''
+              }
             }}
           />
           <button
@@ -274,12 +276,25 @@ export default function FileManager() {
           >
             新建文件夹
           </button>
-          <button className="puter-button" style={{ height: 28 }} onClick={() => {
+          <button className="puter-button" style={{ height: 28 }} disabled={selected.size === 0 || [...selected].every(n => entries.find(e => e.name === n)?.is_dir)} onClick={async () => {
             const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
             if (names.length === 0) return
             const first = names[0]
-            const url = api.fsDownloadUrl(path.endsWith('/') ? `${path}${first}` : `${path}/${first}`)
-            window.open(url, '_blank')
+            const fullPath = path.endsWith('/') ? `${path}${first}` : `${path}/${first}`
+            try {
+              const blob = await api.fsDownloadBlob(fullPath)
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = first
+              a.style.display = 'none'
+              document.body.appendChild(a)
+              a.click()
+              document.body.removeChild(a)
+              URL.revokeObjectURL(url)
+            } catch {
+              alert('下载失败，请稍后重试')
+            }
           }}>下载</button>
           <button className="puter-button" style={{ height: 28 }} onClick={async () => {
             const names = [...selected]

@@ -8,6 +8,8 @@ export function isAllowed(appId: string, cap: string) {
 }
 
 export function requestPermission(appId: string, cap: string) {
+  const defaultApps = new Set(['file-manager', 'app-store', 'user-center'])
+  if (defaultApps.has(appId) && cap.startsWith('fs.')) return true
   const k = getPermissionKey(appId, cap)
   const existing = localStorage.getItem(k)
   if (existing === 'allow') return true

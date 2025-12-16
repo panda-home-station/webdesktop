@@ -1,16 +1,9 @@
 import axios from 'axios'
 
 const host = window.location.hostname || 'localhost'
-const overridePort = (() => {
-  try {
-    const v = localStorage.getItem('apiPort')
-    return v && /^\d+$/.test(v) ? v : null
-  } catch {
-    return null
-  }
-})()
-const port = overridePort || '8000'
-const base = `http://${host}:${port}`
+const apiPort = (import.meta as any).env?.VITE_PNAS_PORT ?? '8000'
+const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+const base = `${protocol}://${host}:${apiPort}`
 
 let offline = false
 const TOKEN_KEY = 'authToken'
@@ -237,8 +230,8 @@ export const api = {
   async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void) {
     try {
       const fd = new FormData()
-      fd.append('file', file)
       fd.append('path', path)
+      fd.append('file', file)
       let lastLoaded = 0
       let lastTs = Date.now()
       if (onProgress) onProgress({ percent: 0, loaded: 0, total: file.size, bps: 0 })
@@ -273,7 +266,15 @@ export const api = {
   fsDownloadUrl(path: string) {
     const u = new URL(`${base}/api/fs/download`)
     u.searchParams.set('path', path)
+    if (token) u.searchParams.set('token', token)
     return u.toString()
+  },
+  async fsDownloadBlob(path: string) {
+    const r = await axios.get(`${base}/api/fs/download`, {
+      params: { path, token },
+      responseType: 'blob'
+    })
+    return r.data as Blob
   },
   isOffline() {
     return offline
