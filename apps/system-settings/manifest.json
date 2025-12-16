@@ -1,0 +1,12 @@
+{
+  "name": "system-settings",
+  "title": "系统设置",
+  "version": "1.0.0",
+  "capabilities": ["core"],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 1024,
+  "minHeight": 768
+}

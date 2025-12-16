@@ -6,6 +6,7 @@ type Props = {
 }
 
 export default function InitForm({ onDone }: Props) {
+  const [deviceName, setDeviceName] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -15,8 +16,8 @@ export default function InitForm({ onDone }: Props) {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!username || !password) {
-      setError('请输入管理员用户名和密码')
+    if (!deviceName || !username || !password) {
+      setError('请输入完整信息')
       return
     }
     if (password !== confirm) {
@@ -26,7 +27,7 @@ export default function InitForm({ onDone }: Props) {
     setLoading(true)
     setError('')
     try {
-      await api.initSystem(username, password)
+      await api.initSystem(deviceName, username, password)
       setOk(true)
       onDone && onDone()
     } catch {
@@ -39,8 +40,19 @@ export default function InitForm({ onDone }: Props) {
   return (
     <form onSubmit={submit} style={{ display: 'grid', gap: 12 }}>
       <div style={{ fontWeight: 700, marginBottom: 4, color: '#111827' }}>系统初始化</div>
-      <div style={{ fontSize: 12, color: '#6b7280' }}>设置管理员用户名与密码</div>
+      <div style={{ fontSize: 12, color: '#6b7280' }}>设置设备名称与管理员账号</div>
+      
       <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+        <div style={{ fontSize: 12, color: '#6b7280' }}>设备名称</div>
+        <input
+          value={deviceName}
+          onChange={(e) => setDeviceName(e.target.value)}
+          placeholder="MyNAS"
+          style={{ width: '100%', height: 38, border: '1px solid #e5e7eb', borderRadius: 10, padding: '0 12px', background: '#fff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', boxSizing: 'border-box', maxWidth: '100%' }}
+        />
+      </div>
+
+      <div style={{ display: 'grid', gap: 8 }}>
         <div style={{ fontSize: 12, color: '#6b7280' }}>管理员用户名</div>
         <input
           value={username}
@@ -49,6 +61,7 @@ export default function InitForm({ onDone }: Props) {
           style={{ width: '100%', height: 38, border: '1px solid #e5e7eb', borderRadius: 10, padding: '0 12px', background: '#fff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', boxSizing: 'border-box', maxWidth: '100%' }}
         />
       </div>
+
       <div style={{ display: 'grid', gap: 8 }}>
         <div style={{ fontSize: 12, color: '#6b7280' }}>管理员密码</div>
         <input
@@ -59,6 +72,7 @@ export default function InitForm({ onDone }: Props) {
           style={{ width: '100%', height: 38, border: '1px solid #e5e7eb', borderRadius: 10, padding: '0 12px', background: '#fff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', boxSizing: 'border-box', maxWidth: '100%' }}
         />
       </div>
+
       <div style={{ display: 'grid', gap: 8 }}>
         <div style={{ fontSize: 12, color: '#6b7280' }}>确认密码</div>
         <input
@@ -69,6 +83,7 @@ export default function InitForm({ onDone }: Props) {
           style={{ width: '100%', height: 38, border: '1px solid #e5e7eb', borderRadius: 10, padding: '0 12px', background: '#fff', boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.03)', boxSizing: 'border-box', maxWidth: '100%' }}
         />
       </div>
+
       {error && (
         <div style={{ color: '#b91c1c', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 10px', fontSize: 12 }}>
           {error}

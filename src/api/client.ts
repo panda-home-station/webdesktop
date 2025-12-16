@@ -125,12 +125,22 @@ export const api = {
       return { version: 'frontend-only' }
     }
   },
+  async getDeviceInfo() {
+    const r = await axios.get(`${base}/api/system/device`)
+    return r.data as {
+      device_name: string
+      device_id: string
+      system_version: string
+      system_time: string
+      uptime: string
+    }
+  },
   async initState() {
     const r = await axios.get(`${base}/api/system/init/state`)
     return r.data as { initialized: boolean }
   },
-  async initSystem(username: string, password: string) {
-    const r = await axios.post(`${base}/api/system/init`, { username, password })
+  async initSystem(deviceName: string, username: string, password: string) {
+    const r = await axios.post(`${base}/api/system/init`, { device_name: deviceName, username, password })
     return r.data as { ok: boolean }
   },
   async signup(username: string, password: string) {

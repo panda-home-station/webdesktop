@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../../../src/api/client'
+import { Sidebar, SidebarItem } from '../../../src/components/Sidebar'
 
 export default function FileManager() {
   const [path, setPath] = useState<string>('/')
@@ -128,23 +129,27 @@ export default function FileManager() {
   }
   const clearSelection = () => setSelected(new Set())
 
+  const sidebarItems: SidebarItem[] = [
+    { id: 'home', label: '主文件夹', icon: '🏠', onClick: () => goto('/', 'home') },
+    { id: 'recent', label: '最近访问', icon: '🕒', onClick: () => goto('/Recent', 'recent') },
+    { id: 'appdata', label: '应用文件', icon: '⚙️', onClick: () => goto('/AppData', 'appdata') },
+    { id: 'uploads', label: '上传列表', icon: '☁️', onClick: showUploads },
+    { id: 'trash', label: '回收站', icon: '🗑️', onClick: () => goto('/Trash', 'trash') },
+    { id: 'downloads', label: '下载', icon: '⬇️', onClick: () => goto('/Downloads', 'downloads') },
+    { id: 'documents', label: '文档', icon: '📄', onClick: () => goto('/Documents', 'documents') },
+    { id: 'pictures', label: '图片', icon: '🖼️', onClick: () => goto('/Pictures', 'pictures') },
+    { id: 'music', label: '音乐', icon: '🎵', onClick: () => goto('/Music', 'music') },
+    { id: 'videos', label: '视频', icon: '🎬', onClick: () => goto('/Videos', 'videos') },
+  ]
+
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', height: '100%' }}>
-      <div style={{ borderRight: '1px solid var(--win-border)', padding: 8, color: '#111827', background: 'var(--titlebar-bg)' }}>
-        <div style={{ display: 'grid', gap: 6 }}>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'home' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/', 'home')}>主文件夹</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'recent' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Recent', 'recent')}>最近访问</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'appdata' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/AppData', 'appdata')}>应用文件</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'uploads' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={showUploads}>上传列表</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'trash' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Trash', 'trash')}>回收站</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'downloads' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Downloads', 'downloads')}>下载</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'documents' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Documents', 'documents')}>文档</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'pictures' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Pictures', 'pictures')}>图片</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'music' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Music', 'music')}>音乐</button>
-          <button className="puter-button" style={{ justifyContent: 'flex-start', color: '#111827', background: active === 'videos' ? 'rgba(0,0,0,0.08)' : undefined }} onClick={() => goto('/Videos', 'videos')}>视频</button>
-        </div>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 8 }}>
+    <div style={{ display: 'flex', height: '100%' }}>
+      <Sidebar
+        width={200}
+        items={sidebarItems}
+        activeId={active}
+      />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: 8, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
           <button
             className="puter-button"
