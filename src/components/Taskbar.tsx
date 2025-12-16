@@ -1,6 +1,6 @@
 import React from 'react'
 import { listApps } from '../apps/registry'
-import { openApp } from '../sdk/desktop'
+import { openApp, showDesktop } from '../sdk/desktop'
 
 type WinItem = {
   id: string
@@ -16,14 +16,12 @@ type Props = {
   onRestore: (id: string) => void
   onOpenLauncher: () => void
   onOpenApp: (id: string) => void
+  isLauncherOpen?: boolean
+  onCloseLauncher?: () => void
 }
 
-export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOpenApp }: Props) {
+export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher }: Props) {
   const apps = listApps()
-  const uc = apps.find(a => a.id === 'user-center')
-  const store = apps.find(a => a.id === 'app-store')
-  const fm = apps.find(a => a.id === 'file-manager')
-  const pinned = new Set(['user-center', 'app-store', 'file-manager'])
   const byApp: Record<string, WinItem[]> = {}
   for (const w of wins) {
     const aid = w.appId || ''
@@ -31,7 +29,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
     byApp[aid] = byApp[aid] || []
     byApp[aid].push(w)
   }
-  const dynamicAppIds = Object.keys(byApp).filter(id => !pinned.has(id))
+  const runningAppIds = Object.keys(byApp)
   const isRunning = (id?: string) => !!(id && byApp[id] && byApp[id].length > 0)
   const focusOrOpen = (appId: string) => {
     const arr = byApp[appId]
@@ -40,7 +38,6 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
       if (w.minimized) onRestore(w.id)
       else onFocus(w.id)
     } else {
-      onOpenApp(appId)
       openApp(appId)
     }
   }
@@ -50,105 +47,146 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
       style={{
         position: 'fixed',
         left: 6,
-        top: '50%',
-        transform: 'translateY(-50%)',
-        width: 56,
+        top: 32,
+        bottom: 32,
+        width: 60,
+        boxSizing: 'border-box',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        gap: 10,
         padding: '10px 8px',
         borderRadius: 16,
         boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
         zIndex: 10000,
-        backdropFilter: 'blur(12px)',
-        background: 'rgba(255,255,255,0.6)',
+        backdropFilter: 'blur(8px)',
+        background: 'rgba(255,255,255,0.25)',
+      }}
+      onMouseDownCapture={(e) => {
+        const t = e.target as HTMLElement
+        if (!t.closest('.dock-item') && isLauncherOpen && onCloseLauncher) {
+          onCloseLauncher()
+        }
       }}
     >
-      <button
-        className="puter-button dock-item"
-        title="用户"
-        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
-        onClick={() => {
-          focusOrOpen('user-center')
-        }}
-      >
-        {uc?.iconUrl ? (
-          <img src={uc.iconUrl} alt="" width={22} height={22} style={{ borderRadius: 6 }} />
-        ) : (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <button
+          className="dock-item"
+          title="显示桌面"
+          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          onClick={() => {
+            showDesktop()
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <rect x="4" y="6" width="16" height="12" rx="2" fill="#64748b" />
+            <path d="M4 18h16" stroke="#94a3b8" strokeWidth="2" />
+          </svg>
+        </button>
+        <button
+          className="dock-item"
+          title="全部应用"
+          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer', position: 'relative' }}
+          onClick={onOpenLauncher}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <rect x="4" y="4" width="6" height="6" rx="2" fill="#60a5fa" />
+            <rect x="14" y="4" width="6" height="6" rx="2" fill="#34d399" />
+            <rect x="4" y="14" width="6" height="6" rx="2" fill="#f59e0b" />
+            <rect x="14" y="14" width="6" height="6" rx="2" fill="#ef4444" />
+          </svg>
+          {isLauncherOpen && <span className="dock-dot dock-dot-active" />}
+        </button>
+      </div>
+      <div style={{ width: '100%', height: 1, background: 'var(--win-border)', margin: '10px 0', opacity: 0.6 }} />
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flex: 1, width: '100%' }}>
+        {runningAppIds.map(id => {
+          const a = apps.find(x => x.id === id)
+          const arr = byApp[id] || []
+          const title = a?.title || id
+          const iconUrl = a?.iconUrl
+          const anyMin = arr.find(x => x.minimized)
+          const anyWin = arr.find(x => !x.minimized) || arr[0]
+          return (
+            <button
+              key={`tb-${id}`}
+              onClick={() => {
+                if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
+                if (anyMin && anyMin.id) onRestore(anyMin.id)
+                else if (anyWin && anyWin.id) onFocus(anyWin.id)
+                else {
+                  openApp(id)
+                }
+              }}
+              className="puter-button dock-item"
+              title={title}
+              style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
+            >
+              {iconUrl ? <img src={iconUrl} alt="" width={22} height={22} style={{ borderRadius: 6 }} /> : <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(0,0,0,0.06)' }} />}
+              <span className="dock-dot dock-dot-active" />
+            </button>
+          )
+        })}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <button
+          className="dock-item"
+          title="文件任务"
+          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          onClick={() => {
+            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
+            onOpenApp('file-tasks')
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <path d="M4 6h8l2 2h6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" fill="#f59e0b" />
+            <circle cx="9" cy="13" r="2" fill="#fff" />
+            <path d="M13 16l3-3" stroke="#fff" strokeWidth="2" />
+          </svg>
+        </button>
+        <button
+          className="dock-item"
+          title="通知"
+          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          onClick={() => {
+            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
+            onOpenApp('notifications')
+          }}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24">
+            <path d="M12 3a6 6 0 0 1 6 6v4l2 2H4l2-2V9a6 6 0 0 1 6-6z" fill="#60a5fa" />
+            <circle cx="12" cy="20" r="2" fill="#93c5fd" />
+          </svg>
+        </button>
+        <button
+          className="dock-item"
+          title="账号"
+          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          onClick={() => {
+            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
+            focusOrOpen('user-center')
+          }}
+        >
           <svg width="22" height="22" viewBox="0 0 24 24">
             <circle cx="12" cy="8" r="4" fill="#64748b" />
             <path d="M4 20a8 8 0 0 1 16 0" fill="#94a3b8" />
           </svg>
-        )}
-        {isRunning('user-center') && <span className="dock-dot dock-dot-active" />}
-      </button>
-      <button
-        className="puter-button dock-item"
-        title="应用程序"
-        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
-        onClick={() => {
-          focusOrOpen('app-store')
-        }}
-      >
-        {store?.iconUrl ? (
-          <img src={store.iconUrl} alt="" width={22} height={22} style={{ borderRadius: 6 }} />
-        ) : (
+        </button>
+        <button
+          className="dock-item"
+          title="设置"
+          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          onClick={() => {
+            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
+            onOpenApp('settings')
+          }}
+        >
           <svg width="22" height="22" viewBox="0 0 24 24">
-            <path d="M3 9h18l-2 10H5L3 9z" fill="#60a5fa" />
-            <path d="M7 9V7a5 5 0 0 1 10 0v2" fill="#93c5fd" />
+            <circle cx="12" cy="12" r="3.5" fill="#9ca3af" />
+            <circle cx="12" cy="12" r="8" fill="none" stroke="#9ca3af" strokeWidth="2" />
+            <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M5 19l1.5-1.5" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
           </svg>
-        )}
-        {isRunning('app-store') && <span className="dock-dot dock-dot-active" />}
-      </button>
-      <button
-        className="puter-button dock-item"
-        title="文件管理器"
-        style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
-        onClick={() => {
-          focusOrOpen('file-manager')
-        }}
-      >
-        {fm?.iconUrl ? (
-          <img src={fm.iconUrl} alt="" width={22} height={22} style={{ borderRadius: 6 }} />
-        ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <linearGradient id="gf" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stopColor="#f59e0b" />
-              <stop offset="1" stopColor="#fbbf24" />
-            </linearGradient>
-            <path fill="url(#gf)" d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" />
-          </svg>
-        )}
-        {isRunning('file-manager') && <span className="dock-dot dock-dot-active" />}
-      </button>
-      {dynamicAppIds.map(id => {
-        const a = apps.find(x => x.id === id)
-        const arr = byApp[id] || []
-        const title = a?.title || id
-        const iconUrl = a?.iconUrl
-        const anyMin = arr.find(x => x.minimized)
-        const anyWin = arr.find(x => !x.minimized) || arr[0]
-        return (
-          <button
-            key={`tb-${id}`}
-            onClick={() => {
-              if (anyMin && anyMin.id) onRestore(anyMin.id)
-              else if (anyWin && anyWin.id) onFocus(anyWin.id)
-              else {
-                onOpenApp(id)
-                openApp(id)
-              }
-            }}
-            className="puter-button dock-item"
-            title={title}
-            style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
-          >
-            {iconUrl ? <img src={iconUrl} alt="" width={20} height={20} style={{ borderRadius: 6 }} /> : <div style={{ width: 20, height: 20, borderRadius: 6, background: 'rgba(0,0,0,0.06)' }} />}
-            <span className="dock-dot dock-dot-active" />
-          </button>
-        )
-      })}
+        </button>
+      </div>
     </div>
   )
 }

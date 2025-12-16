@@ -49,3 +49,13 @@ export function subscribeWinAction(handler: (id: string, action: 'minimize' | 't
   ev.addEventListener('winAction', h as EventListener)
   return () => ev.removeEventListener('winAction', h as EventListener)
 }
+
+export function showDesktop() {
+  ev.dispatchEvent(new CustomEvent('showDesktop'))
+}
+
+export function subscribeShowDesktop(handler: () => void) {
+  const h = () => handler()
+  ev.addEventListener('showDesktop', h as EventListener)
+  return () => ev.removeEventListener('showDesktop', h as EventListener)
+}

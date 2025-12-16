@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import WindowManager from './WindowManager'
 import Notifications from './Notifications'
 import { getWallpaper, setWallpaper } from '../state/desktop'
-import DesktopIcons from './DesktopIcons'
 
 export default function Desktop() {
   const [wallpaper, setWallpaperUrl] = useState<string>(getWallpaper())
@@ -34,7 +33,6 @@ export default function Desktop() {
     <div style={style} className="puter-desktop" onContextMenu={onContextMenu}>
       <WindowManager />
       <Notifications />
-      <DesktopIcons />
     </div>
   )
 }

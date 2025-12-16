@@ -4,7 +4,7 @@ import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import { notify } from '../sdk/notify'
-import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction } from '../sdk/desktop'
+import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
 
 type Win = {
@@ -53,7 +53,6 @@ export default function WindowManager() {
       return [...x, { ...w, id: uid, x: 60, y: 60, w: w.w ?? defW, h: w.h ?? defH }]
     })
     setZOrder(x => [...x.filter(id => id !== newId), newId])
-    notify(`已打开 ${w.title}`)
   }, [apps])
   const close = useCallback((id: string) => {
     setWins(x => x.filter(w => w.id !== id))
@@ -87,10 +86,15 @@ export default function WindowManager() {
         if (w.id !== id) return w
         if (!w.maximized) {
           const prev = { x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 600, h: w.h ?? 400 }
-          const statusH = 32
+          const dockLeft = 6
+          const dockWidth = 60
+          const dockGap = 0
+          const statusH = 0
           const W = window.innerWidth
           const H = window.innerHeight - statusH
-          return { ...w, prev, x: 0, y: 0, w: W, h: H, maximized: true }
+          const x = dockLeft + dockWidth + dockGap
+          const wmax = Math.max(300, W - x)
+          return { ...w, prev, x, y: 0, w: wmax, h: H, maximized: true }
         } else {
           const p = w.prev ?? { x: 60, y: 60, w: 600, h: 400 }
           return { ...w, x: p.x, y: p.y, w: p.w, h: p.h, maximized: false, prev: undefined }
@@ -192,7 +196,14 @@ export default function WindowManager() {
         close(id)
       }
     })
-    return () => unsub()
+    const unsubShow = subscribeShowDesktop(() => {
+      setShowLauncher(false)
+      setWins(ws => ws.map(w => ({ ...w, minimized: true })))
+    })
+    return () => {
+      unsub()
+      unsubShow()
+    }
   }, [minimize, toggleMaximize, close])
 React.useEffect(() => {
   const ws = wins.map(w => ({ id: w.id, title: w.title, appId: w.appId, iconUrl: w.iconUrl, x: w.x, y: w.y, w: w.w, h: w.h, minimized: w.minimized, maximized: w.maximized }))
@@ -243,7 +254,82 @@ React.useEffect(() => {
               }}
               onMouseDown={() => bringToFront(w.id)}
             >
-              
+              <div
+                className="puter-titlebar"
+                style={{ height: 36, display: 'flex', alignItems: 'center', padding: '0 4px', cursor: 'move', borderTopLeftRadius: 'var(--win-radius)', borderTopRightRadius: 'var(--win-radius)', userSelect: 'none' }}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  if (w.maximized) return
+                  const startX = e.clientX
+                  const startY = e.clientY
+                  const initX = w.x ?? 60
+                  const initY = w.y ?? 60
+                  const move = (ev: MouseEvent) => {
+                    const dx = ev.clientX - startX
+                    const dy = ev.clientY - startY
+                    const pad = 0
+                    const W = window.innerWidth
+                    const H = window.innerHeight
+                    const ww = w.w ?? 600
+                    const hh = w.h ?? 400
+                    const nx = Math.max(pad, Math.min(initX + dx, W - ww - pad))
+                    const ny = Math.max(0, Math.min(initY + dy, H - hh - pad))
+                    setPos(w.id, nx, ny)
+                  }
+                  const up = () => {
+                    document.removeEventListener('mousemove', move)
+                    document.removeEventListener('mouseup', up)
+                  }
+                  document.addEventListener('mousemove', move)
+                  document.addEventListener('mouseup', up)
+                }}
+                onDoubleClick={() => toggleMaximize(w.id)}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                  {w.iconUrl ? (
+                    <img src={w.iconUrl} alt="" width={16} height={16} style={{ borderRadius: 4 }} />
+                  ) : (
+                    <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
+                  )}
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{w.title}</span>
+                </div>
+                <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                  <button
+                    className="win-btn"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => minimize(w.id)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24">
+                      <rect x="5" y="12" width="14" height="2" rx="1" fill="currentColor" />
+                    </svg>
+                  </button>
+                  <button
+                    className="win-btn"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => toggleMaximize(w.id)}
+                  >
+                    {w.maximized ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                        <rect x="10" y="10" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" opacity="0.6" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <rect x="7" y="7" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    className="win-btn close"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => close(w.id)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                      <path d="M6 6L18 18M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
               <div style={{ flex: 1, color: 'var(--text)', position: 'relative', overflow: 'auto', background: '#ffffff', borderBottomLeftRadius: 'var(--win-radius)', borderBottomRightRadius: 'var(--win-radius)' }}>
                 {w.content}
                 <div
@@ -429,8 +515,10 @@ React.useEffect(() => {
         wins={wins.map(w => ({ id: w.id, title: w.title, minimized: w.minimized, iconUrl: w.iconUrl, appId: w.appId }))}
         onFocus={bringToFront}
         onRestore={restore}
-        onOpenLauncher={() => setShowLauncher(true)}
+        onOpenLauncher={() => setShowLauncher(v => !v)}
         onOpenApp={openById}
+        isLauncherOpen={showLauncher}
+        onCloseLauncher={() => setShowLauncher(false)}
       />
     </div>
   )
