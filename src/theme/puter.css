@@ -126,3 +126,34 @@
   background: #ef4444;
   color: #fff;
 }
+
+.semi-portal { position: relative; }
+.semi-portal-inner { position: fixed; }
+.semi-tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.85);
+  border: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  border-radius: 12px;
+  color: #ffffff;
+}
+.semi-tooltip-wrapper-show { opacity: 1; }
+.semi-tooltip-with-arrow { position: relative; }
+.semi-tooltip-content { font-size: 12px; white-space: nowrap; text-align: center; }
+.semi-tooltip-with-arrow::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-right: 8px solid rgba(0,0,0,0.85);
+}

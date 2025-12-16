@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { listApps } from '../apps/registry'
 import { openApp, showDesktop } from '../sdk/desktop'
 
@@ -31,6 +31,11 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
   }
   const runningAppIds = Object.keys(byApp)
   const isRunning = (id?: string) => !!(id && byApp[id] && byApp[id].length > 0)
+  const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const showTip = (text: string, el: HTMLElement) => {
+    const r = el.getBoundingClientRect()
+    setTip({ text, x: r.right + 6, y: r.top + r.height / 2 })
+  }
   const focusOrOpen = (appId: string) => {
     const arr = byApp[appId]
     if (arr && arr.length > 0) {
@@ -76,6 +81,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           onClick={() => {
             showDesktop()
           }}
+          onMouseEnter={(e) => showTip('显示桌面', e.currentTarget)}
+          onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
             <rect x="4" y="6" width="16" height="12" rx="2" fill="#64748b" />
@@ -87,6 +94,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           title="全部应用"
           style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer', position: 'relative' }}
           onClick={onOpenLauncher}
+          onMouseEnter={(e) => showTip('全部应用', e.currentTarget)}
+          onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
             <rect x="4" y="4" width="6" height="6" rx="2" fill="#60a5fa" />
@@ -120,6 +129,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
               className="puter-button dock-item"
               title={title}
               style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
+              onMouseEnter={(e) => showTip(title, e.currentTarget)}
+              onMouseLeave={() => setTip(null)}
             >
               {iconUrl ? <img src={iconUrl} alt="" width={22} height={22} style={{ borderRadius: 6 }} /> : <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(0,0,0,0.06)' }} />}
               <span className="dock-dot dock-dot-active" />
@@ -136,6 +147,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             onOpenApp('file-tasks')
           }}
+          onMouseEnter={(e) => showTip('文件任务', e.currentTarget)}
+          onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
             <path d="M4 6h8l2 2h6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" fill="#f59e0b" />
@@ -151,6 +164,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             onOpenApp('notifications')
           }}
+          onMouseEnter={(e) => showTip('通知', e.currentTarget)}
+          onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
             <path d="M12 3a6 6 0 0 1 6 6v4l2 2H4l2-2V9a6 6 0 0 1 6-6z" fill="#60a5fa" />
@@ -165,6 +180,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             focusOrOpen('user-center')
           }}
+          onMouseEnter={(e) => showTip('我的账号', e.currentTarget)}
+          onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
             <circle cx="12" cy="8" r="4" fill="#64748b" />
@@ -179,6 +196,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             onOpenApp('settings')
           }}
+          onMouseEnter={(e) => showTip('设置', e.currentTarget)}
+          onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="3.5" fill="#9ca3af" />
@@ -187,6 +206,15 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           </svg>
         </button>
       </div>
+      {tip && (
+        <div className="semi-portal" style={{ zIndex: 1060 }}>
+          <div tabIndex={-1} className="semi-portal-inner" style={{ position: 'fixed', left: tip.x, top: tip.y, transform: 'translateY(-50%)' }}>
+            <div className="semi-tooltip-wrapper semi-tooltip-wrapper-show semi-tooltip-with-arrow" role="tooltip" style={{ transformOrigin: '0% 50%', animationFillMode: 'forwards' }}>
+              <div className="semi-tooltip-content">{tip.text}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

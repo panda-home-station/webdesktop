@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import WindowManager from './WindowManager'
-import Notifications from './Notifications'
 import { getWallpaper, setWallpaper } from '../state/desktop'
 
 export default function Desktop() {
@@ -32,7 +31,6 @@ export default function Desktop() {
   return (
     <div style={style} className="puter-desktop" onContextMenu={onContextMenu}>
       <WindowManager />
-      <Notifications />
     </div>
   )
 }
