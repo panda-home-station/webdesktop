@@ -49,17 +49,20 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
       className="puter-taskbar"
       style={{
         position: 'fixed',
-        left: '50%',
-        bottom: 6,
-        transform: 'translateX(-50%)',
-        height: 48,
+        left: 6,
+        top: '50%',
+        transform: 'translateY(-50%)',
+        width: 56,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         gap: 10,
-        padding: '6px 10px',
+        padding: '10px 8px',
         borderRadius: 16,
         boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-        zIndex: 10000
+        zIndex: 10000,
+        backdropFilter: 'blur(12px)',
+        background: 'rgba(255,255,255,0.6)',
       }}
     >
       <button
