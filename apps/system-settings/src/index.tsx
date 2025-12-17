@@ -13,6 +13,30 @@ const TABS = [
 
 export default function SystemSettings() {
   const [activeTab, setActiveTab] = useState('device')
+  // Load from local storage immediately for "zero delay"
+  const [deviceInfo, setDeviceInfo] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem('pnas_device_info')
+      return cached ? JSON.parse(cached) : null
+    } catch (e) {
+      return null
+    }
+  })
+
+  useEffect(() => {
+    const fetchInfo = () => {
+      api.getDeviceInfo().then(data => {
+        setDeviceInfo(data)
+        localStorage.setItem('pnas_device_info', JSON.stringify(data))
+      }).catch(console.error)
+    }
+    
+    fetchInfo()
+    // Poll every 5 seconds for hardware stats (CPU temp, etc)
+    // We don't need fast polling for time anymore as it's handled locally
+    const interval = setInterval(fetchInfo, 5000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <div style={{ display: 'flex', height: '100%', fontFamily: 'system-ui, sans-serif', color: '#1f2937' }}>
@@ -30,16 +54,16 @@ export default function SystemSettings() {
           <h2 style={{ margin: '0 0 24px 0', fontSize: 24, fontWeight: 600 }}>
             {TABS.find(t => t.id === activeTab)?.label}
           </h2>
-          <TabContent id={activeTab} />
+          <TabContent id={activeTab} deviceInfo={deviceInfo} />
         </div>
       </div>
     </div>
   )
 }
 
-function TabContent({ id }: { id: string }) {
+function TabContent({ id, deviceInfo }: { id: string; deviceInfo: any }) {
   switch (id) {
-    case 'device': return <DeviceInfo />
+    case 'device': return <DeviceInfo info={deviceInfo} />
     case 'users': return <UserManagement />
     case 'storage': return <StorageManagement />
     case 'disk': return <DiskInfo />
@@ -93,20 +117,54 @@ function CardRow({ label, value }: { label: string; value: React.ReactNode }) {
   )
 }
 
-function DeviceInfo() {
-  const [info, setInfo] = useState<{
-    device_name: string
-    device_id: string
-    system_version: string
-    system_time: string
-    uptime: string
-  } | null>(null)
+function DeviceInfo({ info }: { info: any }) {
+  const [cloudAccount, setCloudAccount] = useState<{ email: string; type: string } | null>(null)
+  const [cloudConnect, setCloudConnect] = useState<{ id: string; server: string } | null>(null)
+  const [displayTime, setDisplayTime] = useState('')
 
   useEffect(() => {
-    api.getDeviceInfo().then(setInfo).catch(console.error)
-  }, [])
+    if (!info) return
+    
+    // Use backend timestamp if available, fallback to current time
+    let ts = info.system_time_ts ? info.system_time_ts * 1000 : Date.now()
+    
+    const format = (ms: number) => {
+      const d = new Date(ms)
+      const pad = (n: number) => n < 10 ? '0' + n : n
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+    }
 
-  if (!info) return <div style={{ padding: 20 }}>加载中...</div>
+    setDisplayTime(format(ts))
+
+    const timer = setInterval(() => {
+      ts += 1000
+      setDisplayTime(format(ts))
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [info]) // Resync when backend info updates
+
+  if (!info) {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
+        {[1, 2, 3, 4, 5, 6].map(i => (
+          <div key={i} style={{ 
+            background: '#f9fafb', 
+            border: '1px solid #e5e7eb', 
+            borderRadius: 12, 
+            height: 120,
+            animation: 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
+          }} />
+        ))}
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+          }
+        `}</style>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
@@ -127,7 +185,7 @@ function DeviceInfo() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <div style={{ fontSize: 12, fontWeight: 'bold', color: '#6b7280' }}>系统时间</div>
-            <div style={{ fontSize: 13, color: '#374151' }}>{info.system_time}</div>
+            <div style={{ fontSize: 13, color: '#374151' }}>{displayTime || info.system_time}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <div style={{ fontSize: 12, fontWeight: 'bold', color: '#6b7280' }}>本次运行时间</div>
@@ -137,43 +195,98 @@ function DeviceInfo() {
       </InfoCard>
 
       <InfoCard title="Panda 账号">
-        <CardRow label="账号" value="zac@panda.com" />
-        <CardRow label="状态" value={<span style={{ color: '#10b981' }}>已登录</span>} />
-        <CardRow label="类型" value="Pro 用户" />
+        {cloudAccount ? (
+          <div style={{ fontSize: 14, color: '#374151', fontWeight: 500, height: 21.33, display: 'flex', alignItems: 'center' }}>{cloudAccount.email}</div>
+        ) : (
+          <div style={{ display: 'flex' }}>
+            <button
+              onClick={() => setCloudAccount({ email: 'zac@panda.com', type: 'Pro 用户' })}
+              style={{
+                background: '#2563eb',
+                color: '#fff',
+                border: 'none',
+                padding: '2px 8px',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 500,
+                height: 21.33,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              点击登录
+            </button>
+          </div>
+        )}
       </InfoCard>
 
       <InfoCard title="Panda Connect">
-        <CardRow label="远程连接" value={<span style={{ color: '#10b981' }}>已启用</span>} />
-        <CardRow label="Panda ID" value="pnas-8848-007" />
-        <CardRow label="中继服务器" value="cn-sh-01" />
+        {cloudConnect ? (
+          <div style={{ fontSize: 14, fontWeight: 500, height: 21.33, display: 'flex', alignItems: 'center' }}>
+            <a
+              href={`https://${cloudConnect.id}.lingxi-agent.com`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ color: '#2563eb', textDecoration: 'none' }}
+            >
+              {`https://${cloudConnect.id}.lingxi-agent.com`}
+            </a>
+          </div>
+        ) : (
+          <div style={{ display: 'flex' }}>
+            <button
+              onClick={() => setCloudConnect({ id: 'pnas-8848-007', server: 'cn-sh-01' })}
+              style={{
+                background: '#2563eb',
+                color: '#fff',
+                border: 'none',
+                padding: '2px 8px',
+                borderRadius: 4,
+                cursor: 'pointer',
+                fontSize: 12,
+                fontWeight: 500,
+                height: 21.33,
+                display: 'flex',
+                alignItems: 'center',
+              }}
+            >
+              点击绑定
+            </button>
+          </div>
+        )}
       </InfoCard>
 
       <InfoCard title="系统盘信息">
-        <CardRow label="容量" value="256 GB NVMe SSD" />
-        <CardRow label="已用" value="45.2 GB (17%)" />
-        <div style={{ height: 6, background: '#e5e7eb', borderRadius: 3, marginTop: 4, overflow: 'hidden' }}>
-          <div style={{ width: '17%', height: '100%', background: '#3b82f6' }} />
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: '#111827' }}>{info.system_disk.percent}%</span>
+          <span style={{ fontSize: 13, color: '#6b7280' }}>已使用</span>
+        </div>
+        <div style={{ fontSize: 13, color: '#374151' }}>
+          容量 {info.system_disk.total} / 已用 {info.system_disk.used}
         </div>
       </InfoCard>
 
       <InfoCard title="数据盘信息">
-        <CardRow label="容量" value="4 TB RAID 1" />
-        <CardRow label="已用" value="1.2 TB (30%)" />
-        <div style={{ height: 6, background: '#e5e7eb', borderRadius: 3, marginTop: 4, overflow: 'hidden' }}>
-          <div style={{ width: '30%', height: '100%', background: '#10b981' }} />
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: '#111827' }}>{info.data_disk.percent}%</span>
+          <span style={{ fontSize: 13, color: '#6b7280' }}>已使用</span>
+        </div>
+        <div style={{ fontSize: 13, color: '#374151' }}>
+          容量 {info.data_disk.total} / 已用 {info.data_disk.used}
         </div>
       </InfoCard>
 
       <InfoCard title="硬件信息">
-        <CardRow label="CPU" value="i7-12700H (14核)" />
-        <CardRow label="内存" value="32 GB DDR4 3200" />
-        <CardRow label="温度" value="CPU 45°C / 硬盘 38°C" />
+        <CardRow label="CPU" value={info.hardware.cpu} />
+        <CardRow label="内存" value={info.hardware.memory} />
+        <CardRow label="温度" value={info.hardware.temperature} />
       </InfoCard>
 
       <InfoCard title="网络信息">
-        <CardRow label="IP 地址" value="192.168.1.100" />
-        <CardRow label="连接速度" value="1000 Mbps" />
-        <CardRow label="上传/下载" value="↑ 1.2MB/s  ↓ 4.5MB/s" />
+        <CardRow label="IP 地址" value={info.network.ip} />
+        <CardRow label="连接速度" value={info.network.speed} />
+        <CardRow label="上传/下载" value={info.network.transfer} />
       </InfoCard>
     </div>
   )
