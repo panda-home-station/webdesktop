@@ -14,7 +14,10 @@ export default function App() {
     if (api.getToken()) {
       api.whoami().then(u => {
         setUser(u)
-      }).catch(() => {})
+      }).catch(() => {
+        api.logout()
+        setUser(null)
+      })
     }
     api.initState().then(s => {
       setNeedInit(!s.initialized)

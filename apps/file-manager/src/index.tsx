@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../../../src/api/client'
-import { Sidebar, SidebarItem } from '../../../src/components/Sidebar'
+import { pushFileTask, updateFileTask } from '../../../src/sdk/desktop'
 
 export default function FileManager() {
   const [path, setPath] = useState<string>('/')
@@ -16,8 +16,6 @@ export default function FileManager() {
   const [navHist, setNavHist] = useState<string[]>(['/'])
   const [navIndex, setNavIndex] = useState<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
-  const [uploads, setUploads] = useState<{ id: string; name: string; dir: string; progress: number; speed?: number; total?: number; status: 'uploading' | 'done' | 'error' }[]>([])
-
   useEffect(() => {
     let mounted = true
     const load = async () => {
@@ -82,10 +80,7 @@ export default function FileManager() {
     }
     setPath(to)
   }
-  const showUploads = () => {
-    setActive('uploads')
-    setSelected(new Set())
-  }
+  const showUploads = () => {}
 
   const back = () => {
     if (navIndex > 0) {
@@ -128,27 +123,81 @@ export default function FileManager() {
     })
   }
   const clearSelection = () => setSelected(new Set())
-
-  const sidebarItems: SidebarItem[] = [
-    { id: 'home', label: '主文件夹', icon: '🏠', onClick: () => goto('/', 'home') },
-    { id: 'recent', label: '最近访问', icon: '🕒', onClick: () => goto('/Recent', 'recent') },
-    { id: 'appdata', label: '应用文件', icon: '⚙️', onClick: () => goto('/AppData', 'appdata') },
-    { id: 'uploads', label: '上传列表', icon: '☁️', onClick: showUploads },
-    { id: 'trash', label: '回收站', icon: '🗑️', onClick: () => goto('/Trash', 'trash') },
-    { id: 'downloads', label: '下载', icon: '⬇️', onClick: () => goto('/Downloads', 'downloads') },
-    { id: 'documents', label: '文档', icon: '📄', onClick: () => goto('/Documents', 'documents') },
-    { id: 'pictures', label: '图片', icon: '🖼️', onClick: () => goto('/Pictures', 'pictures') },
-    { id: 'music', label: '音乐', icon: '🎵', onClick: () => goto('/Music', 'music') },
-    { id: 'videos', label: '视频', icon: '🎬', onClick: () => goto('/Videos', 'videos') },
-  ]
+  
+  const NavItem = ({ id, icon, label, onClick }: { id: string; icon?: React.ReactNode; label: string; onClick: () => void }) => {
+    const isActive = active === id
+    return (
+      <div
+        onClick={() => {
+          onClick()
+        }}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 12px',
+          borderRadius: 6,
+          cursor: 'pointer',
+          background: isActive ? '#eff6ff' : 'transparent',
+          color: isActive ? '#2563eb' : '#374151',
+          fontWeight: isActive ? 500 : 400,
+          marginBottom: 2,
+          fontSize: 14,
+          transition: 'all 0.2s'
+        }}
+      >
+        {icon && (
+          <span style={{ 
+            fontSize: 16, 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center',
+            width: 20,
+            opacity: isActive ? 1 : 0.7
+          }}>
+            {icon}
+          </span>
+        )}
+        <span>{label}</span>
+      </div>
+    )
+  }
 
   return (
     <div style={{ display: 'flex', height: '100%' }}>
-      <Sidebar
-        width={200}
-        items={sidebarItems}
-        activeId={active}
-      />
+      <div
+        style={{
+          width: 220,
+          borderRight: '1px solid #e5e7eb',
+          background: '#f9fafb',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ flex: 1, padding: 8, overflowY: 'auto' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', margin: '8px 12px' }}>文件</div>
+          <NavItem id="home" icon="📁" label="我的文件" onClick={() => goto('/', 'home')} />
+          <NavItem id="team" icon="👥" label="团队文件" onClick={() => goto('/Team', 'team')} />
+          <NavItem id="appdata" icon="⚙️" label="应用文件" onClick={() => goto('/AppData', 'appdata')} />
+
+          <div style={{ height: 8 }} />
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', margin: '8px 12px' }}>共享</div>
+          <NavItem id="shared-with-me" icon="📨" label="他人共享" onClick={() => goto('/SharedWithMe', 'shared-with-me')} />
+          <NavItem id="my-shares" icon="📤" label="我的共享" onClick={() => goto('/MyShares', 'my-shares')} />
+          <NavItem id="public-links" icon="🔗" label="外链分享" onClick={() => goto('/PublicLinks', 'public-links')} />
+
+          <div style={{ height: 8 }} />
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', margin: '8px 12px' }}>快捷</div>
+          <NavItem id="recent" icon="🕒" label="最近访问" onClick={() => goto('/Recent', 'recent')} />
+          <NavItem id="favorites" icon="⭐" label="我的收藏" onClick={() => goto('/Favorites', 'favorites')} />
+
+          <div style={{ height: 8 }} />
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', margin: '8px 12px' }}>系统</div>
+          <NavItem id="trash" icon="🗑️" label="回收站" onClick={() => goto('/Trash', 'trash')} />
+        </div>
+      </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: 8, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
           <button
@@ -241,14 +290,14 @@ export default function FileManager() {
               if (!files || files.length === 0) return
               for (const f of Array.from(files)) {
                 const id = `${f.name}-${Date.now()}`
-                setUploads(u => [...u, { id, name: f.name, dir: path, progress: 0, speed: 0, total: f.size, status: 'uploading' }])
+                pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, status: 'running' })
                 try {
                   await api.fsUpload(path, f, (info) => {
-                    setUploads(u => u.map(x => x.id === id ? { ...x, progress: info.percent, speed: info.bps ?? 0, total: info.total } : x))
+                    updateFileTask(id, { progress: info.percent, total: info.total })
                   })
-                  setUploads(u => u.map(x => x.id === id ? { ...x, progress: 100, status: 'done' } : x))
+                  updateFileTask(id, { progress: 100, status: 'done' })
                 } catch {
-                  setUploads(u => u.map(x => x.id === id ? { ...x, status: 'error' } : x))
+                  updateFileTask(id, { status: 'error' })
                 }
               }
               const rs = await api.fsList(path)
@@ -305,7 +354,10 @@ export default function FileManager() {
             const names = [...selected]
             for (const n of names) {
               const p = path.endsWith('/') ? `${path}${n}` : `${path}/${n}`
+              const id = `del-${n}-${Date.now()}`
+              pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
               await api.fsDelete(p)
+              updateFileTask(id, { status: 'done' })
             }
             const rs = await api.fsList(path)
             setEntries(rs.entries)
@@ -324,49 +376,7 @@ export default function FileManager() {
           </span>
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827' }}>
-          {active === 'uploads' ? (
-            <div style={{ border: '1px solid var(--win-border)', borderRadius: 8, padding: 8, background: '#fff' }}>
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <strong>上传列表</strong>
-                <button
-                  className="puter-button"
-                  style={{ height: 24, marginLeft: 'auto' }}
-                  onClick={() => setUploads(u => u.filter(x => x.status === 'uploading'))}
-                >
-                  清除已完成
-                </button>
-              </div>
-              <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
-                {uploads.length === 0 ? (
-                  <div style={{ color: 'var(--muted)' }}>暂无上传任务</div>
-                ) : (
-                  uploads.map(u => (
-                    <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px 60px 90px', alignItems: 'center', gap: 8 }}>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{u.dir}</div>
-                      <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
-                        <div style={{ width: `${u.progress}%`, height: '100%', background: '#60a5fa' }} />
-                      </div>
-                      <div style={{ textAlign: 'right', color: u.status === 'error' ? '#ef4444' : '#111827' }}>
-                        {u.status === 'error' ? '失败' : `${u.progress}%`}
-                      </div>
-                      <div style={{ textAlign: 'right', color: '#111827' }}>
-                        {(() => {
-                          const bps = u.speed || 0
-                          if (!bps) return '-'
-                          const kb = bps / 1024
-                          const mb = kb / 1024
-                          if (mb >= 1) return `${mb.toFixed(2)} MB/s`
-                          if (kb >= 1) return `${kb.toFixed(0)} KB/s`
-                          return `${bps.toFixed(0)} B/s`
-                        })()}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          ) : loading ? (
+          {loading ? (
             <div>加载中…</div>
           ) : view === 'list' ? (
             <table style={{ width: '100%' }}>

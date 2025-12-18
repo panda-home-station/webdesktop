@@ -286,6 +286,53 @@ export const api = {
     })
     return r.data as Blob
   },
+  // Task API
+  async getTasks() {
+    try {
+      const r = await axios.get(`${base}/api/tasks`)
+      return r.data as {
+        id: string
+        type: string
+        name: string
+        dir?: string
+        progress: number
+        status: string
+      }[]
+    } catch {
+      return []
+    }
+  },
+  async createTask(task: {
+    id: string
+    type: string
+    name: string
+    dir?: string
+    progress: number
+    status: string
+  }) {
+    try {
+      await axios.post(`${base}/api/tasks`, task)
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  },
+  async updateTask(id: string, patch: { progress?: number; status?: string }) {
+    try {
+      await axios.post(`${base}/api/tasks/${id}`, patch)
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  },
+  async clearTasks() {
+    try {
+      await axios.post(`${base}/api/tasks/clear`)
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  },
   isOffline() {
     return offline
   }
