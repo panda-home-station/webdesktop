@@ -200,19 +200,21 @@ function DeviceInfo({ info }: { info: any }) {
         ) : (
           <div style={{ display: 'flex' }}>
             <button
-              onClick={() => setCloudAccount({ email: 'zac@panda.com', type: 'Pro 用户' })}
+              onClick={() => {}}
+              disabled
               style={{
                 background: '#2563eb',
                 color: '#fff',
                 border: 'none',
                 padding: '2px 8px',
                 borderRadius: 4,
-                cursor: 'pointer',
+                cursor: 'not-allowed',
                 fontSize: 12,
                 fontWeight: 500,
                 height: 21.33,
                 display: 'flex',
                 alignItems: 'center',
+                opacity: 0.5,
               }}
             >
               点击登录
@@ -236,19 +238,21 @@ function DeviceInfo({ info }: { info: any }) {
         ) : (
           <div style={{ display: 'flex' }}>
             <button
-              onClick={() => setCloudConnect({ id: 'pnas-8848-007', server: 'cn-sh-01' })}
+              onClick={() => {}}
+              disabled
               style={{
                 background: '#2563eb',
                 color: '#fff',
                 border: 'none',
                 padding: '2px 8px',
                 borderRadius: 4,
-                cursor: 'pointer',
+                cursor: 'not-allowed',
                 fontSize: 12,
                 fontWeight: 500,
                 height: 21.33,
                 display: 'flex',
                 alignItems: 'center',
+                opacity: 0.5,
               }}
             >
               点击绑定
