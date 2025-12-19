@@ -11,11 +11,14 @@ export default function FileManager() {
   const [active, setActive] = useState<string>('home')
   const [view, setView] = useState<'list' | 'grid'>('list')
   const [sortKey, setSortKey] = useState<'name' | 'size' | 'modified_ts'>('name')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [showSortMenu, setShowSortMenu] = useState<boolean>(false)
   const [q, setQ] = useState<string>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [navHist, setNavHist] = useState<string[]>(['/'])
   const [navIndex, setNavIndex] = useState<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const sortButtonRef = useRef<HTMLButtonElement | null>(null)
   useEffect(() => {
     let mounted = true
     const load = async () => {
@@ -33,6 +36,21 @@ export default function FileManager() {
       mounted = false
     }
   }, [path])
+
+  // 处理点击外部区域关闭排序菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (sortButtonRef.current && !sortButtonRef.current.contains(event.target as Node)) {
+        setShowSortMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const navigate = (to: string) => {
     const target = to || '/'
     setSelected(new Set())
@@ -106,13 +124,20 @@ export default function FileManager() {
   const filtered = useMemo(() => {
     const base = [...entries]
     base.sort((a, b) => {
-      if (sortKey === 'name') return a.name.localeCompare(b.name)
-      if (sortKey === 'size') return (a.size || 0) - (b.size || 0)
-      return (a.modified_ts || 0) - (b.modified_ts || 0)
+      let comparison = 0;
+      if (sortKey === 'name') {
+        comparison = a.name.localeCompare(b.name)
+      } else if (sortKey === 'size') {
+        comparison = (a.size || 0) - (b.size || 0)
+      } else {
+        comparison = (a.modified_ts || 0) - (b.modified_ts || 0)
+      }
+      
+      return sortOrder === 'asc' ? comparison : -comparison
     })
     const qq = q.trim().toLowerCase()
     return qq ? base.filter(e => e.name.toLowerCase().includes(qq)) : base
-  }, [entries, sortKey, q])
+  }, [entries, sortKey, sortOrder, q])
 
   const toggleSelect = (name: string) => {
     setSelected(prev => {
@@ -366,12 +391,214 @@ export default function FileManager() {
           }}>删除</button>
           <button className="puter-button" style={{ height: 28 }} onClick={() => alert('更多功能即将上线')}>更多</button>
           <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <label>排序</label>
-            <select value={sortKey} onChange={e => setSortKey(e.target.value as any)} style={{ height: 28 }}>
-              <option value="name">名称</option>
-              <option value="size">大小</option>
-              <option value="modified_ts">时间</option>
-            </select>
+            <div style={{ position: 'relative' }} ref={sortButtonRef}>
+              <button 
+                className="puter-button" 
+                style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }}
+                onClick={() => setShowSortMenu(!showSortMenu)}
+                title="排序"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <g clipPath="url(#clip0_18_14325)">
+                    <path d="M6 4a1 1 0 112 0v13.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.338.068l-.076-.068-4-4-.069-.076a1 1 0 011.407-1.406l.076.068L6 17.586V4zm9 7a1 1 0 110 2h-4a1 1 0 110-2h4zm3-4a1 1 0 010 2h-7a1 1 0 110-2h7zm3-4a1 1 0 010 2H11a1 1 0 110-2h10z"></path>
+                  </g>
+                  <defs>
+                    <clipPath id="clip0_18_14325">
+                      <rect width="24" height="24"></rect>
+                    </clipPath>
+                  </defs>
+                </svg>
+              </button>
+              
+              {showSortMenu && (
+                <ul 
+                  role="menu" 
+                  aria-orientation="vertical" 
+                  className="semi-dropdown-menu"
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    minWidth: 120,
+                    background: 'white',
+                    border: '1px solid #e5e7eb',
+                    borderRadius: 8,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                    padding: '4px 0',
+                    margin: '4px 0',
+                    zIndex: 1000,
+                    listStyle: 'none'
+                  }}
+                >
+                  {/* 排序字段选项 */}
+                  <li 
+                    role="menuitem" 
+                    tabIndex={0} 
+                    aria-disabled="false" 
+                    className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'name' ? 'semi-dropdown-item-active' : ''}`}
+                    onClick={() => setSortKey('name')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      color: '#111827'
+                    }}
+                  >
+                    <span 
+                      role="img" 
+                      aria-label="tick" 
+                      className="semi-icon semi-icon-default semi-icon-tick"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        marginRight: 8,
+                        color: sortKey === 'name' ? 'currentColor' : 'transparent'
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" focusable="false" aria-hidden="true">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
+                      </svg>
+                    </span>
+                    文件名
+                  </li>
+                  <li 
+                    role="menuitem" 
+                    tabIndex={-1} 
+                    aria-disabled="false" 
+                    className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'modified_ts' ? 'semi-dropdown-item-active' : ''}`}
+                    onClick={() => setSortKey('modified_ts')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      color: '#111827'
+                    }}
+                  >
+                    <span 
+                      role="img" 
+                      aria-label="tick" 
+                      className="semi-icon semi-icon-default semi-icon-tick"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        marginRight: 8,
+                        color: sortKey === 'modified_ts' ? 'currentColor' : 'transparent'
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" focusable="false" aria-hidden="true">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
+                      </svg>
+                    </span>
+                    修改时间
+                  </li>
+                  <li 
+                    role="menuitem" 
+                    tabIndex={-1} 
+                    aria-disabled="false" 
+                    className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'size' ? 'semi-dropdown-item-active' : ''}`}
+                    onClick={() => setSortKey('size')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      color: '#111827'
+                    }}
+                  >
+                    <span 
+                      role="img" 
+                      aria-label="tick" 
+                      className="semi-icon semi-icon-default semi-icon-tick"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        marginRight: 8,
+                        color: sortKey === 'size' ? 'currentColor' : 'transparent'
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" focusable="false" aria-hidden="true">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
+                      </svg>
+                    </span>
+                    大小
+                  </li>
+                  
+                  {/* 分割线 */}
+                  <div className="semi-dropdown-divider" style={{ height: 1, background: '#e5e7eb', margin: '4px 0' }}></div>
+                  
+                  {/* 排序顺序选项 */}
+                  <li 
+                    role="menuitem" 
+                    tabIndex={-1} 
+                    aria-disabled="false" 
+                    className={`semi-dropdown-item semi-dropdown-item-withTick ${sortOrder === 'asc' ? 'semi-dropdown-item-active' : ''}`}
+                    onClick={() => setSortOrder('asc')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      color: '#111827'
+                    }}
+                  >
+                    <span 
+                      role="img" 
+                      aria-label="tick" 
+                      className="semi-icon semi-icon-default semi-icon-tick"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        marginRight: 8,
+                        color: sortOrder === 'asc' ? 'currentColor' : 'transparent'
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" focusable="false" aria-hidden="true">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
+                      </svg>
+                    </span>
+                    升序
+                  </li>
+                  <li 
+                    role="menuitem" 
+                    tabIndex={-1} 
+                    aria-disabled="false" 
+                    className={`semi-dropdown-item semi-dropdown-item-withTick ${sortOrder === 'desc' ? 'semi-dropdown-item-active' : ''}`}
+                    onClick={() => setSortOrder('desc')}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      fontSize: 14,
+                      color: '#111827'
+                    }}
+                  >
+                    <span 
+                      role="img" 
+                      aria-label="tick" 
+                      className="semi-icon semi-icon-default semi-icon-tick"
+                      style={{
+                        width: 16,
+                        height: 16,
+                        marginRight: 8,
+                        color: sortOrder === 'desc' ? 'currentColor' : 'transparent'
+                      }}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" focusable="false" aria-hidden="true">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
+                      </svg>
+                    </span>
+                    降序
+                  </li>
+                </ul>
+              )}
+            </div>
             <button className="puter-button" style={{ height: 28 }} onClick={() => setView('list')}>列显示</button>
             <button className="puter-button" style={{ height: 28 }} onClick={() => setView('grid')}>大图标显示</button>
           </span>
