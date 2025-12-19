@@ -73,8 +73,29 @@
   padding: 6px 10px;
 }
 
-.dock-item {
-  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+/* 紧密相邻的按钮组样式 */
+.button-group {
+  display: flex;
+  gap: 0;
+}
+
+.button-group .puter-button {
+  border-radius: 0;
+  border-right-width: 0;
+  margin-right: 0;
+  padding: 6px 8px;
+}
+.button-group .puter-button:first-child {
+  border-top-left-radius: 10px;
+  border-bottom-left-radius: 10px;
+}
+
+.button-group .puter-button:last-child {
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border-right-width: 1px;
+}
+.dock-item {  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
 }
 .dock-item:hover {
   transform: scale(1.12);

@@ -200,35 +200,36 @@ export default function FileManager() {
       </div>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: 8, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
-          <button
-            className="puter-button"
-            style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={back}
-            disabled={navIndex === 0}
-            title="后退"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
-          <button
-            className="puter-button"
-            style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-            onClick={forward}
-            disabled={navIndex >= navHist.length - 1}
-            title="前进"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          <div className="button-group">
+            <button
+              className="puter-button"
+              style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              onClick={back}
+              disabled={navIndex === 0}
+              title="后退"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              className="puter-button"
+              style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+              onClick={forward}
+              disabled={navIndex >= navHist.length - 1}
+              title="前进"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
           <button
             className="puter-button"
             style={{ height: 28, width: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
             onClick={refresh}
             title="刷新"
-          >
-            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          >            <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 6v-3l4 4-4 4V8a4 4 0 1 0 4 4h2a6 6 0 1 1-6-6z" fill="currentColor" />
             </svg>
           </button>
@@ -276,7 +277,7 @@ export default function FileManager() {
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="搜索"
-            style={{ width: 220, height: 28, padding: '0 8px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: '#111827' }}
+            style={{ width: 180, height: 28, padding: '0 8px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: '#111827' }}
           />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
