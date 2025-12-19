@@ -7,7 +7,7 @@ type WinItem = {
   title: string
   minimized?: boolean
   iconUrl?: string
-  appId?: string
+  appId: string
 }
 
 type Props = {
@@ -24,8 +24,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
   const apps = listApps()
   const byApp: Record<string, WinItem[]> = {}
   for (const w of wins) {
-    const aid = w.appId || ''
-    if (!aid) continue
+    const aid = w.appId
     byApp[aid] = byApp[aid] || []
     byApp[aid].push(w)
   }

@@ -11,7 +11,7 @@ type Win = {
   id: string
   title: string
   content: React.ReactNode
-  appId?: string
+  appId: string
   iconUrl?: string
   x?: number
   y?: number
@@ -149,13 +149,16 @@ export default function WindowManager() {
     const pz = getPersistZOrder()
     setZOrder(pz)
     ;(async () => {
+      const seen = new Set<string>()
       for (const w of pw) {
-        if (!w.appId) continue
+        if (seen.has(w.appId)) continue
+        seen.add(w.appId)
         const a = apps.find(x => x.id === w.appId)
         if (!a) continue
         const Comp = await loadApp(a.id)
         const baseId = w.id || `${a.id}-${Date.now()}`
         setWins(x => {
+          if (x.some(xx => xx.appId === w.appId)) return x
           const uid = ensureUniqueId(baseId, x)
           return [...x, { id: uid, title: w.title || a.title, content: <Comp />, appId: a.id, iconUrl: w.iconUrl ?? a.iconUrl, x: w.x ?? 60, y: w.y ?? 60, w: w.w ?? 600, h: w.h ?? 400, minimized: !!w.minimized, maximized: !!w.maximized }]
         })
@@ -238,8 +241,15 @@ export default function WindowManager() {
   }, [minimize, toggleMaximize, close])
 
   React.useEffect(() => {
-    const ws = wins.map(w => ({ id: w.id, title: w.title, appId: w.appId, iconUrl: w.iconUrl, x: w.x, y: w.y, w: w.w, h: w.h, minimized: w.minimized, maximized: w.maximized }))
-    setPersistWins(ws)
+    const raw = wins.map(w => ({ id: w.id, title: w.title, appId: w.appId, iconUrl: w.iconUrl, x: w.x, y: w.y, w: w.w, h: w.h, minimized: w.minimized, maximized: w.maximized }))
+    const uniq: typeof raw = []
+    const seen = new Set<string>()
+    for (const w of raw) {
+      if (seen.has(w.appId)) continue
+      seen.add(w.appId)
+      uniq.push(w)
+    }
+    setPersistWins(uniq)
   }, [wins])
 
   React.useEffect(() => {

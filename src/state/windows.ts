@@ -1,7 +1,7 @@
 type WinPersist = {
   id: string
   title: string
-  appId?: string
+  appId: string
   iconUrl?: string
   x?: number
   y?: number
@@ -17,7 +17,9 @@ const KEY_Z = 'desktop:zorder'
 export function getPersistWins(): WinPersist[] {
   try {
     const s = localStorage.getItem(KEY_WINS)
-    return s ? JSON.parse(s) : []
+    const arr = s ? JSON.parse(s) : []
+    if (!Array.isArray(arr)) return []
+    return arr.filter((w: any) => typeof w?.appId === 'string' && w.appId.length > 0)
   } catch {
     return []
   }
