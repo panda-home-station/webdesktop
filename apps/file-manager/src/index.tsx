@@ -19,6 +19,15 @@ export default function FileManager() {
   const [navIndex, setNavIndex] = useState<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [colWidths, setColWidths] = useState<Record<string, number>>({
+    name: 260,
+    modified: 160,
+    type: 100,
+    size: 120,
+    created: 160,
+    owner: 120,
+  })
+  const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
   useEffect(() => {
     let mounted = true
     const load = async () => {
@@ -148,6 +157,47 @@ export default function FileManager() {
     })
   }
   const clearSelection = () => setSelected(new Set())
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem('fm:colWidths')
+      if (s) {
+        const obj = JSON.parse(s)
+        if (obj && typeof obj === 'object') {
+          setColWidths((prev) => ({ ...prev, ...obj }))
+        }
+      }
+    } catch {}
+  }, [])
+  useEffect(() => {
+    try {
+      localStorage.setItem('fm:colWidths', JSON.stringify(colWidths))
+    } catch {}
+  }, [colWidths])
+  useEffect(() => {
+    const total = filtered.length
+    const sel = selected.size
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = sel > 0 && sel < total
+      headerCheckboxRef.current.checked = total > 0 && sel === total
+    }
+  }, [selected, filtered])
+  const startResize = (key: keyof typeof colWidths, e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const startX = e.clientX
+    const startW = colWidths[key]
+    const onMove = (ev: MouseEvent) => {
+      const dx = ev.clientX - startX
+      const next = Math.max(60, startW + dx)
+      setColWidths((cw) => ({ ...cw, [key]: next }))
+    }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+  }
   
   const NavItem = ({ id, icon, label, onClick }: { id: string; icon?: React.ReactNode; label: string; onClick: () => void }) => {
     const isActive = active === id
@@ -335,14 +385,14 @@ export default function FileManager() {
           />
           <button
             className="puter-button"
-            style={{ height: 28 }}
+            style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}
             onClick={() => fileInputRef.current?.click()}
           >
             上传
           </button>
           <button
             className="puter-button"
-            style={{ height: 28 }}
+            style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }}
             onClick={async () => {
               const name = prompt('新建文件夹名称')
               if (!name) return
@@ -356,7 +406,7 @@ export default function FileManager() {
           >
             新建文件夹
           </button>
-          <button className="puter-button" style={{ height: 28 }} disabled={selected.size === 0 || [...selected].every(n => entries.find(e => e.name === n)?.is_dir)} onClick={async () => {
+          <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} disabled={selected.size === 0 || [...selected].every(n => entries.find(e => e.name === n)?.is_dir)} onClick={async () => {
             const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
             if (names.length === 0) return
             const first = names[0]
@@ -376,7 +426,7 @@ export default function FileManager() {
               alert('下载失败，请稍后重试')
             }
           }}>下载</button>
-          <button className="puter-button" style={{ height: 28 }} onClick={async () => {
+          <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} onClick={async () => {
             const names = [...selected]
             for (const n of names) {
               const p = path.endsWith('/') ? `${path}${n}` : `${path}/${n}`
@@ -389,7 +439,7 @@ export default function FileManager() {
             setEntries(rs.entries)
             clearSelection()
           }}>删除</button>
-          <button className="puter-button" style={{ height: 28 }} onClick={() => alert('更多功能即将上线')}>更多</button>
+          <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} onClick={() => alert('更多功能即将上线')}>更多</button>
           <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <div style={{ position: 'relative' }} ref={sortButtonRef}>
               <button 
@@ -660,24 +710,82 @@ export default function FileManager() {
             </div>
           </span>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827' }}>
-          {loading ? (
-            <div>加载中…</div>
-          ) : view === 'list' ? (
-            <table style={{ width: '100%' }}>
+        <style>{`
+          #fm-list-container::-webkit-scrollbar { display: none; }
+        `}</style>
+        <div id="fm-list-container" style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827', fontSize: 14 }}>
+          {view === 'list' ? (<>
+            <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
               <thead>
-                <tr>
-                  <th style={{ textAlign: 'left' }}>名称</th>
-                  <th style={{ textAlign: 'left' }}>类型</th>
-                  <th style={{ textAlign: 'right' }}>大小</th>
-                  <th style={{ textAlign: 'right' }}>修改时间</th>
+                <tr style={{ borderTop: '2px solid #d1d5db', borderBottom: '2px solid #d1d5db', height: 36 }}>
+                  <th style={{ textAlign: 'left', width: colWidths.name, position: 'relative' }}>
+                    <div className="flex items-center justify-between" style={{ display: 'flex', alignItems: 'center' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <input
+                          ref={headerCheckboxRef}
+                          type="checkbox"
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelected(new Set(filtered.map(f => f.name)))
+                            } else {
+                              clearSelection()
+                            }
+                          }}
+                        />
+                        <span>文件名</span>
+                      </label>
+                    </div>
+                    <div
+                      onMouseDown={(e) => startResize('name', e)}
+                      style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }}
+                    />
+                  </th>
+                  <th style={{ textAlign: 'left', width: colWidths.modified, position: 'relative' }}>
+                    <div className="flex items-center justify-between" style={{ display: 'flex', alignItems: 'center' }}>
+                      修改时间
+                    </div>
+                    <div onMouseDown={(e) => startResize('modified', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
+                  </th>
+                  <th style={{ textAlign: 'left', width: colWidths.type, position: 'relative' }}>
+                    <div className="flex items-center justify-between" style={{ display: 'flex', alignItems: 'center' }}>
+                      类型
+                    </div>
+                    <div onMouseDown={(e) => startResize('type', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
+                  </th>
+                  <th style={{ textAlign: 'right', width: colWidths.size, position: 'relative' }}>
+                    <div className="flex items-center justify-between" style={{ display: 'flex', alignItems: 'center' }}>
+                      大小
+                    </div>
+                    <div onMouseDown={(e) => startResize('size', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
+                  </th>
+                  <th style={{ textAlign: 'left', width: colWidths.created, position: 'relative' }}>
+                    <div className="flex items-center justify-between" style={{ display: 'flex', alignItems: 'center' }}>
+                      创建时间
+                    </div>
+                    <div onMouseDown={(e) => startResize('created', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
+                  </th>
+                  <th style={{ textAlign: 'left', width: colWidths.owner, position: 'relative' }}>
+                    <div className="flex items-center justify-between" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span>所有者</span>
+                      <button
+                        className="puter-button"
+                        title="字段设置"
+                        style={{ height: 24, width: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.4 4a7.4 7.4 0 01-.2 1.8l2.1 1.6-2 3.5-2.5-1a7.6 7.6 0 01-1.6 1l-.4 2.6h-4l-.4-2.6a7.6 7.6 0 01-1.6-1l-2.5 1-2-3.5 2.1-1.6a7.4 7.4 0 01-.2-1.8c0-.6.1-1.2.2-1.8L2.5 8.6l2-3.5 2.5 1c.5-.4 1-.7 1.6-1l.4-2.6h4l.4 2.6c.6.3 1.1.6 1.6 1l2.5-1 2 3.5-2.1 1.6c.1.6.2 1.2.2 1.8z"/>
+                        </svg>
+                      </button>
+                    </div>
+                    <div onMouseDown={(e) => startResize('owner', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((e) => (
                   <tr
                     key={`${path}/${e.name}`}
-                    style={{ background: selected.has(e.name) ? 'rgba(0,0,0,0.06)' : undefined, cursor: 'pointer' }}
+                    style={{ background: selected.has(e.name) ? 'rgba(0,0,0,0.06)' : undefined, cursor: 'pointer', borderBottom: '1px solid #e5e7eb', height: 36 }}
                     onClick={() => toggleSelect(e.name)}
                     onDoubleClick={() => {
                       if (e.is_dir) {
@@ -686,17 +794,20 @@ export default function FileManager() {
                       }
                     }}
                   >
-                    <td>
+                    <td style={{ width: colWidths.name, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>
                       <span style={{ color: e.is_dir ? '#2563eb' : '#111827' }}>{e.name}</span>
                     </td>
-                    <td>{e.is_dir ? '目录' : '文件'}</td>
-                    <td style={{ textAlign: 'right' }}>{e.is_dir ? '-' : e.size}</td>
-                    <td style={{ textAlign: 'right' }}>{fmtTime(e.modified_ts)}</td>
+                    <td style={{ width: colWidths.modified, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{fmtTime(e.modified_ts)}</td>
+                    <td style={{ width: colWidths.type, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{e.is_dir ? '目录' : '文件'}</td>
+                    <td style={{ width: colWidths.size, textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{e.is_dir ? '-' : e.size}</td>
+                    <td style={{ width: colWidths.created, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{'-'}</td>
+                    <td style={{ width: colWidths.owner, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{'-'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          ) : (
+            
+          </>) : (<>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 12 }}>
               {filtered.map(e => (
                 <div
@@ -739,7 +850,11 @@ export default function FileManager() {
                 </div>
               ))}
             </div>
-          )}
+            
+          </>)}
+        </div>
+        <div style={{ height: 32, display: 'flex', alignItems: 'center', padding: '0 8px', color: '#6b7280', borderTop: '1px solid #e5e7eb', fontSize: 14 }}>
+          共 {filtered.length} 项
         </div>
       </div>
     </div>
