@@ -599,8 +599,65 @@ export default function FileManager() {
                 </ul>
               )}
             </div>
-            <button className="puter-button" style={{ height: 28 }} onClick={() => setView('list')}>列显示</button>
-            <button className="puter-button" style={{ height: 28 }} onClick={() => setView('grid')}>大图标显示</button>
+            <div title="切换列表视图" className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 2px', border: '1px solid var(--button-border)', borderRadius: 8, background: 'var(--button-bg)' }}>
+              <div 
+                className="relative box-border flex shrink-0 items-center overflow-hidden rounded-full transition-all px-0.5 justify-end cursor-pointer bg-brand w-7.5 h-4 !rounded-[6px] !bg-[var(--semi-color-fill-0)] border border-solid border-[#68778d14] !w-[52px] !h-[28px]"
+                style={{ 
+                  display: 'flex',
+                  alignItems: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  width: 48,
+                  height: 24,
+                  borderRadius: 6,
+                  background: view === 'grid' ? 'var(--button-bg)' : 'var(--semi-color-primary)',
+                  justifyContent: 'flex-start',
+                  transition: 'background-color 180ms ease'
+                }}
+                onClick={() => setView(view === 'list' ? 'grid' : 'list')}
+                role="switch"
+                aria-checked={view === 'list'}
+                aria-label="切换显示样式"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setView(view === 'list' ? 'grid' : 'list')
+                  }
+                }}
+              >
+                <div className="pointer-events-none absolute left-0 top-0 z-10 size-full box-border flex flex-row items-center justify-center gap-1 px-1" style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '0 4px', zIndex: 0, pointerEvents: 'none' }}>
+                  <div className="flex size-7 items-center justify-center" style={{ display: 'flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center', opacity: view === 'list' ? 1 : 0.5 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" className="size-4 text-[var(--semi-color-text-1)]">
+                      <g clipPath="url(#clip0_18_14350)">
+                        <path d="M3.01 17l.102.005a1 1 0 010 1.99L3.01 19H3a1 1 0 110-2h.01zM21 17a1 1 0 110 2H8a1 1 0 110-2h13zM3.01 11l.102.005a1 1 0 010 1.99L3.01 13H3a1 1 0 110-2h.01zM21 11a1 1 0 110 2H8a1 1 0 110-2h13zM3.01 5l.102.005a1 1 0 010 1.99L3.01 7H3a1 1 0 010-2h.01zM21 5a1 1 0 110 2H8a1 1 0 010-2h13z"></path>
+                      </g>
+                      <defs>
+                        <clipPath id="clip0_18_14350">
+                          <rect width="24" height="24"></rect>
+                        </clipPath>
+                      </defs>
+                    </svg>
+                  </div>
+                  <div className="flex size-7 items-center justify-center" style={{ display: 'flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center', opacity: view === 'grid' ? 1 : 0.5 }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor" className="size-4 text-[var(--semi-color-text-1)]">
+                      <path fillRule="evenodd" clipRule="evenodd" d="M2 4a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm7 0H4v5h5V4zm4 0a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2h-5a2 2 0 01-2-2V4zm7 0h-5v5h5V4zM2 15a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2v-5zm7 0H4v5h5v-5zm4 0a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2h-5a2 2 0 01-2-2v-5zm7 0h-5v5h5v-5z"></path>
+                    </svg>
+                  </div>
+                </div>
+                <div 
+                  className="flex items-center justify-center rounded-full size-3 !rounded-[6px] !bg-[var(--semi-color-bg-1)] !w-[24px] !h-[24px] bg-[var(--semi-color-bg-1)]"
+                  style={{ 
+                    filter: 'drop-shadow(rgba(32, 35, 39, 0.12) 0px 0.667px 1.333px)',
+                    transform: view === 'list' ? 'translateX(2px)' : 'translateX(22px)',
+                    transformOrigin: '50% 50% 0px',
+                    position: 'relative',
+                    zIndex: 1,
+                    transition: 'transform 180ms ease'
+                  }}
+                ></div>
+              </div>
+            </div>
           </span>
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827' }}>
