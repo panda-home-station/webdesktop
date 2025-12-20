@@ -1,5 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react'
 
+function usePress() {
+  const [pressed, setPressed] = useState(false)
+  return {
+    pressed,
+    onMouseDown: () => setPressed(true),
+    onMouseUp: () => setPressed(false),
+    onMouseLeave: () => setPressed(false),
+  }
+}
+
 export default function Toolbar({
   back,
   forward,
@@ -95,12 +105,88 @@ export default function Toolbar({
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="搜索" style={{ width: 180, height: 28, padding: '0 8px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: '#111827' }} />
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
+        {/** 点击动画 */}
+        {/** 上传 */}
+        {/** 新建文件夹 */}
+        {/** 下载 */}
+        {/** 删除 */}
+        {/** 更多 */}
         <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={(e) => { const files = e.target.files; if (files && files.length) onUploadFiles(files); if (fileInputRef.current) fileInputRef.current.value = '' }} />
-        <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} onClick={() => fileInputRef.current?.click()}>上传</button>
-        <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} onClick={onCreateFolder}>新建文件夹</button>
-        <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} onClick={onDownloadSelected}>下载</button>
-        <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} onClick={onDeleteSelected}>删除</button>
-        <button className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px' }} onClick={() => alert('更多功能即将上线')}>更多</button>
+        {(() => {
+          const press = usePress()
+          return (
+            <button
+              className="puter-button"
+              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
+              onMouseDown={press.onMouseDown}
+              onMouseUp={press.onMouseUp}
+              onMouseLeave={press.onMouseLeave}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              上传
+            </button>
+          )
+        })()}
+        {(() => {
+          const press = usePress()
+          return (
+            <button
+              className="puter-button"
+              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
+              onMouseDown={press.onMouseDown}
+              onMouseUp={press.onMouseUp}
+              onMouseLeave={press.onMouseLeave}
+              onClick={onCreateFolder}
+            >
+              新建文件夹
+            </button>
+          )
+        })()}
+        {(() => {
+          const press = usePress()
+          return (
+            <button
+              className="puter-button"
+              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
+              onMouseDown={press.onMouseDown}
+              onMouseUp={press.onMouseUp}
+              onMouseLeave={press.onMouseLeave}
+              onClick={onDownloadSelected}
+            >
+              下载
+            </button>
+          )
+        })()}
+        {(() => {
+          const press = usePress()
+          return (
+            <button
+              className="puter-button"
+              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
+              onMouseDown={press.onMouseDown}
+              onMouseUp={press.onMouseUp}
+              onMouseLeave={press.onMouseLeave}
+              onClick={onDeleteSelected}
+            >
+              删除
+            </button>
+          )
+        })()}
+        {(() => {
+          const press = usePress()
+          return (
+            <button
+              className="puter-button"
+              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
+              onMouseDown={press.onMouseDown}
+              onMouseUp={press.onMouseUp}
+              onMouseLeave={press.onMouseLeave}
+              onClick={() => alert('更多功能即将上线')}
+            >
+              更多
+            </button>
+          )
+        })()}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <div style={{ position: 'relative' }}>
             <button ref={sortButtonRef} className="puter-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={() => setShowSortMenu(!showSortMenu)} title="排序">
