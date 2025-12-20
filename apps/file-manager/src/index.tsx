@@ -25,11 +25,11 @@ export default function FileManager() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
   const [colWidths, setColWidths] = useState<Record<string, number>>({
-    name: 260,
-    modified: 160,
-    type: 100,
-    size: 120,
-    created: 160,
+    name: 172,
+    modified: 149,
+    type: 60,
+    size: 85,
+    created: 105,
     owner: 120,
   })
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
@@ -97,6 +97,16 @@ export default function FileManager() {
   const fmtTime = (ts: number) => {
     if (!ts) return '-'
     return new Date(ts * 1000).toLocaleString()
+  }
+  const fmtSize = (bytes: number) => {
+    if (bytes === undefined || bytes === null) return '-'
+    if (bytes < 1024) return `${bytes} B`
+    const kb = bytes / 1024
+    if (kb < 1024) return `${Math.round(kb)} KB`
+    const mb = kb / 1024
+    if (mb < 1024) return `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB`
+    const gb = mb / 1024
+    return `${gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10} GB`
   }
 
   const goto = async (to: string, key: string) => {
@@ -302,6 +312,7 @@ export default function FileManager() {
               headerCheckboxRef={headerCheckboxRef}
               toggleSelect={toggleSelect}
               fmtTime={fmtTime}
+              fmtSize={fmtSize}
               onOpenDir={(name) => {
                 const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
                 setPath(next)

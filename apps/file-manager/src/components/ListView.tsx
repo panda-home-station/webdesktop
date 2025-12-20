@@ -11,6 +11,7 @@ export default function ListView({
   headerCheckboxRef,
   toggleSelect,
   fmtTime,
+  fmtSize,
   onOpenDir
 }: {
   path: string
@@ -23,6 +24,7 @@ export default function ListView({
   headerCheckboxRef: React.RefObject<HTMLInputElement>
   toggleSelect: (name: string) => void
   fmtTime: (ts: number) => string
+  fmtSize: (n: number) => string
   onOpenDir: (name: string) => void
 }) {
   return (
@@ -46,26 +48,31 @@ export default function ListView({
                 <span>文件名</span>
               </label>
             </div>
+            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
             <div onMouseDown={(e) => startResize('name', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
           </th>
           <th style={{ textAlign: 'left', width: colWidths.modified, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>修改时间</div>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>修改时间</div>
+            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
             <div onMouseDown={(e) => startResize('modified', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
           </th>
           <th style={{ textAlign: 'left', width: colWidths.type, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>类型</div>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>类型</div>
+            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
             <div onMouseDown={(e) => startResize('type', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
           </th>
-          <th style={{ textAlign: 'right', width: colWidths.size, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>大小</div>
+          <th style={{ textAlign: 'left', width: colWidths.size, position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>大小</div>
+            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
             <div onMouseDown={(e) => startResize('size', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
           </th>
           <th style={{ textAlign: 'left', width: colWidths.created, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>创建时间</div>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>创建时间</div>
+            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
             <div onMouseDown={(e) => startResize('created', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
           </th>
           <th style={{ textAlign: 'left', width: colWidths.owner, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 8 }}>
               <span>所有者</span>
               <button className="puter-button" title="字段设置" style={{ height: 24, width: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -89,14 +96,14 @@ export default function ListView({
               }
             }}
           >
-            <td style={{ width: colWidths.name, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>
+            <td style={{ width: colWidths.name, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 24 }}>
               <span style={{ color: e.is_dir ? '#2563eb' : '#111827' }}>{e.name}</span>
             </td>
-            <td style={{ width: colWidths.modified, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{fmtTime(e.modified_ts)}</td>
-            <td style={{ width: colWidths.type, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{e.is_dir ? '目录' : '文件'}</td>
-            <td style={{ width: colWidths.size, textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{e.is_dir ? '-' : e.size}</td>
-            <td style={{ width: colWidths.created, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{'-'}</td>
-            <td style={{ width: colWidths.owner, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle' }}>{'-'}</td>
+            <td style={{ width: colWidths.modified, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{fmtTime(e.modified_ts)}</td>
+            <td style={{ width: colWidths.type, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{e.is_dir ? '目录' : '文件'}</td>
+            <td style={{ width: colWidths.size, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{e.is_dir ? '-' : fmtSize(e.size)}</td>
+            <td style={{ width: colWidths.created, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{'-'}</td>
+            <td style={{ width: colWidths.owner, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{'-'}</td>
           </tr>
         ))}
       </tbody>
