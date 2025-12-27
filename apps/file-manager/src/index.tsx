@@ -261,18 +261,8 @@ export default function FileManager() {
             if (names.length === 0) return
             const first = names[0]
             const fullPath = path.endsWith('/') ? `${path}${first}` : `${path}/${first}`
-            try {
-              const url = api.fsDownloadUrl(fullPath)
-              const a = document.createElement('a')
-              a.href = url
-              a.download = first
-              a.style.display = 'none'
-              document.body.appendChild(a)
-              a.click()
-              document.body.removeChild(a)
-            } catch {
-              alert('下载失败，请稍后重试')
-            }
+            const url = api.fsDownloadUrl(fullPath)
+            window.open(url, '_blank')
           }}
           onDeleteSelected={async () => {
             const names = [...selected]
