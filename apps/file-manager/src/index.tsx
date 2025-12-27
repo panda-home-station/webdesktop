@@ -262,8 +262,7 @@ export default function FileManager() {
             const first = names[0]
             const fullPath = path.endsWith('/') ? `${path}${first}` : `${path}/${first}`
             try {
-              const blob = await api.fsDownloadBlob(fullPath)
-              const url = URL.createObjectURL(blob)
+              const url = api.fsDownloadUrl(fullPath)
               const a = document.createElement('a')
               a.href = url
               a.download = first
@@ -271,7 +270,6 @@ export default function FileManager() {
               document.body.appendChild(a)
               a.click()
               document.body.removeChild(a)
-              URL.revokeObjectURL(url)
             } catch {
               alert('下载失败，请稍后重试')
             }
