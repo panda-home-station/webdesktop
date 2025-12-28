@@ -17,7 +17,7 @@ export default function Desktop() {
       flexDirection: 'column',
       width: '100vw',
       height: '100vh',
-      background: wallpaper ? `url(${wallpaper}) center/cover no-repeat` : undefined
+      background: wallpaper ? `url(${wallpaper}) center/cover no-repeat` : '#f0f0f0'
     }
     return base
   }, [wallpaper])
