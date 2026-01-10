@@ -19,3 +19,4 @@ pnpm-debug.log*
 *.swp
 src/**/*.js
 src/**/*.js.map
+assets

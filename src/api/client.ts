@@ -333,6 +333,48 @@ export const api = {
       return { ok: false }
     }
   },
+  // Docker API
+  async dockerListContainers() {
+    const r = await axios.get(`${base}/api/docker/containers`)
+    return r.data as {
+      id: string
+      names: string[]
+      image: string
+      state: string
+      status?: string
+      created: number
+      ports: [number, number | null, string | null][]
+    }[]
+  },
+  async dockerListImages() {
+    const r = await axios.get(`${base}/api/docker/images`)
+    return r.data as {
+      id: string
+      repo_tags: string[]
+      size: number
+      created: number
+    }[]
+  },
+  async dockerStart(id: string) {
+    const r = await axios.post(`${base}/api/docker/container/start`, { id })
+    return r.data as { ok: boolean }
+  },
+  async dockerStop(id: string) {
+    const r = await axios.post(`${base}/api/docker/container/stop`, { id })
+    return r.data as { ok: boolean }
+  },
+  async dockerRestart(id: string) {
+    const r = await axios.post(`${base}/api/docker/container/restart`, { id })
+    return r.data as { ok: boolean }
+  },
+  async dockerRemove(id: string) {
+    const r = await axios.post(`${base}/api/docker/container/remove`, { id })
+    return r.data as { ok: boolean }
+  },
+  async dockerPull(image: string, tag?: string) {
+    const r = await axios.post(`${base}/api/docker/image/pull`, { image, tag })
+    return r.data as { ok: boolean }
+  },
   isOffline() {
     return offline
   }

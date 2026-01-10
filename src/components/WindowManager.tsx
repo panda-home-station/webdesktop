@@ -50,7 +50,16 @@ export default function WindowManager() {
     const dockLeft = 6
     const dockWidth = 60
     const openGap = 24
-    const initX = dockLeft + dockWidth + openGap
+    const screenW = window.innerWidth
+    const screenH = window.innerHeight
+    const centerX = Math.round((screenW - (w.w ?? defW)) / 2)
+    const centerY = Math.round((screenH - (w.h ?? defH)) / 2)
+    const offsetX = 120
+    const offsetY = 80
+    const minX = dockLeft + dockWidth + openGap
+    const minY = 60
+    const initX = Math.max(minX, centerX - offsetX)
+    const initY = Math.max(minY, centerY - offsetY)
 
     const existing = winsRef.current.find(ww => ww.appId === w.appId)
     if (existing) {
@@ -63,7 +72,7 @@ export default function WindowManager() {
     setWins(x => {
       const uid = ensureUniqueId(w.id, x)
       newId = uid
-      return [...x, { ...w, id: uid, x: initX, y: 60, w: w.w ?? defW, h: w.h ?? defH }]
+      return [...x, { ...w, id: uid, x: initX, y: initY, w: w.w ?? defW, h: w.h ?? defH }]
     })
     setZOrder(x => [...x.filter(id => id !== newId), newId])
   }, [apps])

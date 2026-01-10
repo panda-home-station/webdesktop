@@ -1,0 +1,12 @@
+{
+  "name": "docker-manager",
+  "title": "Docker 管理",
+  "version": "0.1.0",
+  "capabilities": [],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 1100,
+  "minHeight": 640
+}
