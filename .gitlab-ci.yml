@@ -7,7 +7,7 @@ stages:
 variables:
   APP_ID: "pnas-webdesktop"
   DIST_DIR: "dist"
-  ARTIFACT_TARBALL: "dist/pnas-webdesktop.tar.gz"
+  ARTIFACT_TARBALL: "artifacts/pnas-webdesktop.tar.gz"
   ORAS_ARTIFACT_TYPE: "application/vnd.pnas.webapp"
   ORAS_BLOB_TYPE: "application/vnd.pnas.webapp.tar+gzip"
   HARBOR_REGISTRY: "harbor.pandamicro.com"
@@ -43,7 +43,8 @@ package:tarball:
   needs:
     - job: build:dist
   script:
-    - tar -C "${DIST_DIR}" -czf "${ARTIFACT_TARBALL}" .
+    - mkdir -p "$(dirname "${ARTIFACT_TARBALL}")"
+    - tar --warning=no-file-changed -C "${DIST_DIR}" -czf "${ARTIFACT_TARBALL}" .
   artifacts:
     paths:
       - ${ARTIFACT_TARBALL}
