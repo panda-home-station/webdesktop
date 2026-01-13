@@ -1,0 +1,68 @@
+stages:
+  - test
+  - build
+  - package
+  - publish
+
+variables:
+  APP_ID: "pnas-webdesktop"
+  DIST_DIR: "dist"
+  ARTIFACT_TARBALL: "dist/pnas-webdesktop.tar.gz"
+  ORAS_ARTIFACT_TYPE: "application/vnd.pnas.webapp"
+  ORAS_BLOB_TYPE: "application/vnd.pnas.webapp.tar+gzip"
+  HARBOR_REGISTRY: "harbor.pandamicro.com"
+  HARBOR_NAMESPACE: "phs"
+  HARBOR_REPO: "${HARBOR_NAMESPACE}/${APP_ID}"
+
+test:npm:
+  stage: test
+  image: harbor.pandamicro.com/phs/ci-node-webdesktop:22-alpine
+  before_script:
+    - node -v
+    - npm -v
+  script:
+    - npm ci --no-audit --no-fund
+    - npm run lint || true
+
+build:dist:
+  stage: build
+  image: harbor.pandamicro.com/phs/ci-node-webdesktop:22-alpine
+  script:
+    - npm ci --no-audit --no-fund
+    - npm run build
+  artifacts:
+    paths:
+      - ${DIST_DIR}
+    expire_in: 7 days
+
+package:tarball:
+  stage: package
+  image: harbor.pandamicro.com/phs/ci-node-webdesktop:22-alpine
+  needs:
+    - job: build:dist
+  script:
+    - tar -C "${DIST_DIR}" -czf "${ARTIFACT_TARBALL}" .
+  artifacts:
+    paths:
+      - ${ARTIFACT_TARBALL}
+    expire_in: 14 days
+
+publish:oras:
+  stage: publish
+  image: harbor.pandamicro.com/phs/ci-node-webdesktop:22-alpine
+  needs:
+    - job: package:tarball
+  rules:
+    - if: '$CI_COMMIT_TAG'
+    - when: manual
+  script:
+    - |
+      set -euo pipefail
+      HARBOR_USERNAME="${harbor_username:-${HARBOR_USERNAME:-}}"
+      HARBOR_PASSWORD="${harbor_password:-${HARBOR_PASSWORD:-}}"
+      if [ -z "${HARBOR_USERNAME:-}" ]; then echo 'Harbor username missing: set CI variable harbor_username'; exit 1; fi
+      if [ -z "${HARBOR_PASSWORD:-}" ]; then echo 'Harbor password missing: set CI variable harbor_password'; exit 1; fi
+      VERSION="${CI_COMMIT_TAG:-${CI_COMMIT_SHORT_SHA}}"
+      echo "Publish version: ${VERSION}"
+      echo "${HARBOR_PASSWORD}" | oras login "${HARBOR_REGISTRY}" -u "${HARBOR_USERNAME}" --password-stdin --plain-http
+      oras push "${HARBOR_REGISTRY}/${HARBOR_REPO}:v${VERSION}" --artifact-type "${ORAS_ARTIFACT_TYPE}" "${ARTIFACT_TARBALL}:${ORAS_BLOB_TYPE}" --annotation org.opencontainers.image.title="${APP_ID}-v${VERSION}.tar.gz" --annotation org.opencontainers.image.version="${VERSION}" --plain-http
