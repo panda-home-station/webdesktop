@@ -20,6 +20,7 @@ test:npm:
   before_script:
     - node -v
     - npm -v
+    - echo "Using ESBUILD_BINARY_PATH=${ESBUILD_BINARY_PATH:-}"
   script:
     - npm ci --no-audit --no-fund
     - npm run lint || true
@@ -28,6 +29,7 @@ build:dist:
   stage: build
   image: harbor.pandamicro.com/phs/ci-node-webdesktop:22-alpine
   script:
+    - echo "Using ESBUILD_BINARY_PATH=${ESBUILD_BINARY_PATH:-}"
     - npm ci --no-audit --no-fund
     - npm run build
   artifacts:
