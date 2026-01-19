@@ -50,14 +50,7 @@ function mockLoadRoot(): Node {
       root = { type: 'dir', children: {} }
     }
   } else {
-    root = {
-      type: 'dir',
-      children: {
-        Documents: { type: 'dir', children: {} },
-        Pictures: { type: 'dir', children: {} },
-        Downloads: { type: 'dir', children: {} }
-      }
-    }
+    root = { type: 'dir', children: {} }
     localStorage.setItem('mockfs', JSON.stringify(root))
   }
   return root
