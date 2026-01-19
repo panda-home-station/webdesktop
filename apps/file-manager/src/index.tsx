@@ -111,7 +111,17 @@ export default function FileManager() {
 
   const goto = async (to: string, key: string) => {
     setActive(key)
-    if (to !== '/') {
+    const reserved = new Set<string>([
+      '/AppData',
+      '/Favorites',
+      '/MyShares',
+      '/PublicLinks',
+      '/Recent',
+      '/SharedWithMe',
+      '/Team',
+      '/Trash',
+    ])
+    if (to !== '/' && !reserved.has(to)) {
       await api.fsMkdir(to)
     }
     setSelected(new Set())

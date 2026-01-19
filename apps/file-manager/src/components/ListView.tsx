@@ -85,6 +85,11 @@ export default function ListView({
         </tr>
       </thead>
       <tbody>
+        {filtered.length === 0 ? (
+          <tr>
+            <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#6b7280' }}>暂无文件</td>
+          </tr>
+        ) : null}
         {filtered.map((e) => (
           <tr
             key={`${path}/${e.name}`}

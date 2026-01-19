@@ -15,6 +15,9 @@ export default function GridView({
 }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 12 }}>
+      {filtered.length === 0 ? (
+        <div style={{ gridColumn: '1 / -1', padding: 24, textAlign: 'center', color: '#6b7280' }}>暂无文件</div>
+      ) : null}
       {filtered.map(e => (
         <div
           key={`${path}/grid-${e.name}`}
