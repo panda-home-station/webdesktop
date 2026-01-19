@@ -175,12 +175,11 @@ export const api = {
   },
   async fsList(path: string) {
     try {
-      const r = await axios.get(`${base}/api/fs/list`, { params: { path } })
+      const r = await axios.get(`${base}/api/docs/list`, { params: { path } })
       offline = false
       return r.data as {
-        base: string
         path: string
-        entries: { name: string; is_dir: boolean; size: number; modified_ts: number }[]
+        entries: { id: string; name: string; is_dir: boolean; size: number; modified_ts: number }[]
       }
     } catch {
       offline = true
@@ -189,7 +188,7 @@ export const api = {
   },
   async fsMkdir(path: string) {
     try {
-      const r = await axios.post(`${base}/api/fs/mkdir`, { path })
+      const r = await axios.post(`${base}/api/docs/mkdir`, { path })
       offline = false
       return r.data as { ok: boolean }
     } catch {
@@ -200,7 +199,7 @@ export const api = {
   },
   async fsDelete(path: string) {
     try {
-      const r = await axios.delete(`${base}/api/fs/delete`, { params: { path } })
+      const r = await axios.delete(`${base}/api/docs/delete`, { params: { path } })
       offline = false
       return r.data as { ok: boolean }
     } catch {
@@ -215,7 +214,7 @@ export const api = {
   },
   async fsRename(from: string, to: string) {
     try {
-      const r = await axios.post(`${base}/api/fs/rename`, { from, to })
+      const r = await axios.post(`${base}/api/docs/rename`, { from, to })
       return r.data as { ok: boolean }
     } catch {
       const { root, parent, name } = mockTraverse(from)
@@ -245,7 +244,7 @@ export const api = {
       let lastLoaded = 0
       let lastTs = Date.now()
       if (onProgress) onProgress({ percent: 0, loaded: 0, total: file.size, bps: 0 })
-      const r = await axios.post(`${base}/api/fs/upload`, fd, {
+      const r = await axios.post(`${base}/api/docs/upload`, fd, {
         onUploadProgress: (e) => {
           if (onProgress && e.loaded != null) {
             const now = Date.now()
@@ -274,13 +273,13 @@ export const api = {
     }
   },
   fsDownloadUrl(path: string) {
-    const u = new URL(`${base}/api/fs/download`)
+    const u = new URL(`${base}/api/docs/download`)
     u.searchParams.set('path', path)
     if (token) u.searchParams.set('token', token)
     return u.toString()
   },
   async fsDownloadBlob(path: string) {
-    const r = await axios.get(`${base}/api/fs/download`, {
+    const r = await axios.get(`${base}/api/docs/download`, {
       params: { path, token },
       responseType: 'blob'
     })
