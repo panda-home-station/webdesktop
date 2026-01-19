@@ -38,9 +38,31 @@ export default function FileManager() {
     const load = async () => {
       setLoading(true)
       try {
+        console.time('fm:first-page')
         const r = await api.fsList(path)
         if (!mounted) return
         setEntries(r.entries)
+        console.timeEnd('fm:first-page')
+        if (r.has_more && r.next_offset != null) {
+          console.time('fm:all-pages')
+          let nextOffset = r.next_offset
+          let more = r.has_more
+          while (mounted && more) {
+            const rr = await api.fsListPage(path, nextOffset, 500)
+            if (!mounted) break
+            if (rr.entries && rr.entries.length > 0) {
+              setEntries(prev => {
+                const seen = new Set(prev.map(e => e.name))
+                const appended = rr.entries.filter(e => !seen.has(e.name))
+                return appended.length > 0 ? [...prev, ...appended] : prev
+              })
+            }
+            more = !!rr.has_more
+            nextOffset = rr.next_offset ?? (nextOffset + (rr.entries?.length ?? 0))
+            await new Promise(res => setTimeout(res, 0))
+          }
+          console.timeEnd('fm:all-pages')
+        }
       } finally {
         setLoading(false)
       }

@@ -11,6 +11,13 @@ const USER_KEY = 'authUser'
 type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
 type Node = { type: 'dir' | 'file'; children?: Record<string, Node>; size?: number; modified_ts?: number }
 type User = { user_id: string; username: string }
+type FsListResp = {
+  path: string
+  entries: { id?: string; name: string; is_dir: boolean; size: number; modified_ts: number }[]
+  has_more?: boolean
+  next_offset?: number
+  total?: number
+}
 let token = localStorage.getItem(TOKEN_KEY) || ''
 let currentUser: User | null = null
 try {
@@ -168,16 +175,17 @@ export const api = {
   },
   async fsList(path: string) {
     try {
-      const r = await axios.get(`${base}/api/docs/list`, { params: { path } })
+      const r = await axios.get(`${base}/api/docs/list`, { params: { path, limit: 200 } })
       offline = false
-      return r.data as {
-        path: string
-        entries: { id: string; name: string; is_dir: boolean; size: number; modified_ts: number }[]
-      }
+      return r.data as FsListResp
     } catch {
       offline = true
       return getMockList(path)
     }
+  },
+  async fsListPage(path: string, offset: number, limit = 500) {
+    const r = await axios.get(`${base}/api/docs/list`, { params: { path, offset, limit } })
+    return r.data as FsListResp
   },
   async fsMkdir(path: string) {
     try {
