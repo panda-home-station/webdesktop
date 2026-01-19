@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../../../src/api/client'
-import { pushFileTask, updateFileTask } from '../../../src/sdk/desktop'
+import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, FileTask } from '../../../src/sdk/desktop'
 import Sidebar from './components/Sidebar'
 import Toolbar from './components/Toolbar'
 import ListView from './components/ListView'
@@ -12,6 +12,7 @@ export default function FileManager() {
   const [entries, setEntries] = useState<
     { name: string; is_dir: boolean; size: number; modified_ts: number }[]
   >([])
+  const [tasks, setTasks] = useState<FileTask[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [active, setActive] = useState<string>('home')
   const [view, setView] = useState<'list' | 'grid'>('list')
@@ -35,9 +36,18 @@ export default function FileManager() {
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
   useEffect(() => {
     let mounted = true
+    let unsub: (() => void) | null = null
     const load = async () => {
       setLoading(true)
       try {
+        if (path === '/Transfers') {
+          setTasks(getFileTasks())
+          unsub = subscribeFileTasks((ts) => {
+            if (!mounted) return
+            setTasks(ts)
+          })
+          return
+        }
         console.time('fm:first-page')
         const r = await api.fsList(path)
         if (!mounted) return
@@ -70,6 +80,7 @@ export default function FileManager() {
     load()
     return () => {
       mounted = false
+      if (unsub) unsub()
     }
   }, [path])
 
@@ -142,6 +153,7 @@ export default function FileManager() {
       '/SharedWithMe',
       '/Team',
       '/Trash',
+      '/Transfers',
     ])
     if (to !== '/' && !reserved.has(to)) {
       await api.fsMkdir(to)
@@ -248,112 +260,231 @@ export default function FileManager() {
   
   
 
+  const renderTransfers = () => {
+    const visible = tasks.filter(t => t.kind === 'upload' || t.kind === 'download')
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderBottom: '1px solid var(--win-border)' }}>
+          <h3 style={{ margin: 0, fontSize: 16 }}>传输任务</h3>
+          <button className="puter-button" style={{ height: 28, marginLeft: 'auto' }} onClick={() => clearCompletedFileTasks()}>清除已完成</button>
+        </div>
+        <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+          {visible.length === 0 ? (
+            <div style={{ color: 'var(--muted)' }}>暂无传输任务</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {visible.map(t => (
+                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 160px 80px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
+                  <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {t.kind === 'upload' ? '⬆️' : '⬇️'}
+                  </div>
+                  <div style={{ display: 'grid', gap: 4 }}>
+                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.dir}</div>
+                  </div>
+                  <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.min(100, Math.max(0, t.progress ?? (t.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
+                  </div>
+                  <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827' }}>
+                    {t.status === 'error' ? '失败' : t.status === 'done' ? '完成' : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  const renderTrash = () => {
+    const onRestoreSelected = async () => {
+      const names = [...selected]
+      for (const n of names) {
+        const from = `/Trash/${n}`
+        const to = `/${n}`
+        await api.fsRename(from, to)
+      }
+      const rs = await api.fsList(path)
+      setEntries(rs.entries)
+      clearSelection()
+    }
+    const onDeleteSelected = async () => {
+      const names = [...selected]
+      for (const n of names) {
+        const p = `/Trash/${n}`
+        await api.fsDelete(p)
+      }
+      const rs = await api.fsList(path)
+      setEntries(rs.entries)
+      clearSelection()
+    }
+    const onEmptyTrash = async () => {
+      const names = entries.map(e => e.name)
+      for (const n of names) {
+        const p = `/Trash/${n}`
+        await api.fsDelete(p)
+      }
+      const rs = await api.fsList(path)
+      setEntries(rs.entries)
+      clearSelection()
+    }
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderBottom: '1px solid var(--win-border)' }}>
+          <h3 style={{ margin: 0, fontSize: 16 }}>回收站</h3>
+          <button className="puter-button" style={{ height: 28 }} onClick={onRestoreSelected} disabled={selected.size === 0}>还原所选</button>
+          <button className="puter-button" style={{ height: 28 }} onClick={onDeleteSelected} disabled={selected.size === 0}>删除所选</button>
+          <button className="puter-button" style={{ height: 28, marginLeft: 'auto' }} onClick={onEmptyTrash}>清空回收站</button>
+        </div>
+        <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
+          {entries.length === 0 ? (
+            <div style={{ color: 'var(--muted)' }}>回收站为空</div>
+          ) : (
+            <div style={{ display: 'grid', gap: 8 }}>
+              {entries.map(e => {
+                const checked = selected.has(e.name)
+                return (
+                  <div
+                    key={`trash-${e.name}`}
+                    style={{ display: 'grid', gridTemplateColumns: '24px 1fr 120px 120px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8, background: checked ? 'rgba(0,0,0,0.06)' : '#fff', cursor: 'pointer' }}
+                    onClick={() => toggleSelect(e.name)}
+                  >
+                    <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{e.is_dir ? '📁' : '📄'}</div>
+                    <div style={{ display: 'grid', gap: 4 }}>
+                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>大小：{e.is_dir ? '-' : fmtSize(e.size)} · 修改：{fmtTime(e.modified_ts)}</div>
+                    </div>
+                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await api.fsRename(`/Trash/${e.name}`, `/${e.name}`); const rs = await api.fsList(path); setEntries(rs.entries) }}>还原</button>
+                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await api.fsDelete(`/Trash/${e.name}`); const rs = await api.fsList(path); setEntries(rs.entries) }}>删除</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ display: 'flex', height: '100%' }}>
       <Sidebar active={active} onGoto={goto} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: 8, minWidth: 0 }}>
-        <Toolbar
-          back={back}
-          forward={forward}
-          refresh={refresh}
-          navIndex={navIndex}
-          navHist={navHist}
-          navigate={navigate}
-          crumbs={crumbs}
-          q={q}
-          setQ={(v) => setQ(v)}
-          onUploadFiles={async (files) => {
-            for (const f of Array.from(files)) {
-              const id = `${f.name}-${Date.now()}`
-              pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, status: 'running' })
-              try {
-                await api.fsUpload(path, f, (info) => {
-                  updateFileTask(id, { progress: info.percent, total: info.total })
-                })
-                updateFileTask(id, { progress: 100, status: 'done' })
-              } catch {
-                updateFileTask(id, { status: 'error' })
-              }
-            }
-            const rs = await api.fsList(path)
-            setEntries(rs.entries)
-          }}
-          onCreateFolder={async () => {
-            const name = prompt('新建文件夹名称')
-            if (!name) return
-            const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
-            const r = await api.fsMkdir(next)
-            if (r.ok) {
-              const rs = await api.fsList(path)
-              setEntries(rs.entries)
-            }
-          }}
-          onDownloadSelected={async () => {
-            const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
-            if (names.length === 0) return
-            const first = names[0]
-            const fullPath = path.endsWith('/') ? `${path}${first}` : `${path}/${first}`
-            const url = api.fsDownloadUrl(fullPath)
-            window.open(url, '_blank')
-          }}
-          onDeleteSelected={async () => {
-            const names = [...selected]
-            for (const n of names) {
-              const p = path.endsWith('/') ? `${path}${n}` : `${path}/${n}`
-              const id = `del-${n}-${Date.now()}`
-              pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
-              await api.fsDelete(p)
-              updateFileTask(id, { status: 'done' })
-            }
-            const rs = await api.fsList(path)
-            setEntries(rs.entries)
-            clearSelection()
-          }}
-          sortKey={sortKey}
-          setSortKey={(k) => setSortKey(k)}
-          sortOrder={sortOrder}
-          setSortOrder={(o) => setSortOrder(o)}
-          view={view}
-          setView={(v) => setView(v)}
-        />
-        <style>{`
-          #fm-list-container::-webkit-scrollbar { display: none; }
-        `}</style>
-        <div id="fm-list-container" style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827', fontSize: 14 }}>
-          {view === 'list' ? (<>
-            <ListView
-              path={path}
-              filtered={filtered}
-              selected={selected}
-              setSelected={(s) => setSelected(new Set(s))}
-              clearSelection={clearSelection}
-              colWidths={colWidths}
-              startResize={startResize}
-              headerCheckboxRef={headerCheckboxRef}
-              toggleSelect={toggleSelect}
-              fmtTime={fmtTime}
-              fmtSize={fmtSize}
-              onOpenDir={(name) => {
-                const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
-                setPath(next)
+        {path === '/Transfers' ? (
+          renderTransfers()
+        ) : path === '/Trash' ? (
+          renderTrash()
+        ) : (
+          <>
+            <Toolbar
+              back={back}
+              forward={forward}
+              refresh={refresh}
+              navIndex={navIndex}
+              navHist={navHist}
+              navigate={navigate}
+              crumbs={crumbs}
+              q={q}
+              setQ={(v) => setQ(v)}
+              onUploadFiles={async (files) => {
+                for (const f of Array.from(files)) {
+                  const id = `${f.name}-${Date.now()}`
+                  pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, status: 'running' })
+                  try {
+                    await api.fsUpload(path, f, (info) => {
+                      updateFileTask(id, { progress: info.percent, total: info.total })
+                    })
+                    updateFileTask(id, { progress: 100, status: 'done' })
+                  } catch {
+                    updateFileTask(id, { status: 'error' })
+                  }
+                }
+                const rs = await api.fsList(path)
+                setEntries(rs.entries)
               }}
-            />
-            
-          </>) : (<>
-            <GridView
-              path={path}
-              filtered={filtered}
-              selected={selected}
-              toggleSelect={toggleSelect}
-              onOpenDir={(name) => {
+              onCreateFolder={async () => {
+                const name = prompt('新建文件夹名称')
+                if (!name) return
                 const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
-                setPath(next)
+                const r = await api.fsMkdir(next)
+                if (r.ok) {
+                  const rs = await api.fsList(path)
+                  setEntries(rs.entries)
+                }
               }}
+              onDownloadSelected={async () => {
+                const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
+                if (names.length === 0) return
+                const first = names[0]
+                const fullPath = path.endsWith('/') ? `${path}${first}` : `${path}/${first}`
+                const url = api.fsDownloadUrl(fullPath)
+                window.open(url, '_blank')
+                const id = `dl-${first}-${Date.now()}`
+                pushFileTask({ id, kind: 'download', name: first, dir: path, progress: 100, status: 'done' })
+              }}
+              onDeleteSelected={async () => {
+                const names = [...selected]
+                for (const n of names) {
+                  const p = path.endsWith('/') ? `${path}${n}` : `${path}/${n}`
+                  const id = `del-${n}-${Date.now()}`
+                  pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
+                  await api.fsDelete(p)
+                  updateFileTask(id, { status: 'done' })
+                }
+                const rs = await api.fsList(path)
+                setEntries(rs.entries)
+                clearSelection()
+              }}
+              sortKey={sortKey}
+              setSortKey={(k) => setSortKey(k)}
+              sortOrder={sortOrder}
+              setSortOrder={(o) => setSortOrder(o)}
+              view={view}
+              setView={(v) => setView(v)}
             />
-            
-          </>)}
-        </div>
-        <FooterCount count={filtered.length} />
+            <style>{`
+              #fm-list-container::-webkit-scrollbar { display: none; }
+            `}</style>
+            <div id="fm-list-container" style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827', fontSize: 14 }}>
+              {view === 'list' ? (
+                <>
+                  <ListView
+                    path={path}
+                    filtered={filtered}
+                    selected={selected}
+                    setSelected={(s) => setSelected(new Set(s))}
+                    clearSelection={clearSelection}
+                    colWidths={colWidths}
+                    startResize={startResize}
+                    headerCheckboxRef={headerCheckboxRef}
+                    toggleSelect={toggleSelect}
+                    fmtTime={fmtTime}
+                    fmtSize={fmtSize}
+                    onOpenDir={(name) => {
+                      const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
+                      setPath(next)
+                    }}
+                  />
+                </>
+              ) : (
+                <>
+                  <GridView
+                    path={path}
+                    filtered={filtered}
+                    selected={selected}
+                    toggleSelect={toggleSelect}
+                    onOpenDir={(name) => {
+                      const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
+                      setPath(next)
+                    }}
+                  />
+                </>
+              )}
+            </div>
+            <FooterCount count={filtered.length} />
+          </>
+        )}
       </div>
     </div>
   )

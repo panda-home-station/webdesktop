@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { listApps } from '../apps/registry'
-import { openApp, showDesktop, subscribeFileTasks, getFileTasks, clearCompletedFileTasks, FileTask } from '../sdk/desktop'
+import { openApp, showDesktop } from '../sdk/desktop'
 
 type WinItem = {
   id: string
@@ -31,13 +31,6 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
   const runningAppIds = Object.keys(byApp)
   const isRunning = (id?: string) => !!(id && byApp[id] && byApp[id].length > 0)
   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null)
-  const [showTasks, setShowTasks] = useState(false)
-  const [tasks, setTasks] = useState<FileTask[]>([])
-  useEffect(() => {
-    setTasks(getFileTasks())
-    const unsub = subscribeFileTasks(setTasks)
-    return () => unsub()
-  }, [])
   const showTip = (text: string, el: HTMLElement) => {
     const r = el.getBoundingClientRect()
     setTip({ text, x: r.right + 6, y: r.top + r.height / 2 })
@@ -145,78 +138,6 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
         })}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-        <button
-          className="dock-item"
-          title="文件任务"
-          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
-          onClick={() => {
-            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            setShowTasks(v => !v)
-          }}
-          onMouseEnter={(e) => showTip('文件任务', e.currentTarget)}
-          onMouseLeave={() => setTip(null)}
-        >
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <path d="M4 6h8l2 2h6v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6z" fill="#f59e0b" />
-            <circle cx="9" cy="13" r="2" fill="#fff" />
-            <path d="M13 16l3-3" stroke="#fff" strokeWidth="2" />
-          </svg>
-        </button>
-        {showTasks && (
-          <>
-            <div
-              style={{ position: 'fixed', inset: 0, zIndex: 10000 }}
-              onClick={() => setShowTasks(false)}
-            />
-            <div
-              style={{
-                position: 'fixed',
-                left: 74,
-                bottom: 32,
-                width: 360,
-                maxHeight: '70vh',
-                overflow: 'auto',
-                background: '#ffffff',
-                borderRadius: 12,
-                boxShadow: '0 12px 32px rgba(0,0,0,0.14)',
-                border: '1px solid var(--win-border)',
-                padding: 12,
-                transform: 'translateX(0)',
-                transition: 'transform 0.2s ease, opacity 0.2s ease',
-                zIndex: 10001
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <strong>文件任务</strong>
-                <button
-                  className="puter-button"
-                  style={{ height: 24, marginLeft: 'auto' }}
-                  onClick={() => clearCompletedFileTasks()}
-                >
-                  清除已完成
-                </button>
-              </div>
-              <div style={{ marginTop: 8, display: 'grid', gap: 8 }}>
-                {tasks.length === 0 ? (
-                  <div style={{ color: 'var(--muted)' }}>暂无任务</div>
-                ) : (
-                  tasks.map(u => (
-                    <div key={u.id} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px 60px', alignItems: 'center', gap: 8 }}>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.name}</div>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--muted)' }}>{u.dir}</div>
-                      <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
-                        <div style={{ width: `${Math.min(100, Math.max(0, u.progress ?? (u.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
-                      </div>
-                      <div style={{ textAlign: 'right', color: u.status === 'error' ? '#ef4444' : '#111827' }}>
-                        {u.status === 'error' ? '失败' : u.status === 'done' ? '完成' : `${Math.min(100, Math.max(0, u.progress ?? 0))}%`}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </>
-        )}
         <button
           className="dock-item"
           title="通知"

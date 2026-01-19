@@ -69,6 +69,7 @@ export default function Sidebar({ active, onGoto }: { active: string; onGoto: (t
 
         <div style={{ height: 8 }} />
         <div style={{ fontSize: 12, fontWeight: 700, color: '#6b7280', margin: '8px 12px' }}>系统</div>
+        <NavItem id="transfers" icon="🔄" label="传输任务" active={active === 'transfers'} onClick={() => onGoto('/Transfers', 'transfers')} />
         <NavItem id="trash" icon="🗑️" label="回收站" active={active === 'trash'} onClick={() => onGoto('/Trash', 'trash')} />
       </div>
     </div>
