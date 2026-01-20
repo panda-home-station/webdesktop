@@ -25,6 +25,14 @@ export default function App() {
     }).catch(() => {
       setInitChecked(true)
     })
+    const onWp = (e: any) => {
+      const next = e?.detail?.url ?? getWallpaper()
+      setWallpaperUrl(next)
+    }
+    window.addEventListener('desktop:wallpaper', onWp)
+    return () => {
+      window.removeEventListener('desktop:wallpaper', onWp)
+    }
   }, [])
   const bgStyle = useMemo<React.CSSProperties>(() => {
     return {

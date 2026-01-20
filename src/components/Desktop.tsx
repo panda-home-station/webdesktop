@@ -3,7 +3,7 @@ import WindowManager from './WindowManager'
 import { getWallpaper, setWallpaper } from '../state/desktop'
 import { openApp } from '../sdk/desktop'
 import Icon from '@mdi/react'
-import { mdiRefresh, mdiCogOutline } from '@mdi/js'
+import { mdiRefresh, mdiCogOutline, mdiAccountCircleOutline } from '@mdi/js'
 
 export default function Desktop() {
   const [wallpaper, setWallpaperUrl] = useState<string>(getWallpaper())
@@ -13,6 +13,12 @@ export default function Desktop() {
   useEffect(() => {
     const url = getWallpaper()
     setWallpaperUrl(url)
+    const onWp = (e: any) => {
+      const next = e?.detail?.url ?? getWallpaper()
+      setWallpaperUrl(next)
+    }
+    window.addEventListener('desktop:wallpaper', onWp)
+    return () => window.removeEventListener('desktop:wallpaper', onWp)
   }, [])
 
   const style = useMemo(() => {
@@ -105,6 +111,32 @@ export default function Desktop() {
               >
                 <Icon path={mdiCogOutline} size={0.85} />
                 系统设置
+              </button>
+              <button
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  border: 'none',
+                  textAlign: 'left',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: hoverIndex === 2 ? '#e5e7eb' : 'transparent',
+                  color: 'inherit'
+                }}
+                onClick={() => {
+                  closeMenu()
+                  openApp('user-center')
+                }}
+                onMouseEnter={() => setHoverIndex(2)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onFocus={() => setHoverIndex(2)}
+                onBlur={() => setHoverIndex(null)}
+              >
+                <Icon path={mdiAccountCircleOutline} size={0.85} />
+                我的账号
               </button>
             </div>
           </div>
