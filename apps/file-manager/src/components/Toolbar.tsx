@@ -1,4 +1,15 @@
 import React, { useRef, useEffect, useState } from 'react'
+import Icon from '@mdi/react'
+import {
+  mdiArrowLeft,
+  mdiArrowRight,
+  mdiRefresh,
+  mdiHome,
+  mdiSort,
+  mdiCheckBold,
+  mdiViewList,
+  mdiViewGridOutline
+} from '@mdi/js'
 
 function usePress() {
   const [pressed, setPressed] = useState(false)
@@ -70,27 +81,19 @@ export default function Toolbar({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
         <div className="button-group">
           <button className="puter-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={back} disabled={navIndex === 0} title="后退">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M15 19l-7-7 7-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Icon path={mdiArrowLeft} size={0.9} />
           </button>
           <button className="puter-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={forward} disabled={navIndex >= navHist.length - 1} title="前进">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <Icon path={mdiArrowRight} size={0.9} />
           </button>
         </div>
         <button className="puter-button" style={{ height: 28, width: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={refresh} title="刷新">
-          <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 6v-3l4 4-4 4V8a4 4 0 1 0 4 4h2a6 6 0 1 1-6-6z" fill="currentColor" />
-          </svg>
+          <Icon path={mdiRefresh} size={1} />
         </button>
         <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: '100%', minWidth: 0, height: 28, padding: '0 6px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)' }}>
             <button className="puter-button" style={{ height: 28, width: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none' }} onClick={() => navigate('/')} title="主文件夹">
-              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor" />
-              </svg>
+              <Icon path={mdiHome} size={1} />
             </button>
             {crumbs.slice(1).map((c, i) => (
               <React.Fragment key={`crumb-${i}-${c.to}`}>
@@ -190,57 +193,38 @@ export default function Toolbar({
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <div style={{ position: 'relative' }}>
             <button ref={sortButtonRef} className="puter-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={() => setShowSortMenu(!showSortMenu)} title="排序">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                <g clipPath="url(#clip0_18_14325)">
-                  <path d="M6 4a1 1 0 112 0v13.586l2.293-2.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.338.068l-.076-.068-4-4-.069-.076a1 1 0 011.407-1.406l.076.068L6 17.586V4zm9 7a1 1 0 110 2h-4a1 1 0 110-2h4zm3-4a1 1 0 010 2h-7a1 1 0 110-2h7zm3-4a1 1 0 010 2H11a1 1 0 110-2h10z"></path>
-                </g>
-                <defs>
-                  <clipPath id="clip0_18_14325">
-                    <rect width="24" height="24"></rect>
-                  </clipPath>
-                </defs>
-              </svg>
+              <Icon path={mdiSort} size={0.9} />
             </button>
             {showSortMenu && (
               <ul role="menu" aria-orientation="vertical" className="semi-dropdown-menu" style={{ position: 'absolute', top: '100%', right: 0, minWidth: 120, background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '4px 0', margin: '4px 0', zIndex: 1000, listStyle: 'none' }}>
                 <li role="menuitem" tabIndex={0} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'name' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortKey('name')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
                   <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortKey === 'name' ? 'currentColor' : 'transparent' }}>
-                    <svg viewBox="0 0 24 24" fill="none" width="1em" height="1em" focusable="false" aria-hidden="true">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
-                    </svg>
+                    <Icon path={mdiCheckBold} size={0.9} />
                   </span>
                   文件名
                 </li>
                 <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'modified_ts' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortKey('modified_ts')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
                   <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortKey === 'modified_ts' ? 'currentColor' : 'transparent' }}>
-                    <svg viewBox="0 0 24 24" fill="none" width="1em" height="1em" focusable="false" aria-hidden="true">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
-                    </svg>
+                    <Icon path={mdiCheckBold} size={0.9} />
                   </span>
                   修改时间
                 </li>
                 <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'size' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortKey('size')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
                   <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortKey === 'size' ? 'currentColor' : 'transparent' }}>
-                    <svg viewBox="0 0 24 24" fill="none" width="1em" height="1em" focusable="false" aria-hidden="true">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
-                    </svg>
+                    <Icon path={mdiCheckBold} size={0.9} />
                   </span>
                   大小
                 </li>
                 <div className="semi-dropdown-divider" style={{ height: 1, background: '#e5e7eb', margin: '4px 0' }}></div>
                 <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortOrder === 'asc' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortOrder('asc')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
                   <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortOrder === 'asc' ? 'currentColor' : 'transparent' }}>
-                    <svg viewBox="0 0 24 24" fill="none" width="1em" height="1em" focusable="false" aria-hidden="true">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
-                    </svg>
+                    <Icon path={mdiCheckBold} size={0.9} />
                   </span>
                   升序
                 </li>
                 <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortOrder === 'desc' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortOrder('desc')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
                   <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortOrder === 'desc' ? 'currentColor' : 'transparent' }}>
-                    <svg viewBox="0 0 24 24" fill="none" width="1em" height="1em" focusable="false" aria-hidden="true">
-                      <path fillRule="evenodd" clipRule="evenodd" d="M21.35 4.27c.68.47.86 1.4.38 2.08l-10 14.5a1.5 1.5 0 0 1-2.33.17l-6.5-7a1.5 1.5 0 0 1 2.2-2.04l5.23 5.63 8.94-12.96a1.5 1.5 0 0 1 2.08-.38Z" fill="currentColor"></path>
-                    </svg>
+                    <Icon path={mdiCheckBold} size={0.9} />
                   </span>
                   降序
                 </li>
@@ -275,21 +259,10 @@ export default function Toolbar({
             >
               <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '0 4px', zIndex: 0, pointerEvents: 'none' }}>
                 <div style={{ display: 'flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center', opacity: view === 'list' ? 1 : 0.5 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor">
-                    <g clipPath="url(#clip0_18_14350)">
-                      <path d="M3.01 17l.102.005a1 1 0 010 1.99L3.01 19H3a1 1 0 110-2h.01zM21 17a1 1 0 110 2H8a1 1 0 110-2h13zM3.01 11l.102.005a1 1 0 010 1.99L3.01 13H3a1 1 0 110-2h.01zM21 11a1 1 0 110 2H8a1 1 0 110-2h13zM3.01 5l.102.005a1 1 0 010 1.99L3.01 7H3a1 1 0 010-2h.01zM21 5a1 1 0 110 2H8a1 1 0 010-2h13z"></path>
-                    </g>
-                    <defs>
-                      <clipPath id="clip0_18_14350">
-                        <rect width="24" height="24"></rect>
-                      </clipPath>
-                    </defs>
-                  </svg>
+                  <Icon path={mdiViewList} size={0.9} />
                 </div>
                 <div style={{ display: 'flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center', opacity: view === 'grid' ? 1 : 0.5 }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="currentColor">
-                    <path fillRule="evenodd" clipRule="evenodd" d="M2 4a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2V4zm7 0H4v5h5V4zm4 0a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2h-5a2 2 0 01-2-2V4zm7 0h-5v5h5V4zM2 15a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2H4a2 2 0 01-2-2v-5zm7 0H4v5h5v-5zm4 0a2 2 0 012-2h5a2 2 0 012 2v5a2 2 0 01-2 2h-5a2 2 0 01-2-2v-5zm7 0h-5v5h5v-5z"></path>
-                  </svg>
+                  <Icon path={mdiViewGridOutline} size={0.9} />
                 </div>
               </div>
               <div style={{ filter: 'drop-shadow(rgba(32, 35, 39, 0.12) 0px 0.667px 1.333px)', transform: view === 'list' ? 'translateX(2px)' : 'translateX(22px)', transformOrigin: '50% 50% 0px', position: 'relative', zIndex: 1, transition: 'transform 180ms ease', width: 24, height: 24, borderRadius: 6, background: 'var(--semi-color-bg-1)' }}></div>

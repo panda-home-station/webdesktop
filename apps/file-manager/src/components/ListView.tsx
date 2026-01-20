@@ -1,4 +1,6 @@
 import React from 'react'
+import Icon from '@mdi/react'
+import { mdiCogOutline } from '@mdi/js'
 
 export default function ListView({
   path,
@@ -75,9 +77,7 @@ export default function ListView({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 8 }}>
               <span>所有者</span>
               <button className="puter-button" title="字段设置" style={{ height: 24, width: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 8a4 4 0 100 8 4 4 0 000-8zm9.4 4a7.4 7.4 0 01-.2 1.8l2.1 1.6-2 3.5-2.5-1a7.6 7.6 0 01-1.6 1l-.4 2.6h-4l-.4-2.6a7.6 7.6 0 01-1.6-1l-2.5 1-2-3.5 2.1-1.6a7.4 7.4 0 01-.2-1.8c0-.6.1-1.2.2-1.8L2.5 8.6l2-3.5 2.5 1c.5-.4 1-.7 1.6-1l.4-2.6h4l.4 2.6c.6.3 1.1.6 1.6 1l2.5-1 2 3.5-2.1 1.6c.1.6.2 1.2.2 1.8z"/>
-                </svg>
+                <Icon path={mdiCogOutline} size={0.8} />
               </button>
             </div>
             <div onMouseDown={(e) => startResize('owner', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />

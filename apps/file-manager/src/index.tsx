@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import Icon from '@mdi/react'
+import { mdiUpload, mdiDownload, mdiFolderOutline, mdiFileDocumentOutline } from '@mdi/js'
 import { api } from '../../../src/api/client'
 import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, FileTask } from '../../../src/sdk/desktop'
 import Sidebar from './components/Sidebar'
@@ -322,7 +324,7 @@ export default function FileManager() {
               {visible.map(t => (
                 <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 160px 80px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
                   <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {t.kind === 'upload' ? '⬆️' : '⬇️'}
+                    {t.kind === 'upload' ? <Icon path={mdiUpload} size={0.9} /> : <Icon path={mdiDownload} size={0.9} />}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
                     <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
@@ -396,7 +398,9 @@ export default function FileManager() {
                     style={{ display: 'grid', gridTemplateColumns: '24px 1fr 120px 120px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8, background: checked ? 'rgba(0,0,0,0.06)' : '#fff', cursor: 'pointer' }}
                     onClick={() => toggleSelect(e.name)}
                   >
-                    <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{e.is_dir ? '📁' : '📄'}</div>
+                    <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {e.is_dir ? <Icon path={mdiFolderOutline} size={0.9} /> : <Icon path={mdiFileDocumentOutline} size={0.9} />}
+                    </div>
                     <div style={{ display: 'grid', gap: 4 }}>
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--muted)' }}>大小：{e.is_dir ? '-' : fmtSize(e.size)} · 修改：{fmtTime(e.modified_ts)}</div>
