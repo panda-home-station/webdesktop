@@ -93,7 +93,7 @@ export default function ListView({
         {filtered.map((e) => (
           <tr
             key={`${path}/${e.name}`}
-            style={{ background: selected.has(e.name) ? 'rgba(0,0,0,0.06)' : undefined, cursor: 'pointer', borderBottom: '1px solid #e5e7eb', height: 36 }}
+            style={{ background: selected.has(e.name) ? '#d4d4d8' : undefined, cursor: 'pointer', borderBottom: '1px solid #e5e7eb', height: 36 }}
             onClick={() => toggleSelect(e.name)}
             onDoubleClick={() => {
               if (e.is_dir) {
@@ -102,7 +102,7 @@ export default function ListView({
             }}
           >
             <td style={{ width: colWidths.name, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 24 }}>
-              <span style={{ color: e.is_dir ? '#2563eb' : '#111827' }}>{e.name}</span>
+              <span style={{ color: selected.has(e.name) ? '#111827' : (e.is_dir ? '#2563eb' : '#111827') }}>{e.name}</span>
             </td>
             <td style={{ width: colWidths.modified, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{fmtTime(e.modified_ts)}</td>
             <td style={{ width: colWidths.type, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{e.is_dir ? '目录' : '文件'}</td>

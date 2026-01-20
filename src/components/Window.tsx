@@ -168,7 +168,7 @@ export default function Window({
           height: 36,
           display: 'flex',
           alignItems: 'center',
-          padding: '0 4px',
+          padding: '0 12px',
           cursor: 'move',
           borderTopLeftRadius: 'var(--win-radius)',
           borderTopRightRadius: 'var(--win-radius)',
@@ -179,11 +179,11 @@ export default function Window({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {iconUrl ? (
-            <img src={iconUrl} alt="" width={16} height={16} style={{ borderRadius: 4 }} />
+            <img src={iconUrl} alt="" width={18} height={18} style={{ borderRadius: 4 }} />
           ) : (
             <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
           )}
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{title}</span>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 16 }}>{title}</span>
         </div>
         <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
           <button

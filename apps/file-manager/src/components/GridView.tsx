@@ -36,7 +36,7 @@ export default function GridView({
             borderRadius: 8,
             overflow: 'hidden',
             cursor: 'pointer',
-            background: selected.has(e.name) ? 'rgba(0,0,0,0.06)' : '#fff'
+            background: selected.has(e.name) ? '#d4d4d8' : '#fff'
           }}
           onClick={() => toggleSelect(e.name)}
           onDoubleClick={() => {
