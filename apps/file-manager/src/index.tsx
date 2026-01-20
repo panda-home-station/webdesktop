@@ -1,9 +1,23 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Icon from '@mdi/react'
-import { mdiUpload, mdiDownload, mdiFolderOutline, mdiFileDocumentOutline } from '@mdi/js'
+import {
+  mdiUpload,
+  mdiDownload,
+  mdiFolderOutline,
+  mdiFileDocumentOutline,
+  mdiAccountGroupOutline,
+  mdiCogOutline,
+  mdiInboxArrowDownOutline,
+  mdiShareVariant,
+  mdiLinkVariant,
+  mdiHistory,
+  mdiStarOutline,
+  mdiSwapHorizontal,
+  mdiTrashCanOutline
+} from '@mdi/js'
 import { api } from '../../../src/api/client'
 import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, FileTask } from '../../../src/sdk/desktop'
-import Sidebar from './components/Sidebar'
+import { Sidebar } from '../../../src/components/Sidebar'
 import Toolbar from './components/Toolbar'
 import ListView from './components/ListView'
 import GridView from './components/GridView'
@@ -417,9 +431,62 @@ export default function FileManager() {
     )
   }
 
+  const sections = [
+    {
+      title: '文件',
+      items: [
+        { id: 'home', label: '我的文件', icon: <Icon path={mdiFolderOutline} size={1} /> },
+        { id: 'team', label: '团队文件', icon: <Icon path={mdiAccountGroupOutline} size={1} /> },
+        { id: 'appdata', label: '应用文件', icon: <Icon path={mdiCogOutline} size={1} /> },
+      ]
+    },
+    {
+      title: '共享',
+      items: [
+        { id: 'shared-with-me', label: '他人共享', icon: <Icon path={mdiInboxArrowDownOutline} size={1} /> },
+        { id: 'my-shares', label: '我的共享', icon: <Icon path={mdiShareVariant} size={1} /> },
+        { id: 'public-links', label: '外链分享', icon: <Icon path={mdiLinkVariant} size={1} /> },
+      ]
+    },
+    {
+      title: '快捷',
+      items: [
+        { id: 'recent', label: '最近访问', icon: <Icon path={mdiHistory} size={1} /> },
+        { id: 'favorites', label: '我的收藏', icon: <Icon path={mdiStarOutline} size={1} /> },
+      ]
+    },
+    {
+      title: '系统',
+      items: [
+        { id: 'transfers', label: '传输任务', icon: <Icon path={mdiSwapHorizontal} size={1} /> },
+        { id: 'trash', label: '回收站', icon: <Icon path={mdiTrashCanOutline} size={1} /> },
+      ]
+    }
+  ]
+
   return (
     <div style={{ display: 'flex', height: '100%' }}>
-      <Sidebar active={active} onGoto={goto} />
+      <Sidebar
+        width={220}
+        sections={sections}
+        activeId={active}
+        onSelect={(id) => {
+          const toMap: Record<string, string> = {
+            home: '/',
+            team: '/Team',
+            appdata: '/AppData',
+            'shared-with-me': '/SharedWithMe',
+            'my-shares': '/MyShares',
+            'public-links': '/PublicLinks',
+            recent: '/Recent',
+            favorites: '/Favorites',
+            transfers: '/Transfers',
+            trash: '/Trash',
+          }
+          const to = toMap[id] ?? '/'
+          goto(to, id)
+        }}
+      />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: 8, minWidth: 0 }}>
         {path === '/Transfers' ? (
           renderTransfers()
