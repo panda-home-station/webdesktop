@@ -4,7 +4,7 @@ import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
-import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop } from '../sdk/desktop'
+import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
 
 type Win = {
@@ -282,9 +282,13 @@ export default function WindowManager() {
       setShowLauncher(false)
       setWins(ws => ws.map(w => ({ ...w, minimized: true })))
     })
+    const unsubLaunch = subscribeLauncher(() => {
+      setShowLauncher(true)
+    })
     return () => {
       unsub()
       unsubShow()
+      unsubLaunch()
     }
   }, [minimize, toggleMaximize, close])
 

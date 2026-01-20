@@ -4,6 +4,8 @@ import { getWallpaper, setWallpaper } from '../state/desktop'
 import { openApp } from '../sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiRefresh, mdiCogOutline, mdiAccountCircleOutline } from '@mdi/js'
+import { showDesktop, openLauncher } from '../sdk/desktop'
+import { mdiFolderOutline, mdiViewGridOutline, mdiMonitor } from '@mdi/js'
 
 function SmoothWallpaper({ src }: { src?: string }) {
   const [cur, setCur] = useState<string | null>(null)
@@ -168,15 +170,15 @@ export default function Desktop() {
                 }}
                 onClick={() => {
                   closeMenu()
-                  window.location.reload()
+                  showDesktop()
                 }}
                 onMouseEnter={() => setHoverIndex(0)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(0)}
                 onBlur={() => setHoverIndex(null)}
               >
-                <Icon path={mdiRefresh} size={0.85} />
-                刷新
+                <Icon path={mdiMonitor} size={0.85} />
+                显示桌面
               </button>
               <button
                 style={{
@@ -194,15 +196,15 @@ export default function Desktop() {
                 }}
                 onClick={() => {
                   closeMenu()
-                  openApp('system-settings')
+                  openLauncher()
                 }}
                 onMouseEnter={() => setHoverIndex(1)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(1)}
                 onBlur={() => setHoverIndex(null)}
               >
-                <Icon path={mdiCogOutline} size={0.85} />
-                系统设置
+                <Icon path={mdiViewGridOutline} size={0.85} />
+                全部应用
               </button>
               <button
                 style={{
@@ -220,11 +222,89 @@ export default function Desktop() {
                 }}
                 onClick={() => {
                   closeMenu()
-                  openApp('user-center')
+                  openApp('file-manager')
                 }}
                 onMouseEnter={() => setHoverIndex(2)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(2)}
+                onBlur={() => setHoverIndex(null)}
+              >
+                <Icon path={mdiFolderOutline} size={0.85} />
+                文档管理器
+              </button>
+              <button
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  border: 'none',
+                  textAlign: 'left',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: hoverIndex === 3 ? '#e5e7eb' : 'transparent',
+                  color: 'inherit'
+                }}
+                onClick={() => {
+                  closeMenu()
+                  window.location.reload()
+                }}
+                onMouseEnter={() => setHoverIndex(3)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onFocus={() => setHoverIndex(3)}
+                onBlur={() => setHoverIndex(null)}
+              >
+                <Icon path={mdiRefresh} size={0.85} />
+                刷新
+              </button>
+              <button
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  border: 'none',
+                  textAlign: 'left',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: hoverIndex === 4 ? '#e5e7eb' : 'transparent',
+                  color: 'inherit'
+                }}
+                onClick={() => {
+                  closeMenu()
+                  openApp('system-settings')
+                }}
+                onMouseEnter={() => setHoverIndex(4)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onFocus={() => setHoverIndex(4)}
+                onBlur={() => setHoverIndex(null)}
+              >
+                <Icon path={mdiCogOutline} size={0.85} />
+                系统设置
+              </button>
+              <button
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  border: 'none',
+                  textAlign: 'left',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  background: hoverIndex === 5 ? '#e5e7eb' : 'transparent',
+                  color: 'inherit'
+                }}
+                onClick={() => {
+                  closeMenu()
+                  openApp('user-center')
+                }}
+                onMouseEnter={() => setHoverIndex(5)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onFocus={() => setHoverIndex(5)}
                 onBlur={() => setHoverIndex(null)}
               >
                 <Icon path={mdiAccountCircleOutline} size={0.85} />
