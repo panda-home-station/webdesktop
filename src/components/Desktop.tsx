@@ -1,9 +1,99 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import WindowManager from './WindowManager'
 import { getWallpaper, setWallpaper } from '../state/desktop'
 import { openApp } from '../sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiRefresh, mdiCogOutline, mdiAccountCircleOutline } from '@mdi/js'
+
+function SmoothWallpaper({ src }: { src?: string }) {
+  const [cur, setCur] = useState<string | null>(null)
+  const [next, setNext] = useState<string | null>(null)
+  const [fadeIn, setFadeIn] = useState(false)
+  const timerRef = useRef<number | null>(null)
+  useEffect(() => {
+    if (!src) {
+      setCur(null)
+      setNext(null)
+      setFadeIn(false)
+      return
+    }
+    if (cur === src || next === src) return
+    const img = new Image()
+    img.src = src
+    img.decode?.().then(() => {
+      setNext(src)
+      requestAnimationFrame(() => setFadeIn(true))
+    }).catch(() => {
+      setNext(src)
+      requestAnimationFrame(() => setFadeIn(true))
+    })
+    return () => {
+      if (timerRef.current) {
+        window.clearTimeout(timerRef.current)
+        timerRef.current = null
+      }
+    }
+  }, [src, cur, next])
+  const onTransitionEnd = useCallback(() => {
+    if (next) {
+      setCur(next)
+      setNext(null)
+      setFadeIn(false)
+    }
+  }, [next])
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: 'none',
+        transform: 'translateZ(0)'
+      }}
+    >
+      {cur && (
+        <img
+          src={cur}
+          decoding="async"
+          draggable={false}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            opacity: 1,
+            willChange: 'opacity, transform',
+            transform: 'translateZ(0)'
+          }}
+          alt=""
+        />
+      )}
+      {next && (
+        <img
+          src={next}
+          decoding="async"
+          draggable={false}
+          onTransitionEnd={onTransitionEnd}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            objectPosition: 'center',
+            opacity: fadeIn ? 1 : 0,
+            transition: 'opacity 220ms ease',
+            willChange: 'opacity, transform',
+            transform: 'translateZ(0)'
+          }}
+          alt=""
+        />
+      )}
+    </div>
+  )
+}
 
 export default function Desktop() {
   const [wallpaper, setWallpaperUrl] = useState<string>(getWallpaper())
@@ -27,7 +117,8 @@ export default function Desktop() {
       flexDirection: 'column',
       width: '100vw',
       height: '100vh',
-      background: wallpaper ? `url(${wallpaper}) center/cover no-repeat` : '#f0f0f0'
+      background: 'transparent',
+      position: 'relative'
     }
     return base
   }, [wallpaper])
@@ -41,6 +132,7 @@ export default function Desktop() {
 
   return (
     <div style={style} className="puter-desktop" onContextMenu={onContextMenu}>
+      <SmoothWallpaper src={wallpaper} />
       <WindowManager />
       {menu && (
         <div className="semi-portal" style={{ zIndex: 10005 }}>
