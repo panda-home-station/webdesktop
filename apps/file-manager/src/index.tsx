@@ -25,6 +25,7 @@ export default function FileManager() {
   const [navIndex, setNavIndex] = useState<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
+  const [transferTab, setTransferTab] = useState<'upload' | 'download'>('upload')
   const [colWidths, setColWidths] = useState<Record<string, number>>({
     name: 172,
     modified: 149,
@@ -261,16 +262,61 @@ export default function FileManager() {
   
 
   const renderTransfers = () => {
-    const visible = tasks.filter(t => t.kind === 'upload' || t.kind === 'download')
+    const uploads = tasks.filter(t => t.kind === 'upload')
+    const downloads = tasks.filter(t => t.kind === 'download')
+    const visible = transferTab === 'upload' ? uploads : downloads
+    const runningUploads = tasks.filter(t => t.kind === 'upload' && t.status === 'running').length
+    const runningDownloads = tasks.filter(t => t.kind === 'download' && t.status === 'running').length
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderBottom: '1px solid var(--win-border)' }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>传输任务</h3>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className="puter-button"
+              style={{
+                height: 28,
+                position: 'relative',
+                padding: '0 10px',
+                borderRadius: 6,
+                background: transferTab === 'upload' ? '#2563eb' : 'var(--button-bg)',
+                color: transferTab === 'upload' ? '#fff' : '#111827',
+                border: transferTab === 'upload' ? '1px solid #2563eb' : '1px solid var(--button-border)'
+              }}
+              onClick={() => setTransferTab('upload')}
+            >
+              上传
+              {runningUploads > 0 && (
+                <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, background: '#ef4444', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                  {runningUploads}
+                </span>
+              )}
+            </button>
+            <button
+              className="puter-button"
+              style={{
+                height: 28,
+                position: 'relative',
+                padding: '0 10px',
+                borderRadius: 6,
+                background: transferTab === 'download' ? '#2563eb' : 'var(--button-bg)',
+                color: transferTab === 'download' ? '#fff' : '#111827',
+                border: transferTab === 'download' ? '1px solid #2563eb' : '1px solid var(--button-border)'
+              }}
+              onClick={() => setTransferTab('download')}
+            >
+              下载
+              {runningDownloads > 0 && (
+                <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, background: '#34d399', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
+                  {runningDownloads}
+                </span>
+              )}
+            </button>
+          </div>
           <button className="puter-button" style={{ height: 28, marginLeft: 'auto' }} onClick={() => clearCompletedFileTasks()}>清除已完成</button>
         </div>
         <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
           {visible.length === 0 ? (
-            <div style={{ color: 'var(--muted)' }}>暂无传输任务</div>
+            <div style={{ color: 'var(--muted)' }}>{transferTab === 'upload' ? '暂无上传任务' : '暂无下载任务'}</div>
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {visible.map(t => (
@@ -278,9 +324,9 @@ export default function FileManager() {
                   <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {t.kind === 'upload' ? '⬆️' : '⬇️'}
                   </div>
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.dir}</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.dir}</span>
                   </div>
                   <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
                     <div style={{ width: `${Math.min(100, Math.max(0, t.progress ?? (t.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
