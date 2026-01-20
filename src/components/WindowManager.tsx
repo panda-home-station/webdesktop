@@ -54,12 +54,17 @@ export default function WindowManager() {
     const screenH = window.innerHeight
     const centerX = Math.round((screenW - (w.w ?? defW)) / 2)
     const centerY = Math.round((screenH - (w.h ?? defH)) / 2)
-    const offsetX = 120
-    const offsetY = 80
     const minX = dockLeft + dockWidth + openGap
     const minY = 60
-    const initX = Math.max(minX, centerX - offsetX)
-    const initY = Math.max(minY, centerY - offsetY)
+    const baseOffsetX = 120
+    const baseOffsetY = 80
+    const initX = Math.max(minX, centerX - baseOffsetX)
+    const initY = Math.max(minY, centerY - baseOffsetY)
+    const gap = 28
+    const width = w.w ?? defW
+    const height = w.h ?? defH
+    const maxX = Math.max(minX, screenW - width - 12)
+    const maxY = Math.max(minY, screenH - height - 12)
 
     const existing = winsRef.current.find(ww => ww.appId === w.appId)
     if (existing) {
@@ -72,7 +77,41 @@ export default function WindowManager() {
     setWins(x => {
       const uid = ensureUniqueId(w.id, x)
       newId = uid
-      return [...x, { ...w, id: uid, x: initX, y: initY, w: w.w ?? defW, h: w.h ?? defH }]
+      
+      // Calculate position with collision detection
+      let cx = initX
+      let cy = initY
+      let tries = 0
+      const maxTries = 100
+      
+      while (tries < maxTries) {
+        // Check if any visible window is close to this position
+        // "Close" means top-left corner is within a small threshold
+        const collision = x.some(win => {
+          if (win.minimized || win.maximized) return false
+          const wx = win.x ?? 60
+          const wy = win.y ?? 60
+          return Math.abs(wx - cx) < 10 && Math.abs(wy - cy) < 10
+        })
+        
+        if (!collision) break
+        
+        cx += gap
+        cy += gap
+        tries++
+        
+        // If we drift too far, reset to initial position (or handle as edge case)
+        // For now we just clamp later
+        if (cx > maxX || cy > maxY) {
+             // If cascade goes off screen, maybe just put it at initX + random or just clamp
+             // A simple strategy is to let it clamp, or wrap around. 
+             // Let's just let it clamp at the end, but the loop continues to find 'logical' offsets
+        }
+      }
+
+      const nx = Math.max(minX, Math.min(cx, maxX))
+      const ny = Math.max(minY, Math.min(cy, maxY))
+      return [...x, { ...w, id: uid, x: nx, y: ny, w: width, h: height }]
     })
     setZOrder(x => [...x.filter(id => id !== newId), newId])
   }, [apps])
