@@ -96,7 +96,7 @@ export default function Desktop() {
                 }}
                 onClick={() => {
                   closeMenu()
-                  openApp('settings')
+                  openApp('system-settings')
                 }}
                 onMouseEnter={() => setHoverIndex(1)}
                 onMouseLeave={() => setHoverIndex(null)}

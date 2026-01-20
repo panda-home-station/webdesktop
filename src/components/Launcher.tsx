@@ -99,7 +99,11 @@ export default function Launcher({ onOpen, onClose }: Props) {
                 color: 'var(--text)',
               }}
             >
-              {a.iconUrl ? <img src={a.iconUrl} alt="" width={64} height={64} style={{ borderRadius: 8 }} /> : <div style={{ width: 64, height: 64, borderRadius: 8, background: '#1f2937' }} />}
+              {a.iconUrl ? (
+                <img src={a.iconUrl} alt="" width={64} height={64} style={{ borderRadius: 8 }} />
+              ) : (
+                <div style={{ width: 64, height: 64, borderRadius: 8, background: '#1f2937' }} />
+              )}
               <div>{a.title}</div>
             </button>
           ))}

@@ -2,6 +2,8 @@ import React, { useState } from 'react'
 import { listApps } from '../apps/registry'
 import { openApp, showDesktop } from '../sdk/desktop'
 import { getAppContextMenu } from '../sdk/desktop'
+import Icon from '@mdi/react'
+import { mdiCogOutline } from '@mdi/js'
 
 type WinItem = {
   id: string
@@ -186,16 +188,12 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            onOpenApp('settings')
+            onOpenApp('system-settings')
           }}
           onMouseEnter={(e) => showTip('设置', e.currentTarget)}
           onMouseLeave={() => setTip(null)}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <circle cx="12" cy="12" r="3.5" fill="#9ca3af" />
-            <circle cx="12" cy="12" r="8" fill="none" stroke="#9ca3af" strokeWidth="2" />
-            <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M5 19l1.5-1.5" stroke="#9ca3af" strokeWidth="2" strokeLinecap="round" />
-          </svg>
+          <Icon path={mdiCogOutline} size="22px" color="#9ca3af" />
         </button>
       </div>
       {tip && (
