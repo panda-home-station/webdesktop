@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { listApps } from '../apps/registry'
 import { openApp, showDesktop } from '../sdk/desktop'
+import { getAppContextMenu } from '../sdk/desktop'
 
 type WinItem = {
   id: string
@@ -31,6 +32,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
   const runningAppIds = Object.keys(byApp)
   const isRunning = (id?: string) => !!(id && byApp[id] && byApp[id].length > 0)
   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null)
+  const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const showTip = (text: string, el: HTMLElement) => {
     const r = el.getBoundingClientRect()
     setTip({ text, x: r.right + 6, y: r.top + r.height / 2 })
@@ -69,6 +71,14 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
         const t = e.target as HTMLElement
         if (!t.closest('.dock-item') && isLauncherOpen && onCloseLauncher) {
           onCloseLauncher()
+        }
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        e.stopPropagation()
+        const items = getAppContextMenu('dock', { x: e.clientX, y: e.clientY, target: e.currentTarget })
+        if (items && items.length > 0) {
+          setMenu({ x: e.clientX, y: e.clientY, items })
         }
       }}
     >
@@ -195,6 +205,35 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
               <div className="semi-tooltip-content">{tip.text}</div>
             </div>
           </div>
+        </div>
+      )}
+      {menu && (
+        <div className="semi-portal" style={{ zIndex: 10005 }}>
+          <div tabIndex={-1} className="semi-portal-inner" style={{ position: 'fixed', left: menu.x, top: menu.y, zIndex: 10006 }}>
+            <div style={{ minWidth: 160, padding: 6, borderRadius: 10, background: 'rgba(243,244,246,0.96)', backdropFilter: 'blur(8px)', border: '1px solid var(--win-border)', boxShadow: '0 10px 24px rgba(0,0,0,0.18)' }}>
+              {menu.items.map((it, idx) => (
+                <button
+                  key={idx}
+                  style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                  onClick={() => {
+                    setMenu(null)
+                    try {
+                      it.onClick && it.onClick()
+                    } catch {}
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = '#e5e7eb'
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'transparent'
+                  }}
+                >
+                  {it.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10004 }} onMouseDown={() => setMenu(null)} />
         </div>
       )}
     </div>

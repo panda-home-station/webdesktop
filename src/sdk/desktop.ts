@@ -1,6 +1,24 @@
 import { api } from '../api/client'
 
 const ev = new EventTarget()
+export type AppContextMenuItem = { label: string; onClick?: () => void }
+export type AppContextMenuProvider = (ev: { x: number; y: number; target: HTMLElement }) => AppContextMenuItem[]
+const appContextMenuProviders = new Map<string, AppContextMenuProvider>()
+
+export function registerAppContextMenu(appId: string, provider: AppContextMenuProvider) {
+  appContextMenuProviders.set(appId, provider)
+}
+
+export function unregisterAppContextMenu(appId: string) {
+  appContextMenuProviders.delete(appId)
+}
+
+export function getAppContextMenu(appId: string, evinfo: { x: number; y: number; target: HTMLElement }): AppContextMenuItem[] {
+  const p = appContextMenuProviders.get(appId)
+  const items = p ? p(evinfo) : []
+  return Array.isArray(items) ? items : []
+}
+
 export type FileTask = {
   id: string
   kind: 'upload' | 'delete' | 'download' | 'mkdir'

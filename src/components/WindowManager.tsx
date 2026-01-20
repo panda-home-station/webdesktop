@@ -287,6 +287,7 @@ export default function WindowManager() {
               title={w.title}
               content={w.content}
               iconUrl={w.iconUrl}
+              appId={w.appId}
               x={w.x}
               y={w.y}
               w={w.w}

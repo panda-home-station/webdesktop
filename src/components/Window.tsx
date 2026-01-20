@@ -1,10 +1,14 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useState, useCallback } from 'react'
+import Icon from '@mdi/react'
+import { mdiAbTesting } from '@mdi/js'
+import { getAppContextMenu } from '../sdk/desktop'
 
 export interface WinProps {
   id: string
   title: string
   content: React.ReactNode
   iconUrl?: string
+  appId: string
   x?: number
   y?: number
   w?: number
@@ -28,6 +32,7 @@ export default function Window({
   title,
   content,
   iconUrl,
+  appId,
   x = 60,
   y = 60,
   w = 600,
@@ -45,6 +50,9 @@ export default function Window({
   minH = 200
 }: WinProps) {
   if (minimized) return null
+
+  const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
+  const closeMenu = useCallback(() => setMenu(null), [])
 
   const handleMouseDown = () => {
     onFocus(id)
@@ -176,6 +184,14 @@ export default function Window({
         }}
         onMouseDown={handleTitleMouseDown}
         onDoubleClick={() => onMaximize(id)}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          const items = getAppContextMenu(appId, { x: e.clientX, y: e.clientY, target: e.currentTarget })
+          if (items && items.length > 0) {
+            setMenu({ x: e.clientX, y: e.clientY, items })
+          }
+        }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {iconUrl ? (
@@ -224,7 +240,16 @@ export default function Window({
       </div>
 
       {/* Content */}
-      <div style={{
+      <div
+        onContextMenu={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          const items = getAppContextMenu(appId, { x: e.clientX, y: e.clientY, target: e.currentTarget })
+          if (items && items.length > 0) {
+            setMenu({ x: e.clientX, y: e.clientY, items })
+          }
+        }}
+        style={{
         flex: 1,
         color: 'var(--text)',
         position: 'relative',
@@ -234,6 +259,38 @@ export default function Window({
         borderBottomRightRadius: 'var(--win-radius)'
       }}>
         {content}
+        {menu && (
+          <div className="semi-portal" style={{ zIndex: 10005 }}>
+            <div tabIndex={-1} className="semi-portal-inner" style={{ position: 'fixed', left: menu.x, top: menu.y, zIndex: 10006 }}>
+              <div style={{ minWidth: 160, padding: 6, borderRadius: 10, background: 'rgba(243,244,246,0.96)', backdropFilter: 'blur(8px)', border: '1px solid var(--win-border)', boxShadow: '0 10px 24px rgba(0,0,0,0.18)' }}>
+                {menu.items.map((it, idx) => (
+                  <button
+                    key={idx}
+                    style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                    onClick={() => {
+                      closeMenu()
+                      try {
+                        it.onClick && it.onClick()
+                      } catch {}
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = '#e5e7eb'
+                      e.currentTarget.style.color = ''
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'transparent'
+                      e.currentTarget.style.color = ''
+                    }}
+                  >
+                    <Icon path={mdiAbTesting} size={0.9} />
+                    {it.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10004 }} onMouseDown={closeMenu} />
+          </div>
+        )}
 
         {/* Resize Handles */}
         {!maximized && (
