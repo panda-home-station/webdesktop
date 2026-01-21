@@ -26,6 +26,8 @@ export type FileTask = {
   dir: string
   progress?: number
   total?: number
+  loaded?: number
+  bps?: number
   status: 'running' | 'done' | 'error'
 }
 let fileTasks: FileTask[] = []
@@ -119,7 +121,7 @@ export function subscribeWinAction(handler: (id: string, action: 'minimize' | 't
 }
 
 function emitFileTasks() {
-  ev.dispatchEvent(new CustomEvent('fileTasks', { detail: fileTasks }))
+  ev.dispatchEvent(new CustomEvent('fileTasks', { detail: [...fileTasks] }))
 }
 
 export function getFileTasks(): FileTask[] {
@@ -160,6 +162,13 @@ export function updateFileTask(id: string, patch: Partial<FileTask>) {
       status: patch.status
     })
   }
+}
+
+export function removeFileTask(id: string) {
+  fileTasks = fileTasks.filter(x => x.id !== id)
+  emitFileTasks()
+  saveLocalTasks()
+  api.deleteTask(id)
 }
 
 export function clearCompletedFileTasks() {

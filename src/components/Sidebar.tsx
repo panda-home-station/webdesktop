@@ -4,6 +4,7 @@ export interface SidebarItem {
   id: string
   label: string
   icon?: React.ReactNode
+  badge?: number | string
   onClick?: () => void
 }
 
@@ -74,6 +75,20 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 200, styl
                       </span>
                     )}
                     <span>{item.label}</span>
+                    {item.badge ? (
+                      <span style={{
+                        marginLeft: 'auto',
+                        background: '#ef4444',
+                        color: 'white',
+                        fontSize: 11,
+                        padding: '1px 6px',
+                        borderRadius: 10,
+                        fontWeight: 600,
+                        lineHeight: '14px'
+                      }}>
+                        {item.badge}
+                      </span>
+                    ) : null}
                   </div>
                 )
               })}
@@ -117,7 +132,21 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 200, styl
                   </span>
                 )}
                 <span>{item.label}</span>
-              </div>
+                    {item.badge ? (
+                      <span style={{
+                        marginLeft: 'auto',
+                        background: '#ef4444',
+                        color: 'white',
+                        fontSize: 11,
+                        padding: '1px 6px',
+                        borderRadius: 10,
+                        fontWeight: 600,
+                        lineHeight: '14px'
+                      }}>
+                        {item.badge}
+                      </span>
+                    ) : null}
+                  </div>
             )
           })
         )}

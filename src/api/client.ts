@@ -325,6 +325,14 @@ export const api = {
       return { ok: false }
     }
   },
+  async deleteTask(id: string) {
+    try {
+      await axios.post(`${base}/api/tasks/delete`, { id })
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  },
   async clearTasks() {
     try {
       await axios.post(`${base}/api/tasks/clear`)

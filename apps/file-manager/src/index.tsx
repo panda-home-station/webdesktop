@@ -13,10 +13,13 @@ import {
   mdiHistory,
   mdiStarOutline,
   mdiSwapHorizontal,
-  mdiTrashCanOutline
+  mdiTrashCanOutline,
+  mdiPlay,
+  mdiPause,
+  mdiClose
 } from '@mdi/js'
 import { api } from '../../../src/api/client'
-import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, FileTask } from '../../../src/sdk/desktop'
+import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, removeFileTask, FileTask } from '../../../src/sdk/desktop'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Toolbar from './components/Toolbar'
 import ListView from './components/ListView'
@@ -51,18 +54,23 @@ export default function FileManager() {
     owner: 120,
   })
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
+  
+  // Global tasks subscription
+  useEffect(() => {
+    setTasks(getFileTasks())
+    const unsub = subscribeFileTasks((ts) => {
+      setTasks(ts)
+    })
+    return () => unsub()
+  }, [])
+
   useEffect(() => {
     let mounted = true
-    let unsub: (() => void) | null = null
     const load = async () => {
       setLoading(true)
       try {
         if (path === '/Transfers') {
-          setTasks(getFileTasks())
-          unsub = subscribeFileTasks((ts) => {
-            if (!mounted) return
-            setTasks(ts)
-          })
+          // Tasks are handled by global subscription
           return
         }
         console.time('fm:first-page')
@@ -97,7 +105,6 @@ export default function FileManager() {
     load()
     return () => {
       mounted = false
-      if (unsub) unsub()
     }
   }, [path])
 
@@ -283,6 +290,30 @@ export default function FileManager() {
     const visible = transferTab === 'upload' ? uploads : downloads
     const runningUploads = tasks.filter(t => t.kind === 'upload' && t.status === 'running').length
     const runningDownloads = tasks.filter(t => t.kind === 'download' && t.status === 'running').length
+    
+    const fmtSpeed = (bps?: number) => {
+      if (!bps) return ''
+      return `${fmtSize(bps)}/s`
+    }
+
+    const togglePause = (t: FileTask) => {
+      // 暂停/继续功能的实现逻辑
+      // 这里暂时只更新状态演示UI
+      if (t.status === 'running') {
+         // TODO: 实现真正的暂停逻辑
+         updateFileTask(t.id, { status: 'error' }) // 临时用error状态模拟停止
+      } else {
+         // TODO: 实现真正的继续逻辑
+         updateFileTask(t.id, { status: 'running' })
+      }
+    }
+
+    const removeTask = (id: string) => {
+      // 从列表中移除任务
+      // 实际应用中可能需要取消正在进行的网络请求
+      removeFileTask(id)
+    }
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderBottom: '1px solid var(--win-border)' }}>
@@ -336,7 +367,7 @@ export default function FileManager() {
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {visible.map(t => (
-                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 160px 80px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
+                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 160px 140px 80px 60px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
                   <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {t.kind === 'upload' ? <Icon path={mdiUpload} size={0.9} /> : <Icon path={mdiDownload} size={0.9} />}
                   </div>
@@ -347,8 +378,34 @@ export default function FileManager() {
                   <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
                     <div style={{ width: `${Math.min(100, Math.max(0, t.progress ?? (t.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
                   </div>
+                  <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>
+                    {t.status === 'running' && (
+                      <>
+                        <span>{fmtSize(t.loaded || 0)} / {fmtSize(t.total || 0)}</span>
+                        {t.bps ? <span style={{ marginLeft: 8 }}>{fmtSpeed(t.bps)}</span> : null}
+                      </>
+                    )}
+                  </div>
                   <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827' }}>
                     {t.status === 'error' ? '失败' : t.status === 'done' ? '完成' : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                    <button 
+                      className="puter-icon-button"
+                      style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={() => togglePause(t)}
+                      title={t.status === 'running' ? '暂停' : '继续'}
+                    >
+                      <Icon path={t.status === 'running' ? mdiPause : mdiPlay} size={0.8} color="#6b7280" />
+                    </button>
+                    <button 
+                      className="puter-icon-button"
+                      style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      onClick={() => removeTask(t.id)}
+                      title="删除任务"
+                    >
+                      <Icon path={mdiClose} size={0.8} color="#6b7280" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -431,7 +488,9 @@ export default function FileManager() {
     )
   }
 
-  const sections = [
+  const sections = useMemo(() => {
+    const runningCount = tasks.filter(t => t.status === 'running').length
+    return [
     {
       title: '文件',
       items: [
@@ -458,11 +517,12 @@ export default function FileManager() {
     {
       title: '系统',
       items: [
-        { id: 'transfers', label: '传输任务', icon: <Icon path={mdiSwapHorizontal} size={1} /> },
+        { id: 'transfers', label: '传输任务', icon: <Icon path={mdiSwapHorizontal} size={1} />, badge: runningCount > 0 ? runningCount : undefined },
         { id: 'trash', label: '回收站', icon: <Icon path={mdiTrashCanOutline} size={1} /> },
       ]
     }
   ]
+  }, [tasks])
 
   return (
     <div style={{ display: 'flex', height: '100%' }} className="noselect">
@@ -507,10 +567,10 @@ export default function FileManager() {
               onUploadFiles={async (files) => {
                 for (const f of Array.from(files)) {
                   const id = `${f.name}-${Date.now()}`
-                  pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, status: 'running' })
+                  pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, loaded: 0, bps: 0, status: 'running' })
                   try {
                     await api.fsUpload(path, f, (info) => {
-                      updateFileTask(id, { progress: info.percent, total: info.total })
+                      updateFileTask(id, { progress: info.percent, total: info.total, loaded: info.loaded, bps: info.bps })
                     })
                     updateFileTask(id, { progress: 100, status: 'done' })
                   } catch {
