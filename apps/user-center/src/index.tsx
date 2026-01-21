@@ -50,7 +50,7 @@ export default function UserCenter() {
   }
 
   return (
-    <div style={{ display: 'flex', width: '100%', height: '100%', background: 'transparent' }}>
+    <div style={{ display: 'flex', width: '100%', height: '100%', background: 'transparent' }} className="noselect">
       <Sidebar
         width={220}
         activeId={active}

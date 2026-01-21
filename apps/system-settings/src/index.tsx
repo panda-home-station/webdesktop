@@ -39,7 +39,7 @@ export default function SystemSettings() {
   }, [])
 
   return (
-    <div style={{ display: 'flex', height: '100%', fontFamily: 'system-ui, sans-serif', color: '#1f2937' }}>
+    <div style={{ display: 'flex', height: '100%', fontFamily: 'system-ui, sans-serif', color: '#1f2937' }} className="noselect">
       {/* Sidebar */}
       <Sidebar
         width={240}

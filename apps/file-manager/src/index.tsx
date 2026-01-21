@@ -465,7 +465,7 @@ export default function FileManager() {
   ]
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
+    <div style={{ display: 'flex', height: '100%' }} className="noselect">
       <Sidebar
         width={220}
         sections={sections}

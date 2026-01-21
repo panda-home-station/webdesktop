@@ -57,12 +57,16 @@
 .puter-titlebar {
   background: var(--titlebar-bg);
   color: #111827;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .puter-taskbar {
   background: var(--taskbar-bg);
   border-top: 1px solid var(--taskbar-border);
   backdrop-filter: blur(12px);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .puter-button {

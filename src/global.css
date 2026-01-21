@@ -6,6 +6,12 @@ html, body {
   overflow: hidden;
 }
 
+.noselect {
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
 #root {
   width: 100vw;
   height: 100vh;

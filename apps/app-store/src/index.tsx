@@ -4,7 +4,7 @@ import { listApps } from '../../../src/apps/registry'
 export default function AppStore() {
   const apps = listApps()
   return (
-    <div style={{ padding: 16 }}>
+    <div style={{ padding: 16 }} className="noselect">
       <h2 style={{ margin: 0, marginBottom: 12 }}>应用商店</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
         {apps.map(a => (
