@@ -115,6 +115,15 @@ export default function App() {
     }).catch(() => {
       setInitChecked(true)
     })
+    api.getWallpaper().then(path => {
+      const fallback = (path && path.length > 0) ? path : (localStorage.getItem('wallpaperPath') || '')
+      const url = fallback ? api.fsDownloadUrl(fallback) : ''
+      setWallpaperUrl(url)
+      try {
+        const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
+        window.dispatchEvent(ev)
+      } catch {}
+    }).catch(() => {})
     const onWp = (e: any) => {
       const next = e?.detail?.url ?? getWallpaper()
       setWallpaperUrl(next)

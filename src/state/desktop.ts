@@ -1,17 +1,21 @@
-const KEY = 'wallpaperUrl'
+import { api } from '../api/client'
+const KEY = 'wallpaperPath'
 
 export function getWallpaper() {
-  return localStorage.getItem(KEY) || ''
+  const p = api.getWallpaperCached() || localStorage.getItem(KEY) || ''
+  return p ? api.fsDownloadUrl(p) : ''
 }
 
-export function setWallpaper(url: string | null) {
-  if (!url) {
+export function setWallpaper(path: string | null) {
+  api.setWallpaper(path)
+  if (!path) {
     localStorage.removeItem(KEY)
   } else {
-    localStorage.setItem(KEY, url)
+    localStorage.setItem(KEY, path)
   }
+  const url = path ? api.fsDownloadUrl(path) : ''
   try {
-    const ev = new CustomEvent('desktop:wallpaper', { detail: { url: url || '' } })
+    const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
     window.dispatchEvent(ev)
   } catch {}
 }

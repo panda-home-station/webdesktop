@@ -31,42 +31,24 @@ export type FileTask = {
   status: 'running' | 'done' | 'error' | 'paused'
 }
 let fileTasks: FileTask[] = []
-const KEY_TASKS = 'desktop:fileTasks'
-
-function saveLocalTasks() {
-  try {
-    localStorage.setItem(KEY_TASKS, JSON.stringify(fileTasks))
-  } catch {}
-}
-function loadLocalTasks(): FileTask[] {
-  try {
-    const s = localStorage.getItem(KEY_TASKS)
-    const arr = s ? JSON.parse(s) : []
-    return Array.isArray(arr) ? arr : []
-  } catch {
-    return []
-  }
-}
 
 // Init tasks
 api.getTasks()
   .then(tasks => {
-    if (Array.isArray(tasks) && tasks.length > 0) {
-      fileTasks = tasks.map(t => ({
-        id: t.id,
-        kind: t.type as any,
-        name: t.name,
-        dir: t.dir || '',
-        progress: t.progress,
-        status: t.status as any
-      }))
-    } else {
-      fileTasks = loadLocalTasks()
-    }
+    fileTasks = Array.isArray(tasks)
+      ? tasks.map(t => ({
+          id: t.id,
+          kind: t.type as any,
+          name: t.name,
+          dir: t.dir || '',
+          progress: t.progress,
+          status: t.status as any
+        }))
+      : []
     emitFileTasks()
   })
   .catch(() => {
-    fileTasks = loadLocalTasks()
+    fileTasks = []
     emitFileTasks()
   })
 
@@ -140,7 +122,6 @@ export function subscribeFileTasks(handler: (tasks: FileTask[]) => void) {
 export function pushFileTask(task: FileTask) {
   fileTasks.push(task)
   emitFileTasks()
-  saveLocalTasks()
   api.createTask({
     id: task.id,
     type: task.kind,
@@ -156,7 +137,6 @@ export function updateFileTask(id: string, patch: Partial<FileTask>) {
   if (t) {
     Object.assign(t, patch)
     emitFileTasks()
-    saveLocalTasks()
     api.updateTask(id, {
       progress: patch.progress,
       status: patch.status
@@ -167,14 +147,12 @@ export function updateFileTask(id: string, patch: Partial<FileTask>) {
 export function removeFileTask(id: string) {
   fileTasks = fileTasks.filter(x => x.id !== id)
   emitFileTasks()
-  saveLocalTasks()
   api.deleteTask(id)
 }
 
 export function clearCompletedFileTasks() {
   fileTasks = fileTasks.filter(x => x.status !== 'done')
   emitFileTasks()
-  saveLocalTasks()
   api.clearTasks()
 }
 

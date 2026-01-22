@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
 import { api } from '../../../src/api/client'
+import { getWallpaper, setWallpaper } from '../../../src/state/desktop'
 import Icon from '@mdi/react'
 import { mdiAccountCircleOutline, mdiImageOutline } from '@mdi/js'
 
 type Item = 'profile' | 'wallpapers'
 
 const WALL_DIR = '/AppData/Wallpapers'
-const WP_KEY = 'wallpaperUrl'
 
 export default function UserCenter() {
   const [active, setActive] = useState<Item>('profile')
@@ -20,7 +20,7 @@ export default function UserCenter() {
     return entries.filter(e => !e.is_dir && allow.has((e.name.split('.').pop() || '').toLowerCase()))
   }, [entries])
 
-  const curWallpaper = localStorage.getItem(WP_KEY) || ''
+  const curWallpaper = getWallpaper()
 
   useEffect(() => {
     if (active !== 'wallpapers') return
@@ -40,14 +40,20 @@ export default function UserCenter() {
     })()
   }, [active])
 
-  const setWallpaper = (url: string | null) => {
-    if (!url) localStorage.removeItem(WP_KEY)
-    else localStorage.setItem(WP_KEY, url)
-    try {
-      const ev = new CustomEvent('desktop:wallpaper', { detail: { url: url || '' } })
-      window.dispatchEvent(ev)
-    } catch {}
-  }
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const path = await api.getWallpaper()
+        const url = path ? api.fsDownloadUrl(path) : ''
+        if (url) {
+          try {
+            const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
+            window.dispatchEvent(ev)
+          } catch {}
+        }
+      } catch {}
+    })()
+  }, [])
 
   return (
     <div style={{ display: 'flex', width: '100%', height: '100%', background: 'transparent' }} className="noselect">
@@ -123,7 +129,7 @@ export default function UserCenter() {
                   <button
                     key={it.name}
                     title={it.name}
-                    onClick={() => setWallpaper(url)}
+                    onClick={() => setWallpaper(full)}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',

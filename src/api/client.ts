@@ -20,6 +20,7 @@ type FsListResp = {
 }
 let token = localStorage.getItem(TOKEN_KEY) || ''
 let currentUser: User | null = null
+let currentWallpaper: string = ''
 try {
   const rawUser = localStorage.getItem(USER_KEY)
   currentUser = rawUser ? JSON.parse(rawUser) : null
@@ -175,6 +176,33 @@ export const api = {
   },
   getUser() {
     return currentUser
+  },
+  async getWallpaper(): Promise<string> {
+    try {
+      const r = await axios.get(`${base}/api/user/wallpaper`)
+      const path = (r.data as { path?: string }).path || ''
+      if (path && path.length > 0) {
+        currentWallpaper = path
+        return path
+      }
+    } catch {
+      // ignore
+    }
+    const local = localStorage.getItem('wallpaperPath') || ''
+    currentWallpaper = local
+    return local
+  },
+  getWallpaperCached(): string {
+    return currentWallpaper
+  },
+  async setWallpaper(path: string | null) {
+    try {
+      await axios.post(`${base}/api/user/wallpaper`, { path: path || '' })
+      currentWallpaper = path || ''
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
   },
   async fsList(path: string) {
     try {
