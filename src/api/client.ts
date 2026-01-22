@@ -110,7 +110,10 @@ export const api = {
       const r = await axios.get(`${base}/health`)
       offline = false
       return r.data as { status: string; ts: number }
-    } catch {
+    } catch (e: any) {
+      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
+        throw e
+      }
       offline = true
       return { status: 'offline', ts: Math.floor(Date.now() / 1000) }
     }
@@ -192,7 +195,10 @@ export const api = {
       const r = await axios.post(`${base}/api/docs/mkdir`, { path })
       offline = false
       return r.data as { ok: boolean }
-    } catch {
+    } catch (e: any) {
+      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
+        throw e
+      }
       offline = true
       mockEnsureDir(path)
       return { ok: true }
@@ -203,7 +209,10 @@ export const api = {
       const r = await axios.delete(`${base}/api/docs/delete`, { params: { path } })
       offline = false
       return r.data as { ok: boolean }
-    } catch {
+    } catch (e: any) {
+      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
+        throw e
+      }
       offline = true
       const { root, parent, name } = mockTraverse(path)
       if (parent && parent.children && name && parent.children[name]) {
@@ -237,15 +246,25 @@ export const api = {
       return { ok: true }
     }
   },
-  async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void) {
+  async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal, offset: number = 0) {
     try {
       const fd = new FormData()
       fd.append('path', path)
-      fd.append('file', file)
+      fd.append('size', String(file.size))
+      if (offset > 0) {
+        fd.append('offset', String(offset))
+        fd.append('file', file.slice(offset), file.name)
+      } else {
+        fd.append('file', file)
+      }
       let lastLoaded = 0
       let lastTs = Date.now()
-      if (onProgress) onProgress({ percent: 0, loaded: 0, total: file.size, bps: 0 })
+      if (onProgress) onProgress({ percent: Math.round(offset / file.size * 100), loaded: offset, total: file.size, bps: 0 })
+      
+      console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: starting POST ${file.name} size=${file.size} offset=${offset}`);
+      
       const r = await axios.post(`${base}/api/docs/upload`, fd, {
+        signal,
         onUploadProgress: (e) => {
           if (onProgress && e.loaded != null) {
             const now = Date.now()
@@ -254,15 +273,27 @@ export const api = {
             const bps = (dbytes / dt) * 1000
             lastLoaded = e.loaded
             lastTs = now
-            const total = e.total ?? file.size
-            const pct = total > 0 ? Math.round((e.loaded / total) * 100) : 0
-            onProgress({ percent: pct, loaded: e.loaded, total, bps })
+            const realLoaded = offset + e.loaded
+            const total = file.size
+            const pct = total > 0 ? Math.round((realLoaded / total) * 100) : 0
+            
+            if (pct === 100) {
+                 console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: progress 100% (client-side) loaded=${e.loaded}`);
+            }
+            
+            onProgress({ percent: pct, loaded: realLoaded, total, bps })
           }
         }
       })
+      
+      console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: POST finished (server responded)`);
+      
       offline = false
       return r.data as { ok: boolean }
-    } catch {
+    } catch (e: any) {
+      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
+        throw e
+      }
       offline = true
       mockEnsureDir(path)
       const { root, node } = mockTraverse(path)

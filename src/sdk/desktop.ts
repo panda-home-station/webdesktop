@@ -28,7 +28,7 @@ export type FileTask = {
   total?: number
   loaded?: number
   bps?: number
-  status: 'running' | 'done' | 'error'
+  status: 'running' | 'done' | 'error' | 'paused'
 }
 let fileTasks: FileTask[] = []
 const KEY_TASKS = 'desktop:fileTasks'

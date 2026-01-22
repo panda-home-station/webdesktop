@@ -54,6 +54,35 @@ export default function FileManager() {
     owner: 120,
   })
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
+  const abortControllers = useRef<Map<string, AbortController>>(new Map())
+  const uploadFilesMap = useRef<Map<string, File>>(new Map())
+
+  const startUpload = async (id: string, file: File, dir: string, offset: number = 0) => {
+    const controller = new AbortController()
+    abortControllers.current.set(id, controller)
+    updateFileTask(id, { status: 'running' })
+    console.log(`[${new Date().toLocaleTimeString()}] FileManager: startUpload ${file.name}`);
+    try {
+      await api.fsUpload(dir, file, (info) => {
+        updateFileTask(id, { progress: info.percent, total: info.total, loaded: info.loaded, bps: info.bps })
+      }, controller.signal, offset)
+      console.log(`[${new Date().toLocaleTimeString()}] FileManager: upload finished ${file.name}`);
+      updateFileTask(id, { progress: 100, status: 'done' })
+      uploadFilesMap.current.delete(id)
+      if (path === dir) {
+        const rs = await api.fsList(path)
+        setEntries(rs.entries)
+      }
+    } catch (e: any) {
+      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
+        // ignore
+      } else {
+        updateFileTask(id, { status: 'error' })
+      }
+    } finally {
+      abortControllers.current.delete(id)
+    }
+  }
   
   // Global tasks subscription
   useEffect(() => {
@@ -297,21 +326,39 @@ export default function FileManager() {
     }
 
     const togglePause = (t: FileTask) => {
-      // 暂停/继续功能的实现逻辑
-      // 这里暂时只更新状态演示UI
       if (t.status === 'running') {
-         // TODO: 实现真正的暂停逻辑
-         updateFileTask(t.id, { status: 'error' }) // 临时用error状态模拟停止
+         const controller = abortControllers.current.get(t.id)
+         if (controller) {
+             controller.abort()
+         }
+         updateFileTask(t.id, { status: 'paused' })
       } else {
-         // TODO: 实现真正的继续逻辑
-         updateFileTask(t.id, { status: 'running' })
+         const file = uploadFilesMap.current.get(t.id)
+         if (file) {
+           startUpload(t.id, file, t.dir, t.loaded || 0)
+         } else {
+           alert('无法恢复任务：文件对象丢失')
+         }
       }
     }
 
-    const removeTask = (id: string) => {
-      // 从列表中移除任务
-      // 实际应用中可能需要取消正在进行的网络请求
-      removeFileTask(id)
+    const removeTask = async (t: FileTask) => {
+      uploadFilesMap.current.delete(t.id)
+      if (t.kind === 'upload' && t.status !== 'done') {
+        if (!window.confirm('确定要取消该任务吗？取消后将删除已上传的部分文件。')) {
+          return
+        }
+        const controller = abortControllers.current.get(t.id)
+        if (controller) {
+          controller.abort()
+        }
+        const fullPath = t.dir === '/' ? `/${t.name}` : `${t.dir}/${t.name}`
+        await api.fsDelete(fullPath)
+        if (path === t.dir) {
+          refresh()
+        }
+      }
+      removeFileTask(t.id)
     }
 
     return (
@@ -387,7 +434,7 @@ export default function FileManager() {
                     )}
                   </div>
                   <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827' }}>
-                    {t.status === 'error' ? '失败' : t.status === 'done' ? '完成' : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
+                    {t.status === 'error' ? '失败' : t.status === 'paused' ? '暂停' : t.status === 'done' ? '完成' : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
                   </div>
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                     <button 
@@ -401,7 +448,7 @@ export default function FileManager() {
                     <button 
                       className="puter-icon-button"
                       style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      onClick={() => removeTask(t.id)}
+                      onClick={() => removeTask(t)}
                       title="删除任务"
                     >
                       <Icon path={mdiClose} size={0.8} color="#6b7280" />
@@ -568,17 +615,9 @@ export default function FileManager() {
                 for (const f of Array.from(files)) {
                   const id = `${f.name}-${Date.now()}`
                   pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, loaded: 0, bps: 0, status: 'running' })
-                  try {
-                    await api.fsUpload(path, f, (info) => {
-                      updateFileTask(id, { progress: info.percent, total: info.total, loaded: info.loaded, bps: info.bps })
-                    })
-                    updateFileTask(id, { progress: 100, status: 'done' })
-                  } catch {
-                    updateFileTask(id, { status: 'error' })
-                  }
+                  uploadFilesMap.current.set(id, f)
+                  await startUpload(id, f, path)
                 }
-                const rs = await api.fsList(path)
-                setEntries(rs.entries)
               }}
               onCreateFolder={async () => {
                 const name = prompt('新建文件夹名称')
