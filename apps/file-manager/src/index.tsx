@@ -47,6 +47,10 @@ export default function FileManager() {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
   const [transferTab, setTransferTab] = useState<'upload' | 'download'>('upload')
+  const [clearPressed, setClearPressed] = useState(false)
+  const [restorePressed, setRestorePressed] = useState(false)
+  const [deletePressed, setDeletePressed] = useState(false)
+  const [emptyPressed, setEmptyPressed] = useState(false)
   const [colWidths, setColWidths] = useState<Record<string, number>>({
     name: 172,
     modified: 149,
@@ -220,6 +224,19 @@ export default function FileManager() {
     const gb = mb / 1024
     return `${gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10} GB`
   }
+  const actionButtonStyle = (pressed: boolean): React.CSSProperties => ({
+    height: 28,
+    padding: '0 10px',
+    borderRadius: 6,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: pressed ? 'linear-gradient(180deg, #edeef1 0%, #e5e7eb 100%)' : 'linear-gradient(180deg, #fbfbfc 0%, #f3f4f6 100%)',
+    color: '#111827',
+    border: pressed ? '1px solid #cbd5e1' : '1px solid #d1d5db',
+    boxShadow: pressed ? 'inset 0 1px 2px rgba(0,0,0,0.14)' : '0 1px 0 rgba(255,255,255,0.75) inset, 0 1px 2px rgba(0,0,0,0.08)',
+    transition: 'background 160ms ease, border-color 160ms ease, box-shadow 160ms ease'
+  })
 
   const goto = async (to: string, key: string) => {
     setActive(key)
@@ -393,12 +410,15 @@ export default function FileManager() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderBottom: '1px solid var(--win-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <button
               className="puter-button"
               style={{
                 height: 28,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 position: 'relative',
                 padding: '0 10px',
                 borderRadius: 6,
@@ -419,6 +439,9 @@ export default function FileManager() {
               className="puter-button"
               style={{
                 height: 28,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 position: 'relative',
                 padding: '0 10px',
                 borderRadius: 6,
@@ -436,12 +459,32 @@ export default function FileManager() {
               )}
             </button>
           </div>
-          <button className="puter-button" style={{ height: 28, marginLeft: 'auto' }} onClick={() => clearCompletedFileTasks()}>清除已完成</button>
+          <button
+            className="puter-button"
+            style={{
+              height: 28,
+              marginLeft: 'auto',
+              padding: '0 10px',
+              borderRadius: 6,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: clearPressed ? 'linear-gradient(180deg, #edeef1 0%, #e5e7eb 100%)' : 'linear-gradient(180deg, #fbfbfc 0%, #f3f4f6 100%)',
+              color: '#111827',
+              border: clearPressed ? '1px solid #cbd5e1' : '1px solid #d1d5db',
+              boxShadow: clearPressed ? 'inset 0 1px 2px rgba(0,0,0,0.14)' : '0 1px 0 rgba(255,255,255,0.75) inset, 0 1px 2px rgba(0,0,0,0.08)',
+              transition: 'background 160ms ease, border-color 160ms ease, box-shadow 160ms ease'
+            }}
+            onMouseDown={() => setClearPressed(true)}
+            onMouseUp={() => setClearPressed(false)}
+            onMouseLeave={() => setClearPressed(false)}
+            onClick={() => clearCompletedFileTasks()}
+          >
+            清除已完成
+          </button>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
-          {visible.length === 0 ? (
-            <div style={{ color: 'var(--muted)' }}>{transferTab === 'upload' ? '暂无上传任务' : '暂无下载任务'}</div>
-          ) : (
+        <div style={{ flex: 1, overflow: 'auto', padding: 12, borderTop: '1px solid #e5e7eb' }}>
+          {visible.length === 0 ? null : (
             <div style={{ display: 'grid', gap: 6 }}>
               {visible.map(t => (
                 <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 4fr 120px 140px 72px 72px', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
@@ -551,23 +594,49 @@ export default function FileManager() {
     }
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12, borderBottom: '1px solid var(--win-border)' }}>
-          <h3 style={{ margin: 0, fontSize: 16 }}>回收站</h3>
-          <button className="puter-button" style={{ height: 28 }} onClick={onRestoreSelected} disabled={selected.size === 0}>还原所选</button>
-          <button className="puter-button" style={{ height: 28 }} onClick={onDeleteSelected} disabled={selected.size === 0}>删除所选</button>
-          <button className="puter-button" style={{ height: 28, marginLeft: 'auto' }} onClick={onEmptyTrash}>清空回收站</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
+          <button
+            className="puter-button"
+            style={actionButtonStyle(restorePressed)}
+            onMouseDown={() => setRestorePressed(true)}
+            onMouseUp={() => setRestorePressed(false)}
+            onMouseLeave={() => setRestorePressed(false)}
+            onClick={onRestoreSelected}
+            disabled={selected.size === 0}
+          >
+            还原所选
+          </button>
+          <button
+            className="puter-button"
+            style={actionButtonStyle(deletePressed)}
+            onMouseDown={() => setDeletePressed(true)}
+            onMouseUp={() => setDeletePressed(false)}
+            onMouseLeave={() => setDeletePressed(false)}
+            onClick={onDeleteSelected}
+            disabled={selected.size === 0}
+          >
+            删除所选
+          </button>
+          <button
+            className="puter-button"
+            style={{ ...actionButtonStyle(emptyPressed), marginLeft: 'auto' }}
+            onMouseDown={() => setEmptyPressed(true)}
+            onMouseUp={() => setEmptyPressed(false)}
+            onMouseLeave={() => setEmptyPressed(false)}
+            onClick={onEmptyTrash}
+          >
+            清空回收站
+          </button>
         </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: 12 }}>
-          {entries.length === 0 ? (
-            <div style={{ color: 'var(--muted)' }}>回收站为空</div>
-          ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
+        <div style={{ flex: 1, overflow: 'auto', padding: 12, borderTop: '1px solid #e5e7eb' }}>
+          {entries.length === 0 ? null : (
+            <div style={{ display: 'grid', gap: 6 }}>
               {entries.map(e => {
                 const checked = selected.has(e.name)
                 return (
                   <div
                     key={`trash-${e.name}`}
-                    style={{ display: 'grid', gridTemplateColumns: '24px 1fr 120px 120px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8, background: checked ? 'rgba(0,0,0,0.06)' : '#fff', cursor: 'pointer' }}
+                    style={{ display: 'grid', gridTemplateColumns: '24px 1fr 120px 120px', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--win-border)', borderRadius: 8, background: checked ? 'rgba(0,0,0,0.06)' : '#fff', cursor: 'pointer' }}
                     onClick={() => toggleSelect(e.name)}
                   >
                     <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
