@@ -17,7 +17,8 @@ import {
   mdiTrashCanOutline,
   mdiPlay,
   mdiPause,
-  mdiClose
+  mdiClose,
+  mdiCheckCircleOutline
 } from '@mdi/js'
 import { api } from '../../../src/api/client'
 import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, removeFileTask, FileTask } from '../../../src/sdk/desktop'
@@ -441,19 +442,26 @@ export default function FileManager() {
           {visible.length === 0 ? (
             <div style={{ color: 'var(--muted)' }}>{transferTab === 'upload' ? '暂无上传任务' : '暂无下载任务'}</div>
           ) : (
-            <div style={{ display: 'grid', gap: 8 }}>
+            <div style={{ display: 'grid', gap: 6 }}>
               {visible.map(t => (
-                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 160px 200px 72px 60px', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
+                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 4fr 120px 140px 72px 72px', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
                   <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {t.kind === 'upload' ? <Icon path={mdiUpload} size={0.9} /> : <Icon path={mdiDownload} size={0.9} />}
+                    {t.kind === 'upload'
+                      ? (t.status === 'done'
+                        ? <Icon path={mdiCheckCircleOutline} size={0.9} color="#10b981" />
+                        : <Icon path={mdiUpload} size={0.9} />)
+                      : <Icon path={mdiDownload} size={0.9} />}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <span style={{ fontSize: 14, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 60%' }}>{t.name}</span>
+                    <span style={{ marginLeft: 16, fontSize: 12, lineHeight: 1.2, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 40%' }}>存储目录: {t.dir}</span>
                   </div>
-                  <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
-                    <div style={{ width: `${Math.min(100, Math.max(0, t.progress ?? (t.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
-                  </div>
-                  <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {!(t.kind === 'upload' && t.status === 'done') ? (
+                    <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
+                      <div style={{ width: `${Math.min(100, Math.max(0, t.progress ?? (t.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
+                    </div>
+                  ) : <div />}
+                  <div style={{ fontSize: 13, lineHeight: 1.2, color: 'var(--muted)', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {t.status === 'running' ? (
                       <>
                         <span>{fmtSize(t.loaded || 0)} / {fmtSize(t.total || 0)}</span>
@@ -461,10 +469,26 @@ export default function FileManager() {
                       </>
                     ) : null}
                   </div>
-                  <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827', fontSize: 13 }}>
-                    {t.status === 'error' ? '失败' : t.status === 'paused' ? '暂停' : t.status === 'done' ? '完成' : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
+                  <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827', fontSize: 13, lineHeight: 1.2 }}>
+                    {t.status === 'error'
+                      ? '失败'
+                      : t.status === 'paused'
+                        ? '暂停'
+                        : (t.kind === 'upload' && t.status === 'done')
+                          ? ''
+                          : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
                   </div>
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                    {(t.kind === 'upload' && t.status === 'done') && (
+                      <button
+                        className="puter-icon-button"
+                        style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => navigate(t.dir)}
+                        title="打开文件目录"
+                      >
+                        <Icon path={mdiFolderOutline} size={0.8} color="#2563eb" />
+                      </button>
+                    )}
                     {t.status !== 'done' && (
                       <button 
                         className="puter-icon-button"
