@@ -57,6 +57,8 @@ export default function FileManager() {
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
   const abortControllers = useRef<Map<string, AbortController>>(new Map())
   const uploadFilesMap = useRef<Map<string, File>>(new Map())
+  const speedStatsRef = useRef<Map<string, { samples: { ts: number; bps: number }[]; lastAvg: number }>>(new Map())
+  const SPEED_WINDOW_MS = 6000
 
   const startUpload = async (id: string, file: File, dir: string, offset: number = 0) => {
     const controller = new AbortController()
@@ -89,6 +91,28 @@ export default function FileManager() {
   useEffect(() => {
     setTasks(getFileTasks())
     const unsub = subscribeFileTasks((ts) => {
+      const now = Date.now()
+      for (const t of ts) {
+        if (t.status === 'running') {
+          const entry = speedStatsRef.current.get(t.id) || { samples: [], lastAvg: 0 }
+          if (t.bps != null) {
+            entry.samples.push({ ts: now, bps: t.bps })
+          }
+          entry.samples = entry.samples.filter(s => now - s.ts <= SPEED_WINDOW_MS)
+          if (entry.samples.length > 0) {
+            let sum = 0
+            for (const s of entry.samples) sum += s.bps
+            entry.lastAvg = sum / entry.samples.length
+          }
+          speedStatsRef.current.set(t.id, entry)
+        } else {
+          const entry = speedStatsRef.current.get(t.id)
+          if (entry) {
+            entry.samples = []
+            speedStatsRef.current.set(t.id, entry)
+          }
+        }
+      }
       setTasks(ts)
     })
     return () => unsub()
@@ -322,8 +346,12 @@ export default function FileManager() {
     const runningDownloads = tasks.filter(t => t.kind === 'download' && t.status === 'running').length
     
     const fmtSpeed = (bps?: number) => {
-      if (!bps) return ''
-      return `${fmtSize(bps)}/s`
+      const v = typeof bps === 'number' && bps >= 0 ? bps : 0
+      return `${fmtSize(v)}/s`
+    }
+    const getAvgSpeed = (id: string) => {
+      const e = speedStatsRef.current.get(id)
+      return e && e.lastAvg ? e.lastAvg : 0
     }
 
     const togglePause = (t: FileTask) => {
@@ -415,37 +443,38 @@ export default function FileManager() {
           ) : (
             <div style={{ display: 'grid', gap: 8 }}>
               {visible.map(t => (
-                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 160px 140px 80px 60px', alignItems: 'center', gap: 12, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
+                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 1fr 160px 200px 72px 60px', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
                   <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {t.kind === 'upload' ? <Icon path={mdiUpload} size={0.9} /> : <Icon path={mdiDownload} size={0.9} />}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
-                    <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.dir}</span>
+                    <span style={{ fontSize: 14, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.name}</span>
                   </div>
                   <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
                     <div style={{ width: `${Math.min(100, Math.max(0, t.progress ?? (t.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'right' }}>
-                    {t.status === 'running' && (
+                  <div style={{ fontSize: 13, color: 'var(--muted)', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {t.status === 'running' ? (
                       <>
                         <span>{fmtSize(t.loaded || 0)} / {fmtSize(t.total || 0)}</span>
-                        {t.bps ? <span style={{ marginLeft: 8 }}>{fmtSpeed(t.bps)}</span> : null}
+                        <span style={{ marginLeft: 8 }}>{fmtSpeed(getAvgSpeed(t.id))}</span>
                       </>
-                    )}
+                    ) : null}
                   </div>
-                  <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827' }}>
+                  <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827', fontSize: 13 }}>
                     {t.status === 'error' ? '失败' : t.status === 'paused' ? '暂停' : t.status === 'done' ? '完成' : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
                   </div>
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    <button 
-                      className="puter-icon-button"
-                      style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      onClick={() => togglePause(t)}
-                      title={t.status === 'running' ? '暂停' : '继续'}
-                    >
-                      <Icon path={t.status === 'running' ? mdiPause : mdiPlay} size={0.8} color="#6b7280" />
-                    </button>
+                    {t.status !== 'done' && (
+                      <button 
+                        className="puter-icon-button"
+                        style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        onClick={() => togglePause(t)}
+                        title={t.status === 'running' ? '暂停' : '继续'}
+                      >
+                        <Icon path={t.status === 'running' ? mdiPause : mdiPlay} size={0.8} color="#6b7280" />
+                      </button>
+                    )}
                     <button 
                       className="puter-icon-button"
                       style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
