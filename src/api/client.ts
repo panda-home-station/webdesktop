@@ -105,6 +105,235 @@ function getMockList(path: string): { base: string; path: string; entries: Entry
   return { base: '/', path, entries }
 }
 
+type ChecksumEntry = { hex: string; ts: number }
+const checksumCache = new Map<string, ChecksumEntry>()
+const CHECKSUM_CACHE_KEY = 'checksumCache'
+const MAX_CHECKSUM_CACHE = 200
+function checksumKey(file: File): string {
+  return `${file.name}:${file.size}:${file.lastModified}`
+}
+function getCachedChecksum(file: File): string | undefined {
+  const e = checksumCache.get(checksumKey(file))
+  return e ? e.hex : undefined
+}
+function setCachedChecksum(file: File, hex: string) {
+  const key = checksumKey(file)
+  const now = Date.now()
+  checksumCache.set(key, { hex, ts: now })
+  try {
+    if (checksumCache.size > MAX_CHECKSUM_CACHE) {
+      const arr = Array.from(checksumCache.entries()).sort((a, b) => a[1].ts - b[1].ts)
+      const removeCount = Math.max(0, checksumCache.size - MAX_CHECKSUM_CACHE)
+      for (let i = 0; i < removeCount; i++) {
+        checksumCache.delete(arr[i][0])
+      }
+    }
+    const obj: Record<string, ChecksumEntry> = {}
+    for (const [k, v] of checksumCache.entries()) obj[k] = v
+    localStorage.setItem(CHECKSUM_CACHE_KEY, JSON.stringify(obj))
+  } catch {}
+}
+
+try {
+  const raw = localStorage.getItem(CHECKSUM_CACHE_KEY)
+  if (raw) {
+    const obj = JSON.parse(raw)
+    if (obj && typeof obj === 'object') {
+      for (const k of Object.keys(obj)) {
+        const v = obj[k]
+        if (v && typeof v.hex === 'string' && typeof v.ts === 'number') {
+          checksumCache.set(k, v)
+        }
+      }
+    }
+  }
+} catch {}
+
+type SessionEntry = { session_id: string; ts: number }
+const uploadSessions = new Map<string, SessionEntry>()
+const UPLOAD_SESS_KEY = 'uploadSessions'
+function sessKey(path: string, name: string, size: number, checksum?: string) {
+  return `${path}:${name}:${size}:${checksum || ''}`
+}
+function setUploadSession(path: string, name: string, size: number, checksum: string | undefined, session_id: string) {
+  const key = sessKey(path, name, size, checksum)
+  uploadSessions.set(key, { session_id, ts: Date.now() })
+  try {
+    const obj: Record<string, SessionEntry> = {}
+    for (const [k, v] of uploadSessions.entries()) obj[k] = v
+    localStorage.setItem(UPLOAD_SESS_KEY, JSON.stringify(obj))
+  } catch {}
+}
+function getUploadSession(path: string, name: string, size: number, checksum: string | undefined): string | undefined {
+  const key = sessKey(path, name, size, checksum)
+  const e = uploadSessions.get(key)
+  return e?.session_id
+}
+function clearUploadSession(path: string, name: string, size: number, checksum: string | undefined) {
+  const key = sessKey(path, name, size, checksum)
+  uploadSessions.delete(key)
+  try {
+    const obj: Record<string, SessionEntry> = {}
+    for (const [k, v] of uploadSessions.entries()) obj[k] = v
+    localStorage.setItem(UPLOAD_SESS_KEY, JSON.stringify(obj))
+  } catch {}
+}
+try {
+  const raw = localStorage.getItem(UPLOAD_SESS_KEY)
+  if (raw) {
+    const obj = JSON.parse(raw)
+    if (obj && typeof obj === 'object') {
+      for (const k of Object.keys(obj)) {
+        const v = obj[k]
+        if (v && typeof v.session_id === 'string' && typeof v.ts === 'number') {
+          uploadSessions.set(k, v)
+        }
+      }
+    }
+  }
+} catch {}
+let activeChecksumWorkers = 0
+const MAX_CHECKSUM_WORKERS = 2
+const workerWaiters: Array<() => void> = []
+function acquireWorkerSlot(signal?: AbortSignal) {
+  return new Promise<void>((resolve) => {
+    const tryAcquire = () => {
+      if (activeChecksumWorkers < MAX_CHECKSUM_WORKERS) {
+        activeChecksumWorkers++
+        resolve()
+      } else {
+        workerWaiters.push(tryAcquire)
+      }
+    }
+    if (signal && signal.aborted) {
+      resolve()
+      return
+    }
+    tryAcquire()
+  })
+}
+function releaseWorkerSlot() {
+  activeChecksumWorkers = Math.max(0, activeChecksumWorkers - 1)
+  const next = workerWaiters.shift()
+  if (next) next()
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+async function uploadFormWithRetry(fd: FormData, signal: AbortSignal | undefined, onUploadProgress: ((e: any) => void) | undefined, attempts = 3, baseDelay = 1000) {
+  let lastErr: any = null
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const r = await axios.post(`${base}/api/docs/upload`, fd, {
+        signal,
+        onUploadProgress
+      })
+      return r
+    } catch (e: any) {
+      lastErr = e
+      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
+        throw e
+      }
+      if (i < attempts - 1) {
+        const delay = baseDelay * Math.pow(2, i)
+        await sleep(delay)
+        continue
+      } else {
+        throw e
+      }
+    }
+  }
+  throw lastErr
+}
+function createChecksumJob(file: File, opts?: { signal?: AbortSignal; chunkSize?: number }) {
+  let worker: Worker | null = null
+  let finished = false
+  const promise: Promise<string | undefined> = new Promise((resolve) => {
+    try {
+      const start = async () => {
+        await acquireWorkerSlot(opts?.signal)
+        if (opts?.signal && opts.signal.aborted) {
+          if (!finished) {
+            finished = true
+            resolve(undefined)
+          }
+          releaseWorkerSlot()
+          return
+        }
+        worker = new Worker(new URL('../workers/hashWorker.ts', import.meta.url), { type: 'module' })
+        const onAbort = () => {
+          if (worker) {
+            worker.terminate()
+            worker = null
+          }
+          releaseWorkerSlot()
+          if (!finished) {
+            finished = true
+            resolve(undefined)
+          }
+        }
+        if (opts?.signal) {
+          if (opts.signal.aborted) onAbort()
+          else opts.signal.addEventListener('abort', onAbort, { once: true })
+        }
+        worker.onmessage = (e) => {
+          const d = e.data
+          if (d && d.type === 'result') {
+            if (opts?.signal) opts.signal.removeEventListener('abort', onAbort)
+            if (worker) {
+              worker.terminate()
+              worker = null
+            }
+            releaseWorkerSlot()
+            if (!finished) {
+              finished = true
+              resolve(d.ok ? d.hex : undefined)
+            }
+          }
+        }
+        worker.onerror = () => {
+          if (opts?.signal) opts.signal.removeEventListener('abort', onAbort)
+          if (worker) {
+            worker.terminate()
+            worker = null
+          }
+          releaseWorkerSlot()
+          if (!finished) {
+            finished = true
+            resolve(undefined)
+          }
+        }
+        worker.postMessage({ type: 'sha256', file, chunkSize: opts?.chunkSize })
+      }
+      start()
+    } catch {
+      ;(async () => {
+        try {
+          const buf = await file.arrayBuffer()
+          const digest = await crypto.subtle.digest('SHA-256', buf)
+          const view = new Uint8Array(digest)
+          let hex = ''
+          for (let i = 0; i < view.length; i++) {
+            hex += view[i].toString(16).padStart(2, '0')
+          }
+          resolve(hex)
+        } catch {
+          resolve(undefined)
+        }
+      })()
+    }
+  })
+  const cancel = () => {
+    if (worker) {
+      worker.terminate()
+      worker = null
+    }
+    releaseWorkerSlot()
+  }
+  return { promise, cancel }
+}
+
 export const api = {
   async health() {
     try {
@@ -276,20 +505,6 @@ export const api = {
   },
   async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal, offset: number = 0) {
     try {
-      const checksumPromise = (async () => {
-        try {
-          const buf = await file.arrayBuffer()
-          const digest = await crypto.subtle.digest('SHA-256', buf)
-          const view = new Uint8Array(digest)
-          let hex = ''
-          for (let i = 0; i < view.length; i++) {
-            hex += view[i].toString(16).padStart(2, '0')
-          }
-          return hex
-        } catch {
-          return undefined
-        }
-      })()
       try {
         const rr = await axios.post(`${base}/api/docs/rapid-upload`, {
           path,
@@ -303,7 +518,17 @@ export const api = {
           return { ok: true }
         }
       } catch {}
-      let checksumForForm = await checksumPromise
+      let checksumForForm = getCachedChecksum(file)
+      let checksumJob: { promise: Promise<string | undefined>; cancel: () => void } | null = null
+      if (!checksumForForm) {
+        const chunkSize =
+          file.size <= 128 * 1024 * 1024 ? 2 * 1024 * 1024 :
+          file.size <= 1024 * 1024 * 1024 ? 4 * 1024 * 1024 :
+          8 * 1024 * 1024
+        checksumJob = createChecksumJob(file, { signal, chunkSize })
+        checksumForForm = await checksumJob.promise
+        if (checksumForForm) setCachedChecksum(file, checksumForForm)
+      }
       if (checksumForForm) {
         try {
           const tryRapidWithChecksum = async () =>
@@ -321,32 +546,126 @@ export const api = {
             rapid = (rr.data as any)?.rapid
           }
           if (rapid) {
+            if (checksumJob) checksumJob.cancel()
             offline = false
             if (onProgress) onProgress({ percent: 100, loaded: file.size, total: file.size, bps: undefined })
             return { ok: true }
           }
         } catch {}
       }
-      const fd = new FormData()
-      fd.append('path', path)
-      fd.append('size', String(file.size))
-      if (checksumForForm) fd.append('checksum', checksumForForm)
-      if (offset > 0) {
-        fd.append('offset', String(offset))
-        fd.append('file', file.slice(offset), file.name)
+      if (checksumJob) checksumJob.cancel()
+      const LARGE_UPLOAD_THRESHOLD = 512 * 1024 * 1024
+      const baseChunk =
+        file.size <= 128 * 1024 * 1024 ? 4 * 1024 * 1024 :
+        file.size <= 1024 * 1024 * 1024 ? 8 * 1024 * 1024 :
+        16 * 1024 * 1024
+      if (file.size >= LARGE_UPLOAD_THRESHOLD) {
+        let sessionId: string | undefined = getUploadSession(path, file.name, file.size, checksumForForm)
+        if (!sessionId) {
+          try {
+            const init = await api.fsUploadInit(path, file.name, file.size, checksumForForm)
+            sessionId = (init as any)?.session_id
+            if (sessionId) setUploadSession(path, file.name, file.size, checksumForForm, sessionId)
+          } catch {}
+        }
+        let resume = 0
+        if (sessionId) {
+          try {
+            const st = await api.fsUploadStatus(sessionId)
+            resume = st?.uploaded || 0
+          } catch {}
+        }
+        let pos = Math.max(offset, resume)
+        if (onProgress) onProgress({ percent: Math.round(pos / file.size * 100), loaded: pos, total: file.size, bps: 0 })
+        const ranges: [number, number][] = []
+        for (let start = pos; start < file.size; start += baseChunk) {
+          const end = Math.min(start + baseChunk, file.size)
+          ranges.push([start, end])
+        }
+        const maxConcurrent = 2
+        let inFlight = 0
+        let idx = 0
+        let completed = pos
+        const partial = new Map<number, number>()
+        async function runNext() {
+          if (idx >= ranges.length) return
+          const myIdx = idx++
+          const [start, end] = ranges[myIdx]
+          inFlight++
+          const fd = new FormData()
+          fd.append('path', path)
+          fd.append('size', String(file.size))
+          if (checksumForForm) fd.append('checksum', checksumForForm)
+          fd.append('offset', String(start))
+          if (sessionId) fd.append('session_id', sessionId)
+          fd.append('file', file.slice(start, end), file.name)
+          partial.set(myIdx, 0)
+          let lastTs = Date.now()
+          let lastLoaded = 0
+          try {
+            await uploadFormWithRetry(fd, signal, (e) => {
+              if (onProgress && e.loaded != null) {
+                const now = Date.now()
+                const dt = Math.max(1, now - lastTs)
+                const dbytes = Math.max(0, e.loaded - lastLoaded)
+                const bps = (dbytes / dt) * 1000
+                lastLoaded = e.loaded
+                lastTs = now
+                partial.set(myIdx, e.loaded)
+                let sumPartial = 0
+                for (const v of partial.values()) sumPartial += v
+                const loaded = completed + sumPartial
+                const pct = file.size > 0 ? Math.round((loaded / file.size) * 100) : 0
+                onProgress({ percent: pct, loaded, total: file.size, bps })
+              }
+            }, 3, 1000)
+            completed += (end - start)
+            partial.delete(myIdx)
+            let sumPartial = 0
+            for (const v of partial.values()) sumPartial += v
+            if (onProgress) {
+              const loaded = completed + sumPartial
+              const pct = file.size > 0 ? Math.round((loaded / file.size) * 100) : 0
+              onProgress({ percent: pct, loaded, total: file.size, bps: undefined })
+            }
+          } finally {
+            inFlight--
+            if (idx < ranges.length) await runNext()
+          }
+        }
+        const starters = Math.min(maxConcurrent, ranges.length)
+        const tasks: Promise<void>[] = []
+        for (let i = 0; i < starters; i++) tasks.push(runNext())
+        await Promise.all(tasks)
+        try {
+          const fin = await api.fsUploadFinalize(path, file.name, file.size, checksumForForm)
+          if (sessionId) clearUploadSession(path, file.name, file.size, checksumForForm)
+          offline = false
+          return fin
+        } catch {
+          offline = false
+          return { ok: true }
+        }
       } else {
-        fd.append('file', file)
-      }
-      console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: will send checksum=${checksumForForm} offset=${offset}`);
-      let lastLoaded = 0
-      let lastTs = Date.now()
-      if (onProgress) onProgress({ percent: Math.round(offset / file.size * 100), loaded: offset, total: file.size, bps: 0 })
-      
-      console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: starting POST ${file.name} size=${file.size} offset=${offset}`);
-      
-      const r = await axios.post(`${base}/api/docs/upload`, fd, {
-        signal,
-        onUploadProgress: (e) => {
+        const fd = new FormData()
+        fd.append('path', path)
+        fd.append('size', String(file.size))
+        if (checksumForForm) fd.append('checksum', checksumForForm)
+        if (offset > 0) {
+          fd.append('offset', String(offset))
+          try {
+            const init = await api.fsUploadInit(path, file.name, file.size, checksumForForm)
+            const sid = (init as any)?.session_id
+            if (sid) fd.append('session_id', sid)
+          } catch {}
+          fd.append('file', file.slice(offset), file.name)
+        } else {
+          fd.append('file', file)
+        }
+        let lastLoaded = 0
+        let lastTs = Date.now()
+        if (onProgress) onProgress({ percent: Math.round(offset / file.size * 100), loaded: offset, total: file.size, bps: 0 })
+        const r = await uploadFormWithRetry(fd, signal, (e) => {
           if (onProgress && e.loaded != null) {
             const now = Date.now()
             const dt = Math.max(1, now - lastTs)
@@ -357,20 +676,18 @@ export const api = {
             const realLoaded = offset + e.loaded
             const total = file.size
             const pct = total > 0 ? Math.round((realLoaded / total) * 100) : 0
-            
-            if (pct === 100) {
-                 console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: progress 100% (client-side) loaded=${e.loaded}`);
-            }
-            
             onProgress({ percent: pct, loaded: realLoaded, total, bps })
           }
+        }, 3, 1000)
+        try {
+          const fin = await api.fsUploadFinalize(path, file.name, file.size, checksumForForm)
+          offline = false
+          return fin
+        } catch {
+          offline = false
+          return r.data as { ok: boolean }
         }
-      })
-      
-      console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: POST finished (server responded)`);
-      
-      offline = false
-      return r.data as { ok: boolean }
+      }
     } catch (e: any) {
       if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
         throw e
@@ -391,6 +708,30 @@ export const api = {
       responseType: 'blob'
     })
     return r.data as Blob
+  },
+  async fsUploadFinalize(path: string, name: string, size: number, checksum?: string) {
+    try {
+      const r = await axios.post(`${base}/api/docs/upload/finalize`, { path, name, size, checksum })
+      return r.data as { ok: boolean }
+    } catch {
+      return { ok: true }
+    }
+  },
+  async fsUploadInit(path: string, name: string, size: number, checksum?: string) {
+    try {
+      const r = await axios.post(`${base}/api/docs/upload/init`, { path, name, size, checksum })
+      return r.data as { ok: boolean; session_id?: string }
+    } catch {
+      return { ok: true }
+    }
+  },
+  async fsUploadStatus(session_id: string) {
+    try {
+      const r = await axios.get(`${base}/api/docs/upload/status`, { params: { session_id } })
+      return r.data as { uploaded: number }
+    } catch {
+      return { uploaded: 0 }
+    }
   },
   // Task API
   async getTasks() {
