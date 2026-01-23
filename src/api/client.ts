@@ -276,15 +276,68 @@ export const api = {
   },
   async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal, offset: number = 0) {
     try {
+      const checksumPromise = (async () => {
+        try {
+          const buf = await file.arrayBuffer()
+          const digest = await crypto.subtle.digest('SHA-256', buf)
+          const view = new Uint8Array(digest)
+          let hex = ''
+          for (let i = 0; i < view.length; i++) {
+            hex += view[i].toString(16).padStart(2, '0')
+          }
+          return hex
+        } catch {
+          return undefined
+        }
+      })()
+      try {
+        const rr = await axios.post(`${base}/api/docs/rapid-upload`, {
+          path,
+          name: file.name,
+          size: file.size
+        })
+        const rapid = (rr.data as any)?.rapid
+        if (rapid) {
+          offline = false
+          if (onProgress) onProgress({ percent: 100, loaded: file.size, total: file.size, bps: undefined })
+          return { ok: true }
+        }
+      } catch {}
+      let checksumForForm = await checksumPromise
+      if (checksumForForm) {
+        try {
+          const tryRapidWithChecksum = async () =>
+            axios.post(`${base}/api/docs/rapid-upload`, {
+              path,
+              name: file.name,
+              size: file.size,
+              checksum: checksumForForm
+            })
+          let rr = await tryRapidWithChecksum()
+          let rapid = (rr.data as any)?.rapid
+          if (!rapid) {
+            await new Promise(res => setTimeout(res, 800))
+            rr = await tryRapidWithChecksum()
+            rapid = (rr.data as any)?.rapid
+          }
+          if (rapid) {
+            offline = false
+            if (onProgress) onProgress({ percent: 100, loaded: file.size, total: file.size, bps: undefined })
+            return { ok: true }
+          }
+        } catch {}
+      }
       const fd = new FormData()
       fd.append('path', path)
       fd.append('size', String(file.size))
+      if (checksumForForm) fd.append('checksum', checksumForForm)
       if (offset > 0) {
         fd.append('offset', String(offset))
         fd.append('file', file.slice(offset), file.name)
       } else {
         fd.append('file', file)
       }
+      console.log(`[${new Date().toLocaleTimeString()}.${String(new Date().getMilliseconds()).padStart(3, '0')}] fsUpload: will send checksum=${checksumForForm} offset=${offset}`);
       let lastLoaded = 0
       let lastTs = Date.now()
       if (onProgress) onProgress({ percent: Math.round(offset / file.size * 100), loaded: offset, total: file.size, bps: 0 })
@@ -323,13 +376,7 @@ export const api = {
         throw e
       }
       offline = true
-      mockEnsureDir(path)
-      const { root, node } = mockTraverse(path)
-      node.children = node.children || {}
-      node.children[file.name] = { type: 'file', size: file.size, modified_ts: Math.floor(Date.now() / 1000) }
-      mockSaveRoot(root)
-      if (onProgress) onProgress({ percent: 100, loaded: file.size, total: file.size, bps: undefined })
-      return { ok: true }
+      throw e
     }
   },
   fsDownloadUrl(path: string) {
