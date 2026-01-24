@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { api } from '../../../src/api/client'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Icon from '@mdi/react'
-import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase } from '@mdi/js'
+import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiCogOutline, mdiMagnify } from '@mdi/js'
 
 type Container = {
   id: string
@@ -37,6 +37,7 @@ export default function DockerManager() {
   const [pulling, setPulling] = useState(false)
   const [pullName, setPullName] = useState('')
   const [pullTag, setPullTag] = useState('latest')
+  const [registryQ, setRegistryQ] = useState('')
 
   const loadAll = async () => {
     setLoading(true)
@@ -186,27 +187,24 @@ export default function DockerManager() {
             </>
           ) : (
             <>
-              <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>镜像仓库</h2>
-              <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                <input
-                  placeholder="镜像名（如 nginx 或 registry.example.com/app）"
-                  value={pullName}
-                  onChange={e => setPullName(e.target.value)}
-                  className="puter-input"
-                  style={{ flex: 1 }}
-                />
-                <input
-                  placeholder="标签（默认 latest）"
-                  value={pullTag}
-                  onChange={e => setPullTag(e.target.value)}
-                  className="puter-input"
-                  style={{ width: 140 }}
-                />
-                <button className="puter-button" onClick={onPull} disabled={pulling || !pullName}>
-                  {pulling ? '拉取中…' : '拉取镜像'}
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 16px 0' }}>
+                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>镜像仓库</h2>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  <input
+                    placeholder="搜索镜像"
+                    value={registryQ}
+                    onChange={e => setRegistryQ(e.target.value)}
+                    className="puter-input"
+                    style={{ width: 220, height: 30, padding: '0 8px', boxSizing: 'border-box' }}
+                  />
+                  <button className="puter-button" title="搜索" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon path={mdiMagnify} size={0.9} />
+                  </button>
+                  <button className="puter-button" title="设置" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon path={mdiCogOutline} size={0.9} />
+                  </button>
+                </span>
               </div>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>成功拉取后，镜像会出现在“本地镜像”。</div>
             </>
           )}
         </div>
