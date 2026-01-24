@@ -27,9 +27,55 @@ import Toolbar from './components/Toolbar'
 import ListView from './components/ListView'
 import GridView from './components/GridView'
 import FooterCount from './components/FooterCount'
+ 
+function useNavigation(initialPath: string = '/') {
+  const [path, setPath] = useState<string>(initialPath)
+  const [navHist, setNavHist] = useState<string[]>([initialPath])
+  const [navIndex, setNavIndex] = useState<number>(0)
+  const navigate = (to: string) => {
+    const target = to || '/'
+    if (navHist[navIndex] !== target) {
+      const nextHist = [...navHist.slice(0, navIndex + 1), target]
+      setNavHist(nextHist)
+      setNavIndex(nextHist.length - 1)
+    }
+    setPath(target)
+  }
+  const back = () => {
+    if (navIndex > 0) {
+      const i = navIndex - 1
+      setNavIndex(i)
+      setPath(navHist[i])
+    }
+  }
+  const forward = () => {
+    if (navIndex < navHist.length - 1) {
+      const i = navIndex + 1
+      setNavIndex(i)
+      setPath(navHist[i])
+    }
+  }
+  const up = useMemo(() => {
+    if (path === '/' || path === '') return '/'
+    const parts = path.split('/').filter(Boolean)
+    parts.pop()
+    return '/' + parts.join('/')
+  }, [path])
+  const crumbs = useMemo(() => {
+    const parts = path.split('/').filter(Boolean)
+    const acc: { label: string; to: string }[] = [{ label: '根目录', to: '/' }]
+    let cur = ''
+    for (const p of parts) {
+      cur = cur ? `${cur}/${p}` : `/${p}`
+      acc.push({ label: p, to: cur })
+    }
+    return acc
+  }, [path])
+  return { path, setPath, navHist, navIndex, navigate, back, forward, up, crumbs }
+}
 
 export default function FileManager() {
-  const [path, setPath] = useState<string>('/')
+  const { path, setPath, navHist, navIndex, navigate, back, forward, crumbs } = useNavigation('/')
   const [entries, setEntries] = useState<
     { name: string; is_dir: boolean; size: number; modified_ts: number }[]
   >([])
@@ -42,15 +88,9 @@ export default function FileManager() {
   const [showSortMenu, setShowSortMenu] = useState<boolean>(false)
   const [q, setQ] = useState<string>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [navHist, setNavHist] = useState<string[]>(['/'])
-  const [navIndex, setNavIndex] = useState<number>(0)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
   const [transferTab, setTransferTab] = useState<'upload' | 'download'>('upload')
-  const [clearPressed, setClearPressed] = useState(false)
-  const [restorePressed, setRestorePressed] = useState(false)
-  const [deletePressed, setDeletePressed] = useState(false)
-  const [emptyPressed, setEmptyPressed] = useState(false)
   const [colWidths, setColWidths] = useState<Record<string, number>>({
     name: 172,
     modified: 149,
@@ -91,8 +131,6 @@ export default function FileManager() {
       abortControllers.current.delete(id)
     }
   }
-  
-  // Global tasks subscription
   useEffect(() => {
     setTasks(getFileTasks())
     const unsub = subscribeFileTasks((ts) => {
@@ -122,6 +160,10 @@ export default function FileManager() {
     })
     return () => unsub()
   }, [])
+  const getAvgSpeed = (id: string) => {
+    const e = speedStatsRef.current.get(id)
+    return e && e.lastAvg ? e.lastAvg : 0
+  }
 
   useEffect(() => {
     let mounted = true
@@ -180,35 +222,7 @@ export default function FileManager() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  const navigate = (to: string) => {
-    const target = to || '/'
-    setSelected(new Set())
-    if (navHist[navIndex] !== target) {
-      const nextHist = [...navHist.slice(0, navIndex + 1), target]
-      setNavHist(nextHist)
-      setNavIndex(nextHist.length - 1)
-    }
-    setPath(target)
-  }
-
-  const up = useMemo(() => {
-    if (path === '/' || path === '') return '/'
-    const parts = path.split('/').filter(Boolean)
-    parts.pop()
-    return '/' + parts.join('/')
-  }, [path])
-
-  const crumbs = useMemo(() => {
-    const parts = path.split('/').filter(Boolean)
-    const acc: { label: string; to: string }[] = [{ label: '根目录', to: '/' }]
-    let cur = ''
-    for (const p of parts) {
-      cur = cur ? `${cur}/${p}` : `/${p}`
-      acc.push({ label: p, to: cur })
-    }
-    return acc
-  }, [path])
+ 
 
   const fmtTime = (ts: number) => {
     if (!ts) return '-'
@@ -224,19 +238,12 @@ export default function FileManager() {
     const gb = mb / 1024
     return `${gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10} GB`
   }
-  const actionButtonStyle = (pressed: boolean): React.CSSProperties => ({
-    height: 28,
-    padding: '0 10px',
-    borderRadius: 6,
-    display: 'inline-flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: pressed ? 'linear-gradient(180deg, #edeef1 0%, #e5e7eb 100%)' : 'linear-gradient(180deg, #fbfbfc 0%, #f3f4f6 100%)',
-    color: '#111827',
-    border: pressed ? '1px solid #cbd5e1' : '1px solid #d1d5db',
-    boxShadow: pressed ? 'inset 0 1px 2px rgba(0,0,0,0.14)' : '0 1px 0 rgba(255,255,255,0.75) inset, 0 1px 2px rgba(0,0,0,0.08)',
-    transition: 'background 160ms ease, border-color 160ms ease, box-shadow 160ms ease'
-  })
+  const joinPath = (dir: string, name: string) => (dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`)
+  const reloadCurrentDir = async () => {
+    const rs = await api.fsList(path)
+    setEntries(rs.entries)
+  }
+  
 
   const goto = async (to: string, key: string) => {
     setActive(key)
@@ -255,34 +262,13 @@ export default function FileManager() {
       await api.fsMkdir(to)
     }
     setSelected(new Set())
-    if (navHist[navIndex] !== to) {
-      const nextHist = [...navHist.slice(0, navIndex + 1), to]
-      setNavHist(nextHist)
-      setNavIndex(nextHist.length - 1)
-    }
-    setPath(to)
+    navigate(to)
   }
   const showUploads = () => {}
 
-  const back = () => {
-    if (navIndex > 0) {
-      const i = navIndex - 1
-      setNavIndex(i)
-      setPath(navHist[i])
-      setSelected(new Set())
-    }
-  }
-  const forward = () => {
-    if (navIndex < navHist.length - 1) {
-      const i = navIndex + 1
-      setNavIndex(i)
-      setPath(navHist[i])
-      setSelected(new Set())
-    }
-  }
+ 
   const refresh = async () => {
-    const r = await api.fsList(path)
-    setEntries(r.entries)
+    await reloadCurrentDir()
   }
 
   const filtered = useMemo(() => {
@@ -355,59 +341,90 @@ export default function FileManager() {
   }
   
   
-
+  const handleTogglePause = (t: FileTask) => {
+    if (t.status === 'running') {
+      const controller = abortControllers.current.get(t.id)
+      if (controller) {
+        controller.abort()
+      }
+      updateFileTask(t.id, { status: 'paused' })
+    } else {
+      const file = uploadFilesMap.current.get(t.id)
+      if (file) {
+        startUpload(t.id, file, t.dir, t.loaded || 0)
+      } else {
+        alert('无法恢复任务：文件对象丢失')
+      }
+    }
+  }
+  const handleRemoveTask = async (t: FileTask) => {
+    uploadFilesMap.current.delete(t.id)
+    if (t.kind === 'upload' && t.status !== 'done') {
+      if (!window.confirm('确定要取消该任务吗？取消后将删除已上传的部分文件。')) {
+        return
+      }
+      const controller = abortControllers.current.get(t.id)
+      if (controller) {
+        controller.abort()
+      }
+      const fullPath = t.dir === '/' ? `/${t.name}` : `${t.dir}/${t.name}`
+      await api.fsDelete(fullPath)
+      if (path === t.dir) {
+        refresh()
+      }
+    }
+    removeFileTask(t.id)
+  }
+  const onRestoreSelected = async () => {
+    const names = [...selected]
+    for (const n of names) {
+      const from = `/Trash/${n}`
+      const to = `/${n}`
+      await api.fsRename(from, to)
+    }
+    const rs = await api.fsList(path)
+    setEntries(rs.entries)
+    clearSelection()
+  }
+  const onDeleteSelected = async () => {
+    const names = [...selected]
+    for (const n of names) {
+      const p = `/Trash/${n}`
+      await api.fsDelete(p)
+    }
+    const rs = await api.fsList(path)
+    setEntries(rs.entries)
+    clearSelection()
+  }
+  const onEmptyTrash = async () => {
+    const names = entries.map(e => e.name)
+    for (const n of names) {
+      const p = `/Trash/${n}`
+      await api.fsDelete(p)
+    }
+    const rs = await api.fsList(path)
+    setEntries(rs.entries)
+    clearSelection()
+  }
+  const onRestoreOne = async (name: string) => {
+    await api.fsRename(`/Trash/${name}`, `/${name}`)
+    await reloadCurrentDir()
+  }
+  const onDeleteOne = async (name: string) => {
+    await api.fsDelete(`/Trash/${name}`)
+    await reloadCurrentDir()
+  }
+  
   const renderTransfers = () => {
     const uploads = tasks.filter(t => t.kind === 'upload')
     const downloads = tasks.filter(t => t.kind === 'download')
     const visible = transferTab === 'upload' ? uploads : downloads
     const runningUploads = tasks.filter(t => t.kind === 'upload' && t.status === 'running').length
     const runningDownloads = tasks.filter(t => t.kind === 'download' && t.status === 'running').length
-    
     const fmtSpeed = (bps?: number) => {
       const v = typeof bps === 'number' && bps >= 0 ? bps : 0
       return `${fmtSize(v)}/s`
     }
-    const getAvgSpeed = (id: string) => {
-      const e = speedStatsRef.current.get(id)
-      return e && e.lastAvg ? e.lastAvg : 0
-    }
-
-    const togglePause = (t: FileTask) => {
-      if (t.status === 'running') {
-         const controller = abortControllers.current.get(t.id)
-         if (controller) {
-             controller.abort()
-         }
-         updateFileTask(t.id, { status: 'paused' })
-      } else {
-         const file = uploadFilesMap.current.get(t.id)
-         if (file) {
-           startUpload(t.id, file, t.dir, t.loaded || 0)
-         } else {
-           alert('无法恢复任务：文件对象丢失')
-         }
-      }
-    }
-
-    const removeTask = async (t: FileTask) => {
-      uploadFilesMap.current.delete(t.id)
-      if (t.kind === 'upload' && t.status !== 'done') {
-        if (!window.confirm('确定要取消该任务吗？取消后将删除已上传的部分文件。')) {
-          return
-        }
-        const controller = abortControllers.current.get(t.id)
-        if (controller) {
-          controller.abort()
-        }
-        const fullPath = t.dir === '/' ? `/${t.name}` : `${t.dir}/${t.name}`
-        await api.fsDelete(fullPath)
-        if (path === t.dir) {
-          refresh()
-        }
-      }
-      removeFileTask(t.id)
-    }
-
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
@@ -415,7 +432,6 @@ export default function FileManager() {
             <button
               className="puter-button"
               style={{
-                height: 28,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -438,7 +454,6 @@ export default function FileManager() {
             <button
               className="puter-button"
               style={{
-                height: 28,
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -460,24 +475,8 @@ export default function FileManager() {
             </button>
           </div>
           <button
-            className="puter-button"
-            style={{
-              height: 28,
-              marginLeft: 'auto',
-              padding: '0 10px',
-              borderRadius: 6,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: clearPressed ? 'linear-gradient(180deg, #edeef1 0%, #e5e7eb 100%)' : 'linear-gradient(180deg, #fbfbfc 0%, #f3f4f6 100%)',
-              color: '#111827',
-              border: clearPressed ? '1px solid #cbd5e1' : '1px solid #d1d5db',
-              boxShadow: clearPressed ? 'inset 0 1px 2px rgba(0,0,0,0.14)' : '0 1px 0 rgba(255,255,255,0.75) inset, 0 1px 2px rgba(0,0,0,0.08)',
-              transition: 'background 160ms ease, border-color 160ms ease, box-shadow 160ms ease'
-            }}
-            onMouseDown={() => setClearPressed(true)}
-            onMouseUp={() => setClearPressed(false)}
-            onMouseLeave={() => setClearPressed(false)}
+            className="puter-button pressable"
+            style={{ marginLeft: 'auto' }}
             onClick={() => clearCompletedFileTasks()}
           >
             清除已完成
@@ -508,7 +507,7 @@ export default function FileManager() {
                     {t.status === 'running' ? (
                       <>
                         <span>{fmtSize(t.loaded || 0)} / {fmtSize(t.total || 0)}</span>
-                        <span style={{ marginLeft: 8 }}>{fmtSpeed(getAvgSpeed(t.id))}</span>
+                        <span style={{ marginLeft: 8 }}>{fmtSize(getAvgSpeed(t.id))}/s</span>
                       </>
                     ) : null}
                   </div>
@@ -536,7 +535,7 @@ export default function FileManager() {
                       <button 
                         className="puter-icon-button"
                         style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => togglePause(t)}
+                        onClick={() => handleTogglePause(t)}
                         title={t.status === 'running' ? '暂停' : '继续'}
                       >
                         <Icon path={t.status === 'running' ? mdiPause : mdiPlay} size={0.8} color="#6b7280" />
@@ -545,7 +544,7 @@ export default function FileManager() {
                     <button 
                       className="puter-icon-button"
                       style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      onClick={() => removeTask(t)}
+                      onClick={() => handleRemoveTask(t)}
                       title="删除任务"
                     >
                       <Icon path={mdiClose} size={0.8} color="#6b7280" />
@@ -559,70 +558,27 @@ export default function FileManager() {
       </div>
     )
   }
-
   const renderTrash = () => {
-    const onRestoreSelected = async () => {
-      const names = [...selected]
-      for (const n of names) {
-        const from = `/Trash/${n}`
-        const to = `/${n}`
-        await api.fsRename(from, to)
-      }
-      const rs = await api.fsList(path)
-      setEntries(rs.entries)
-      clearSelection()
-    }
-    const onDeleteSelected = async () => {
-      const names = [...selected]
-      for (const n of names) {
-        const p = `/Trash/${n}`
-        await api.fsDelete(p)
-      }
-      const rs = await api.fsList(path)
-      setEntries(rs.entries)
-      clearSelection()
-    }
-    const onEmptyTrash = async () => {
-      const names = entries.map(e => e.name)
-      for (const n of names) {
-        const p = `/Trash/${n}`
-        await api.fsDelete(p)
-      }
-      const rs = await api.fsList(path)
-      setEntries(rs.entries)
-      clearSelection()
-    }
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
           <button
-            className="puter-button"
-            style={actionButtonStyle(restorePressed)}
-            onMouseDown={() => setRestorePressed(true)}
-            onMouseUp={() => setRestorePressed(false)}
-            onMouseLeave={() => setRestorePressed(false)}
+            className="puter-button pressable"
             onClick={onRestoreSelected}
             disabled={selected.size === 0}
           >
             还原所选
           </button>
           <button
-            className="puter-button"
-            style={actionButtonStyle(deletePressed)}
-            onMouseDown={() => setDeletePressed(true)}
-            onMouseUp={() => setDeletePressed(false)}
-            onMouseLeave={() => setDeletePressed(false)}
+            className="puter-button pressable"
             onClick={onDeleteSelected}
             disabled={selected.size === 0}
           >
             删除所选
           </button>
           <button
-            className="puter-button"
-            style={{ ...actionButtonStyle(emptyPressed), marginLeft: 'auto' }}
-            onMouseDown={() => setEmptyPressed(true)}
-            onMouseUp={() => setEmptyPressed(false)}
-            onMouseLeave={() => setEmptyPressed(false)}
+            className="puter-button pressable"
+            style={{ marginLeft: 'auto' }}
             onClick={onEmptyTrash}
           >
             清空回收站
@@ -646,8 +602,8 @@ export default function FileManager() {
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--muted)' }}>大小：{e.is_dir ? '-' : fmtSize(e.size)} · 修改：{fmtTime(e.modified_ts)}</div>
                     </div>
-                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await api.fsRename(`/Trash/${e.name}`, `/${e.name}`); const rs = await api.fsList(path); setEntries(rs.entries) }}>还原</button>
-                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await api.fsDelete(`/Trash/${e.name}`); const rs = await api.fsList(path); setEntries(rs.entries) }}>删除</button>
+                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onRestoreOne(e.name) }}>还原</button>
+                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onDeleteOne(e.name) }}>删除</button>
                   </div>
                 )
               })}
@@ -696,6 +652,26 @@ export default function FileManager() {
 
   return (
     <div style={{ display: 'flex', height: '100%' }} className="noselect">
+      <style>{`
+        .pressable {
+          height: 28px;
+          padding: 0 10px;
+          border-radius: 6px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: linear-gradient(180deg, #fbfbfc 0%, #f3f4f6 100%);
+          color: #111827;
+          border: 1px solid #d1d5db;
+          box-shadow: 0 1px 0 rgba(255,255,255,0.75) inset, 0 1px 2px rgba(0,0,0,0.08);
+          transition: background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+        }
+        .pressable:active {
+          background: linear-gradient(180deg, #edeef1 0%, #e5e7eb 100%);
+          border: 1px solid #cbd5e1;
+          box-shadow: inset 0 1px 2px rgba(0,0,0,0.14);
+        }
+      `}</style>
       <Sidebar
         width={220}
         sections={sections}
@@ -725,12 +701,12 @@ export default function FileManager() {
         ) : (
           <>
             <Toolbar
-              back={back}
-              forward={forward}
+              back={() => { setSelected(new Set()); back() }}
+              forward={() => { setSelected(new Set()); forward() }}
               refresh={refresh}
               navIndex={navIndex}
               navHist={navHist}
-              navigate={navigate}
+              navigate={(to) => { setSelected(new Set()); navigate(to) }}
               crumbs={crumbs}
               q={q}
               setQ={(v) => setQ(v)}
@@ -745,18 +721,17 @@ export default function FileManager() {
               onCreateFolder={async () => {
                 const name = prompt('新建文件夹名称')
                 if (!name) return
-                const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
+                const next = joinPath(path, name)
                 const r = await api.fsMkdir(next)
                 if (r.ok) {
-                  const rs = await api.fsList(path)
-                  setEntries(rs.entries)
+                  await reloadCurrentDir()
                 }
               }}
               onDownloadSelected={async () => {
                 const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
                 if (names.length === 0) return
                 const first = names[0]
-                const fullPath = path.endsWith('/') ? `${path}${first}` : `${path}/${first}`
+                const fullPath = joinPath(path, first)
                 const url = api.fsDownloadUrl(fullPath)
                 window.open(url, '_blank')
                 const id = `dl-${first}-${Date.now()}`
@@ -765,14 +740,13 @@ export default function FileManager() {
               onDeleteSelected={async () => {
                 const names = [...selected]
                 for (const n of names) {
-                  const p = path.endsWith('/') ? `${path}${n}` : `${path}/${n}`
+                  const p = joinPath(path, n)
                   const id = `del-${n}-${Date.now()}`
                   pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
                   await api.fsDelete(p)
                   updateFileTask(id, { status: 'done' })
                 }
-                const rs = await api.fsList(path)
-                setEntries(rs.entries)
+                await reloadCurrentDir()
                 clearSelection()
               }}
               sortKey={sortKey}
@@ -801,7 +775,7 @@ export default function FileManager() {
                     fmtTime={fmtTime}
                     fmtSize={fmtSize}
                     onOpenDir={(name) => {
-                      const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
+                      const next = joinPath(path, name)
                       setPath(next)
                     }}
                   />
@@ -814,7 +788,7 @@ export default function FileManager() {
                     selected={selected}
                     toggleSelect={toggleSelect}
                     onOpenDir={(name) => {
-                      const next = path.endsWith('/') ? `${path}${name}` : `${path}/${name}`
+                      const next = joinPath(path, name)
                       setPath(next)
                     }}
                   />
