@@ -45,6 +45,12 @@ export default function DockerManager() {
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
   const [hasPrev, setHasPrev] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [mirrors, setMirrors] = useState<{ id: string; name: string; host: string; enabled: boolean }[]>([])
+  const [newName, setNewName] = useState('')
+  const [newHost, setNewHost] = useState('')
+  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
 
   const loadAll = async () => {
     setLoading(true)
@@ -101,6 +107,40 @@ export default function DockerManager() {
         .finally(() => setRegistryLoading(false))
     }
   }, [active, didSearch, page])
+  const openSettings = async () => {
+    setSettingsOpen(true)
+    setSettingsLoading(true)
+    try {
+      const items = await api.dockerMirrorsGet()
+      setMirrors(Array.isArray(items) ? items : [])
+    } catch {
+      setMirrors([])
+    } finally {
+      setSettingsLoading(false)
+    }
+  }
+  const saveSettings = async () => {
+    setSettingsSaving(true)
+    try {
+      await api.dockerMirrorsSet(mirrors)
+      setSettingsOpen(false)
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+  const onAddMirror = () => {
+    const id = Math.random().toString(36).slice(2)
+    setMirrors(prev => [...prev, { id, name: '', host: '', enabled: true }])
+  }
+  const onRemoveMirror = (id: string) => {
+    setMirrors(prev => prev.filter(m => m.id !== id))
+  }
+  const onToggleMirror = (id: string) => {
+    setMirrors(prev => prev.map(m => m.id === id ? { ...m, enabled: !m.enabled } : m))
+  }
+  const onUpdateMirror = (id: string, patch: Partial<{ name: string; host: string }>) => {
+    setMirrors(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m))
+  }
   const onPagePrev = async () => {
     if (page <= 1 || registryLoading) return
     const newPage = page - 1
@@ -301,7 +341,7 @@ export default function DockerManager() {
                   <button className="puter-button" title="搜索" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={onSearchRegistry} disabled={registryLoading}>
                     <Icon path={mdiMagnify} size={0.9} />
                   </button>
-                  <button className="puter-button" title="设置" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button className="puter-button" title="设置" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={openSettings}>
                     <Icon path={mdiCogOutline} size={0.9} />
                   </button>
                 </span>
@@ -353,6 +393,37 @@ export default function DockerManager() {
                   )}
                 </div>
               </div>
+              {settingsOpen && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: 460, border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', boxShadow: '0 6px 20px rgba(0,0,0,0.1)' }}>
+                    <div style={{ padding: '12px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: 600 }}>镜像仓库设置</div>
+                    <div style={{ padding: 14 }}>
+                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 8 }}>镜像加速源</div>
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 80px', gap: 8, alignItems: 'center', fontSize: 13, color: '#6b7280' }}>
+                          <div style={{ fontWeight: 600, color: '#374151' }}>名称</div>
+                          <div style={{ fontWeight: 600, color: '#374151' }}>镜像域名</div>
+                          <div></div>
+                        </div>
+                        {mirrors.map(m => (
+                          <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 80px', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                            <input className="puter-input" value={m.name} onChange={e => onUpdateMirror(m.id, { name: e.target.value })} placeholder="名称（可选）" style={{ height: 28, padding: '0 8px' }} />
+                            <input className="puter-input" value={m.host} onChange={e => onUpdateMirror(m.id, { host: e.target.value })} placeholder="镜像域名，如 mirror.example.com" style={{ height: 28, padding: '0 8px' }} />
+                            <button className="puter-button danger" onClick={() => onRemoveMirror(m.id)} style={{ height: 28 }}>删除</button>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        <button className="puter-button" onClick={onAddMirror} style={{ height: 30 }}>添加</button>
+                      </div>
+                    </div>
+                    <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                      <button className="puter-button" onClick={() => setSettingsOpen(false)} disabled={settingsSaving}>取消</button>
+                      <button className="puter-button" onClick={saveSettings} disabled={settingsSaving}>保存</button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

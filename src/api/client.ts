@@ -830,6 +830,22 @@ export const api = {
     const r = await axios.post(`${base}/api/docker/image/pull`, { image, tag })
     return r.data as { ok: boolean }
   },
+  async dockerMirrorsGet() {
+    const r = await axios.get(`${base}/api/docker/mirrors`)
+    return (Array.isArray(r.data) ? r.data : []) as { id: string; name: string; host: string; enabled: boolean }[]
+  },
+  async dockerMirrorsSet(items: { id: string; name: string; host: string; enabled: boolean }[]) {
+    const r = await axios.post(`${base}/api/docker/mirrors`, items)
+    return r.status === 200
+  },
+  async dockerSettingsGet() {
+    const r = await axios.get(`${base}/api/docker/settings`)
+    return r.data as { mode: string; host?: string }
+  },
+  async dockerSettingsSet(mode: string, host?: string) {
+    const r = await axios.post(`${base}/api/docker/settings`, { mode, host })
+    return r.status === 200
+  },
   async dockerRegistrySearch(q: string, page = 1, pageSize = 24) {
     const r = await axios.get(`${base}/api/docker/registry/search`, { params: { q, page, page_size: pageSize } })
     const data = r.data as { results: { name: string; namespace?: string; description?: string; star_count?: number; pull_count?: number; is_official?: boolean }[]; next?: boolean; prev?: boolean }
