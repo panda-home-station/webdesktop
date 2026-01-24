@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { api } from '../../../src/api/client'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Icon from '@mdi/react'
-import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiCogOutline, mdiMagnify } from '@mdi/js'
+import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiCogOutline, mdiMagnify, mdiOpenInNew } from '@mdi/js'
 
 type Container = {
   id: string
@@ -38,6 +38,13 @@ export default function DockerManager() {
   const [pullName, setPullName] = useState('')
   const [pullTag, setPullTag] = useState('latest')
   const [registryQ, setRegistryQ] = useState('')
+  const [registryItems, setRegistryItems] = useState<any[]>([])
+  const [registryLoading, setRegistryLoading] = useState(false)
+  const [hotItems, setHotItems] = useState<any[]>([])
+  const [didSearch, setDidSearch] = useState(false)
+  const [page, setPage] = useState(1)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrev, setHasPrev] = useState(false)
 
   const loadAll = async () => {
     setLoading(true)
@@ -56,6 +63,97 @@ export default function DockerManager() {
   useEffect(() => {
     loadAll().catch(console.error)
   }, [])
+  const onSearchRegistry = async () => {
+    const q = registryQ.trim()
+    if (!q) {
+      setDidSearch(false)
+      setRegistryItems([])
+      setPage(1)
+      return
+    }
+    setDidSearch(true)
+    setPage(1)
+    setRegistryLoading(true)
+    try {
+      const { items, hasNext, hasPrev } = await api.dockerRegistrySearch(q, 1)
+      setRegistryItems(items as any[])
+      setHasNext(hasNext)
+      setHasPrev(hasPrev)
+    } finally {
+      setRegistryLoading(false)
+    }
+  }
+  useEffect(() => {
+    if (active === 'registry') {
+      setDidSearch(false)
+      setPage(1)
+    }
+  }, [active])
+  useEffect(() => {
+    if (active === 'registry' && !didSearch) {
+      setRegistryLoading(true)
+      api.dockerRegistryHot(page)
+        .then(({ items, hasNext, hasPrev }) => {
+          setHotItems(items as any[])
+          setHasNext(hasNext)
+          setHasPrev(hasPrev)
+        })
+        .finally(() => setRegistryLoading(false))
+    }
+  }, [active, didSearch, page])
+  const onPagePrev = async () => {
+    if (page <= 1 || registryLoading) return
+    const newPage = page - 1
+    setRegistryLoading(true)
+    try {
+      if (didSearch) {
+        const { items, hasNext, hasPrev } = await api.dockerRegistrySearch(registryQ.trim(), newPage)
+        setRegistryItems(items as any[])
+        setHasNext(hasNext)
+        setHasPrev(hasPrev)
+      } else {
+        const { items, hasNext, hasPrev } = await api.dockerRegistryHot(newPage)
+        setHotItems(items as any[])
+        setHasNext(hasNext)
+        setHasPrev(hasPrev)
+      }
+      setPage(newPage)
+    } finally {
+      setRegistryLoading(false)
+    }
+  }
+  const onPageNext = async () => {
+    if (!hasNext || registryLoading) return
+    const newPage = page + 1
+    setRegistryLoading(true)
+    try {
+      if (didSearch) {
+        const { items, hasNext, hasPrev } = await api.dockerRegistrySearch(registryQ.trim(), newPage)
+        setRegistryItems(items as any[])
+        setHasNext(hasNext)
+        setHasPrev(hasPrev)
+      } else {
+        const { items, hasNext, hasPrev } = await api.dockerRegistryHot(newPage)
+        setHotItems(items as any[])
+        setHasNext(hasNext)
+        setHasPrev(hasPrev)
+      }
+      setPage(newPage)
+    } finally {
+      setRegistryLoading(false)
+    }
+  }
+  const pullFromRegistry = async (ref: string) => {
+    if (!ref) return
+    setPulling(true)
+    try {
+      await api.dockerPull(ref)
+      await loadAll()
+      setActive('local-images')
+    } finally {
+      setPulling(false)
+    }
+  }
 
   const fmtSize = (n: number) => {
     if (n < 1024) return `${n} B`
@@ -107,8 +205,8 @@ export default function DockerManager() {
         activeId={active}
         onSelect={setActive}
       />
-      <div style={{ flex: 1, overflow: 'auto', background: '#fff' }}>
-        <div style={{ padding: 20 }}>
+      <div style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '20px 20px 0 20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
           {active === 'overview' ? (
             <>
               <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>概览</h2>
@@ -194,10 +292,13 @@ export default function DockerManager() {
                     placeholder="搜索镜像"
                     value={registryQ}
                     onChange={e => setRegistryQ(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') onSearchRegistry()
+                    }}
                     className="puter-input"
                     style={{ width: 220, height: 30, padding: '0 8px', boxSizing: 'border-box' }}
                   />
-                  <button className="puter-button" title="搜索" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <button className="puter-button" title="搜索" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={onSearchRegistry} disabled={registryLoading}>
                     <Icon path={mdiMagnify} size={0.9} />
                   </button>
                   <button className="puter-button" title="设置" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -205,9 +306,63 @@ export default function DockerManager() {
                   </button>
                 </span>
               </div>
+              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <div style={{ flex: 1, overflow: 'auto' }}>
+                  {registryLoading && <div style={{ color: '#6b7280' }}>加载中…</div>}
+                  {!registryLoading && (didSearch ? registryItems.length > 0 : hotItems.length > 0) && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                      {(didSearch ? registryItems : hotItems).map((it: any, idx: number) => {
+                        const name = it?.name || ''
+                        const ns = it?.namespace || ''
+                        const stars = typeof it?.star_count === 'number' ? it.star_count : 0
+                        const pulls = typeof it?.pull_count === 'number' ? it.pull_count : 0
+                        const official = !!it?.is_official
+                        const ref = official ? name : (ns && name ? `${ns}/${name}` : name)
+                        return (
+                          <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '8px 10px', background: '#f9fafb', display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                              <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{ref}</span>
+                              {official && <span style={{ fontSize: 12, color: '#10b981' }}>官方</span>}
+                              <span style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>⭐ {stars} · ⬇️ {pulls}</span>
+                            </div>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                              <button className="puter-button" onClick={() => pullFromRegistry(ref)} disabled={pulling} style={{ padding: '4px 10px', height: 28 }}>下载</button>
+                              <button
+                                className="puter-button"
+                                title="打开镜像页面"
+                                onClick={() => {
+                                  const href = official
+                                    ? `https://hub.docker.com/_/${name}`
+                                    : (ns ? `https://hub.docker.com/r/${ns}/${name}` : `https://hub.docker.com/_/${name}`)
+                                  window.open(href, '_blank')
+                                }}
+                                style={{ padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                <Icon path={mdiOpenInNew} size={0.8} />
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                  {!registryLoading && (didSearch ? registryItems.length === 0 : hotItems.length === 0) && (
+                    <div style={{ color: '#6b7280', textAlign: 'center', marginTop: 40 }}>
+                      {'镜像加载失败或连接超时'}
+                    </div>
+                  )}
+                </div>
+              </div>
             </>
           )}
         </div>
+      {active === 'registry' && (
+        <div style={{ height: 36, display: 'flex', alignItems: 'center', borderTop: '1px solid #e5e7eb' }}>
+          <span style={{ marginLeft: 'auto', color: '#6b7280', fontSize: 14 }}>第 {page} 页</span>
+          <button className="puter-button" onClick={onPagePrev} disabled={!hasPrev || page <= 1 || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>上一页</button>
+          <button className="puter-button" onClick={onPageNext} disabled={!hasNext || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>下一页</button>
+        </div>
+      )}
       </div>
     </div>
   )

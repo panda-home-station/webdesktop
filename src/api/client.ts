@@ -830,6 +830,24 @@ export const api = {
     const r = await axios.post(`${base}/api/docker/image/pull`, { image, tag })
     return r.data as { ok: boolean }
   },
+  async dockerRegistrySearch(q: string, page = 1, pageSize = 24) {
+    const r = await axios.get(`${base}/api/docker/registry/search`, { params: { q, page, page_size: pageSize } })
+    const data = r.data as { results: { name: string; namespace?: string; description?: string; star_count?: number; pull_count?: number; is_official?: boolean }[]; next?: boolean; prev?: boolean }
+    return {
+      items: Array.isArray(data.results) ? data.results : [],
+      hasNext: !!data.next,
+      hasPrev: !!data.prev
+    }
+  },
+  async dockerRegistryHot(page = 1, pageSize = 24) {
+    const r = await axios.get(`${base}/api/docker/registry/hot`, { params: { page, page_size: pageSize } })
+    const data = r.data as { results: { name: string; namespace?: string; description?: string; star_count?: number; pull_count?: number; is_official?: boolean }[]; next?: boolean; prev?: boolean }
+    return {
+      items: Array.isArray(data.results) ? data.results : [],
+      hasNext: !!data.next,
+      hasPrev: !!data.prev
+    }
+  },
   isOffline() {
     return offline
   }
