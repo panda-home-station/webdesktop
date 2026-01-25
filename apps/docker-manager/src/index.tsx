@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { api } from '../../../src/api/client'
+import axios from 'axios'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Icon from '@mdi/react'
 import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiCogOutline, mdiMagnify, mdiOpenInNew } from '@mdi/js'
@@ -52,12 +52,63 @@ export default function DockerManager() {
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
 
+  const podmanApi = {
+    async listContainers() {
+      const r = await axios.get('/api/podman/containers')
+      return r.data as Container[]
+    },
+    async listImages() {
+      const r = await axios.get('/api/podman/images')
+      return r.data as Image[]
+    },
+    async start(id: string) {
+      await axios.post('/api/podman/container/start', { id })
+    },
+    async stop(id: string) {
+      await axios.post('/api/podman/container/stop', { id })
+    },
+    async restart(id: string) {
+      await axios.post('/api/podman/container/restart', { id })
+    },
+    async remove(id: string) {
+      await axios.post('/api/podman/container/remove', { id })
+    },
+    async pull(image: string, tag?: string) {
+      await axios.post('/api/podman/image/pull', { image, tag })
+    },
+    async mirrorsGet() {
+      const r = await axios.get('/api/podman/mirrors')
+      return (Array.isArray(r.data) ? r.data : []) as { id: string; name: string; host: string; enabled: boolean }[]
+    },
+    async mirrorsSet(items: { id: string; name: string; host: string; enabled: boolean }[]) {
+      await axios.post('/api/podman/mirrors', items)
+    },
+    async registrySearch(q: string, page = 1, pageSize = 24) {
+      const r = await axios.get('/api/podman/registry/search', { params: { q, page, page_size: pageSize } })
+      const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
+      return {
+        items: Array.isArray(data.results) ? data.results : [],
+        hasNext: !!data.next,
+        hasPrev: !!data.prev
+      }
+    },
+    async registryHot(page = 1, pageSize = 24) {
+      const r = await axios.get('/api/podman/registry/hot', { params: { page, page_size: pageSize } })
+      const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
+      return {
+        items: Array.isArray(data.results) ? data.results : [],
+        hasNext: !!data.next,
+        hasPrev: !!data.prev
+      }
+    }
+  }
+
   const loadAll = async () => {
     setLoading(true)
     try {
       const [cs, ims] = await Promise.all([
-        api.dockerListContainers(),
-        api.dockerListImages()
+        podmanApi.listContainers(),
+        podmanApi.listImages()
       ])
       setContainers(cs)
       setImages(ims)
@@ -81,7 +132,7 @@ export default function DockerManager() {
     setPage(1)
     setRegistryLoading(true)
     try {
-      const { items, hasNext, hasPrev } = await api.dockerRegistrySearch(q, 1)
+      const { items, hasNext, hasPrev } = await podmanApi.registrySearch(q, 1)
       setRegistryItems(items as any[])
       setHasNext(hasNext)
       setHasPrev(hasPrev)
@@ -98,7 +149,7 @@ export default function DockerManager() {
   useEffect(() => {
     if (active === 'registry' && !didSearch) {
       setRegistryLoading(true)
-      api.dockerRegistryHot(page)
+      podmanApi.registryHot(page)
         .then(({ items, hasNext, hasPrev }) => {
           setHotItems(items as any[])
           setHasNext(hasNext)
@@ -111,7 +162,7 @@ export default function DockerManager() {
     setSettingsOpen(true)
     setSettingsLoading(true)
     try {
-      const items = await api.dockerMirrorsGet()
+      const items = await podmanApi.mirrorsGet()
       setMirrors(Array.isArray(items) ? items : [])
     } catch {
       setMirrors([])
@@ -122,7 +173,7 @@ export default function DockerManager() {
   const saveSettings = async () => {
     setSettingsSaving(true)
     try {
-      await api.dockerMirrorsSet(mirrors)
+      await podmanApi.mirrorsSet(mirrors)
       setSettingsOpen(false)
     } finally {
       setSettingsSaving(false)
@@ -147,12 +198,12 @@ export default function DockerManager() {
     setRegistryLoading(true)
     try {
       if (didSearch) {
-        const { items, hasNext, hasPrev } = await api.dockerRegistrySearch(registryQ.trim(), newPage)
+        const { items, hasNext, hasPrev } = await podmanApi.registrySearch(registryQ.trim(), newPage)
         setRegistryItems(items as any[])
         setHasNext(hasNext)
         setHasPrev(hasPrev)
       } else {
-        const { items, hasNext, hasPrev } = await api.dockerRegistryHot(newPage)
+        const { items, hasNext, hasPrev } = await podmanApi.registryHot(newPage)
         setHotItems(items as any[])
         setHasNext(hasNext)
         setHasPrev(hasPrev)
@@ -168,12 +219,12 @@ export default function DockerManager() {
     setRegistryLoading(true)
     try {
       if (didSearch) {
-        const { items, hasNext, hasPrev } = await api.dockerRegistrySearch(registryQ.trim(), newPage)
+        const { items, hasNext, hasPrev } = await podmanApi.registrySearch(registryQ.trim(), newPage)
         setRegistryItems(items as any[])
         setHasNext(hasNext)
         setHasPrev(hasPrev)
       } else {
-        const { items, hasNext, hasPrev } = await api.dockerRegistryHot(newPage)
+        const { items, hasNext, hasPrev } = await podmanApi.registryHot(newPage)
         setHotItems(items as any[])
         setHasNext(hasNext)
         setHasPrev(hasPrev)
@@ -187,7 +238,7 @@ export default function DockerManager() {
     if (!ref) return
     setPulling(true)
     try {
-      await api.dockerPull(ref)
+      await podmanApi.pull(ref)
       await loadAll()
       setActive('local-images')
     } finally {
@@ -208,27 +259,27 @@ export default function DockerManager() {
   }
 
   const onStart = async (id: string) => {
-    await api.dockerStart(id)
+    await podmanApi.start(id)
     await loadAll()
   }
   const onStop = async (id: string) => {
-    await api.dockerStop(id)
+    await podmanApi.stop(id)
     await loadAll()
   }
   const onRestart = async (id: string) => {
-    await api.dockerRestart(id)
+    await podmanApi.restart(id)
     await loadAll()
   }
   const onRemove = async (id: string) => {
     if (!confirm('确认删除该容器？这将强制删除。')) return
-    await api.dockerRemove(id)
+    await podmanApi.remove(id)
     await loadAll()
   }
   const onPull = async () => {
     if (!pullName) return
     setPulling(true)
     try {
-      await api.dockerPull(pullName, pullTag || undefined)
+      await podmanApi.pull(pullName, pullTag || undefined)
       await loadAll()
       setPullName('')
       setPullTag('latest')
@@ -304,7 +355,7 @@ export default function DockerManager() {
           ) : active === 'compose' ? (
             <>
               <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>compose</h2>
-              <div style={{ color: '#6b7280' }}>这里用于管理 Docker Compose 项目（后续功能）。</div>
+              <div style={{ color: '#6b7280' }}>这里用于管理 Podman Compose 项目（后续功能）。</div>
             </>
           ) : active === 'local-images' ? (
             <>

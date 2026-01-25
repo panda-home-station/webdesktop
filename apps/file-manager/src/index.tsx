@@ -20,7 +20,7 @@ import {
   mdiClose,
   mdiCheckCircleOutline
 } from '@mdi/js'
-import { api } from '../../../src/api/client'
+ 
 import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, removeFileTask, FileTask } from '../../../src/sdk/desktop'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Toolbar from './components/Toolbar'
@@ -28,6 +28,10 @@ import ListView from './components/ListView'
 import GridView from './components/GridView'
 import FooterCount from './components/FooterCount'
  
+import { api } from '../../../src/api/client'
+ 
+const fmApi = api
+
 function useNavigation(initialPath: string = '/') {
   const [path, setPath] = useState<string>(initialPath)
   const [navHist, setNavHist] = useState<string[]>([initialPath])
@@ -111,14 +115,14 @@ export default function FileManager() {
     updateFileTask(id, { status: 'running' })
     console.log(`[${new Date().toLocaleTimeString()}] FileManager: startUpload ${file.name}`);
     try {
-      await api.fsUpload(dir, file, (info) => {
+      await fmApi.fsUpload(dir, file, (info) => {
         updateFileTask(id, { progress: info.percent, total: info.total, loaded: info.loaded, bps: info.bps })
       }, controller.signal, offset)
       console.log(`[${new Date().toLocaleTimeString()}] FileManager: upload finished ${file.name}`);
       updateFileTask(id, { progress: 100, status: 'done' })
       uploadFilesMap.current.delete(id)
       if (path === dir) {
-        const rs = await api.fsList(path)
+        const rs = await fmApi.fsList(path)
         setEntries(rs.entries)
       }
     } catch (e: any) {
@@ -175,7 +179,7 @@ export default function FileManager() {
           return
         }
         console.time('fm:first-page')
-        const r = await api.fsList(path)
+        const r = await fmApi.fsList(path)
         if (!mounted) return
         setEntries(r.entries)
         console.timeEnd('fm:first-page')
@@ -184,7 +188,7 @@ export default function FileManager() {
           let nextOffset = r.next_offset
           let more = r.has_more
           while (mounted && more) {
-            const rr = await api.fsListPage(path, nextOffset, 500)
+            const rr = await fmApi.fsListPage(path, nextOffset, 500)
             if (!mounted) break
             if (rr.entries && rr.entries.length > 0) {
               setEntries(prev => {
@@ -240,7 +244,7 @@ export default function FileManager() {
   }
   const joinPath = (dir: string, name: string) => (dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`)
   const reloadCurrentDir = async () => {
-    const rs = await api.fsList(path)
+    const rs = await fmApi.fsList(path)
     setEntries(rs.entries)
   }
   
@@ -259,7 +263,7 @@ export default function FileManager() {
       '/Transfers',
     ])
     if (to !== '/' && !reserved.has(to)) {
-      await api.fsMkdir(to)
+      await fmApi.fsMkdir(to)
     }
     setSelected(new Set())
     navigate(to)
@@ -368,7 +372,7 @@ export default function FileManager() {
         controller.abort()
       }
       const fullPath = t.dir === '/' ? `/${t.name}` : `${t.dir}/${t.name}`
-      await api.fsDelete(fullPath)
+      await fmApi.fsDelete(fullPath)
       if (path === t.dir) {
         refresh()
       }
@@ -380,9 +384,9 @@ export default function FileManager() {
     for (const n of names) {
       const from = `/Trash/${n}`
       const to = `/${n}`
-      await api.fsRename(from, to)
+      await fmApi.fsRename(from, to)
     }
-    const rs = await api.fsList(path)
+      const rs = await fmApi.fsList(path)
     setEntries(rs.entries)
     clearSelection()
   }
@@ -390,9 +394,9 @@ export default function FileManager() {
     const names = [...selected]
     for (const n of names) {
       const p = `/Trash/${n}`
-      await api.fsDelete(p)
+      await fmApi.fsDelete(p)
     }
-    const rs = await api.fsList(path)
+    const rs = await fmApi.fsList(path)
     setEntries(rs.entries)
     clearSelection()
   }
@@ -400,18 +404,18 @@ export default function FileManager() {
     const names = entries.map(e => e.name)
     for (const n of names) {
       const p = `/Trash/${n}`
-      await api.fsDelete(p)
+      await fmApi.fsDelete(p)
     }
-    const rs = await api.fsList(path)
+    const rs = await fmApi.fsList(path)
     setEntries(rs.entries)
     clearSelection()
   }
   const onRestoreOne = async (name: string) => {
-    await api.fsRename(`/Trash/${name}`, `/${name}`)
+    await fmApi.fsRename(`/Trash/${name}`, `/${name}`)
     await reloadCurrentDir()
   }
   const onDeleteOne = async (name: string) => {
-    await api.fsDelete(`/Trash/${name}`)
+    await fmApi.fsDelete(`/Trash/${name}`)
     await reloadCurrentDir()
   }
   

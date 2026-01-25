@@ -1,5 +1,3 @@
-import { api } from '../api/client'
-
 const ev = new EventTarget()
 export type AppContextMenuItem = { label: string; onClick?: () => void }
 export type AppContextMenuProvider = (ev: { x: number; y: number; target: HTMLElement }) => AppContextMenuItem[]
@@ -31,26 +29,6 @@ export type FileTask = {
   status: 'running' | 'done' | 'error' | 'paused'
 }
 let fileTasks: FileTask[] = []
-
-// Init tasks
-api.getTasks()
-  .then(tasks => {
-    fileTasks = Array.isArray(tasks)
-      ? tasks.map(t => ({
-          id: t.id,
-          kind: t.type as any,
-          name: t.name,
-          dir: t.dir || '',
-          progress: t.progress,
-          status: t.status as any
-        }))
-      : []
-    emitFileTasks()
-  })
-  .catch(() => {
-    fileTasks = []
-    emitFileTasks()
-  })
 
 export function openLauncher() {
   ev.dispatchEvent(new CustomEvent('openLauncher'))
@@ -122,14 +100,6 @@ export function subscribeFileTasks(handler: (tasks: FileTask[]) => void) {
 export function pushFileTask(task: FileTask) {
   fileTasks.push(task)
   emitFileTasks()
-  api.createTask({
-    id: task.id,
-    type: task.kind,
-    name: task.name,
-    dir: task.dir,
-    progress: task.progress || 0,
-    status: task.status
-  })
 }
 
 export function updateFileTask(id: string, patch: Partial<FileTask>) {
@@ -137,23 +107,17 @@ export function updateFileTask(id: string, patch: Partial<FileTask>) {
   if (t) {
     Object.assign(t, patch)
     emitFileTasks()
-    api.updateTask(id, {
-      progress: patch.progress,
-      status: patch.status
-    })
   }
 }
 
 export function removeFileTask(id: string) {
   fileTasks = fileTasks.filter(x => x.id !== id)
   emitFileTasks()
-  api.deleteTask(id)
 }
 
 export function clearCompletedFileTasks() {
   fileTasks = fileTasks.filter(x => x.status !== 'done')
   emitFileTasks()
-  api.clearTasks()
 }
 
 export function showDesktop() {

@@ -2,8 +2,64 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import Desktop from './components/Desktop'
 import LoginForm from './components/LoginForm'
 import InitForm from './components/InitForm'
-import { api } from './api/client'
+import axios from 'axios'
 import { getWallpaper } from './state/desktop'
+
+const host = window.location.hostname || 'localhost'
+const apiPort = (import.meta as any).env?.VITE_PNAS_PORT ?? '8000'
+const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+axios.defaults.baseURL = `${protocol}://${host}:${apiPort}`
+{
+  const t = localStorage.getItem('authToken') || ''
+  if (t) axios.defaults.headers.common['Authorization'] = `Bearer ${t}`
+}
+
+const api = {
+  getToken(): string {
+    return localStorage.getItem('authToken') || ''
+  },
+  getUser(): { user_id: string; username: string } | null {
+    try {
+      const raw = localStorage.getItem('authUser')
+      return raw ? JSON.parse(raw) : null
+    } catch {
+      return null
+    }
+  },
+  async whoami(): Promise<{ user_id: string; username: string } | null> {
+    const r = await axios.get('/api/auth/whoami')
+    const u = r.data && typeof r.data === 'object' ? r.data : null
+    if (u) {
+      try { localStorage.setItem('authUser', JSON.stringify(u)) } catch {}
+    }
+    return u
+  },
+  async initState(): Promise<{ initialized: boolean }> {
+    const r = await axios.get('/api/system/init/state')
+    const d = r.data || {}
+    return { initialized: !!d.initialized }
+  },
+  async getWallpaper(): Promise<string> {
+    const p = localStorage.getItem('wallpaperPath') || ''
+    return p
+  },
+  fsDownloadUrl(path: string): string {
+    const host = window.location.hostname || 'localhost'
+    const apiPort = (import.meta as any).env?.VITE_PNAS_PORT ?? '8000'
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+    const base = `${protocol}://${host}:${apiPort}`
+    const token = (localStorage.getItem('authToken') || '')
+    const u = new URL(`${base}/api/docs/download`)
+    u.searchParams.set('path', path || '')
+    if (token) u.searchParams.set('token', token)
+    return u.toString()
+  },
+  logout() {
+    try { localStorage.removeItem('authToken') } catch {}
+    try { localStorage.removeItem('authUser') } catch {}
+    delete axios.defaults.headers.common['Authorization']
+  }
+}
 
 function SmoothWallpaper({ src }: { src?: string }) {
   const [cur, setCur] = useState<string | null>(null)
@@ -113,6 +169,7 @@ export default function App() {
       setNeedInit(!s.initialized)
       setInitChecked(true)
     }).catch(() => {
+      setNeedInit(true)
       setInitChecked(true)
     })
     api.getWallpaper().then(path => {

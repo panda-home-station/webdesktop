@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
-import { api } from '../../../src/api/client'
+import axios from 'axios'
 
 const TABS = [
   { id: 'device', label: '设备信息', icon: '💻' },
@@ -25,9 +25,10 @@ export default function SystemSettings() {
 
   useEffect(() => {
     const fetchInfo = () => {
-      api.getDeviceInfo().then(data => {
+      axios.get('/api/system/info').then(r => {
+        const data = r.data
         setDeviceInfo(data)
-        localStorage.setItem('pnas_device_info', JSON.stringify(data))
+        try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch {}
       }).catch(console.error)
     }
     

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { api } from '../../../../src/api/client'
+import axios from 'axios'
 
 export type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
 
@@ -20,19 +20,28 @@ export function useEntries(path: string) {
   })
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
 
+  const fsList = async (p: string) => {
+    const r = await axios.get('/api/docs/list', { params: { path: p, limit: 200, offset: 0 } })
+    return r.data as { path: string; entries: Entry[]; has_more?: boolean; next_offset?: number }
+  }
+  const fsListPage = async (p: string, offset: number, limit: number) => {
+    const r = await axios.get('/api/docs/list', { params: { path: p, limit, offset } })
+    return r.data as { path: string; entries: Entry[]; has_more?: boolean; next_offset?: number }
+  }
+
   useEffect(() => {
     let mounted = true
     const load = async () => {
       setLoading(true)
       try {
-        const r = await api.fsList(path)
+        const r = await fsList(path)
         if (!mounted) return
         setEntries(r.entries)
         if (r.has_more && r.next_offset != null) {
           let nextOffset = r.next_offset
           let more = r.has_more
           while (mounted && more) {
-            const rr = await api.fsListPage(path, nextOffset, 500)
+            const rr = await fsListPage(path, nextOffset, 500)
             if (!mounted) break
             if (rr.entries && rr.entries.length > 0) {
               setEntries(prev => {
@@ -55,7 +64,7 @@ export function useEntries(path: string) {
   }, [path])
 
   const refresh = async () => {
-    const r = await api.fsList(path)
+    const r = await fsList(path)
     setEntries(r.entries)
   }
 

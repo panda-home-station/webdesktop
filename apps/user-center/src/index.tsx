@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
-import { api } from '../../../src/api/client'
-import { getWallpaper, setWallpaper } from '../../../src/state/desktop'
+import axios from 'axios'
 import Icon from '@mdi/react'
 import { mdiAccountCircleOutline, mdiImageOutline } from '@mdi/js'
 
@@ -9,9 +8,52 @@ type Item = 'profile' | 'wallpapers'
 
 const WALL_DIR = '/AppData/Wallpapers'
 
+const fmApi = {
+  async fsMkdir(path: string) {
+    await axios.post('/api/docs/mkdir', { path })
+  },
+  async fsList(path: string) {
+    const r = await axios.get('/api/docs/list', { params: { path, limit: 200, offset: 0 } })
+    return r.data as { path: string; entries: { id?: string; name: string; is_dir: boolean }[] }
+  },
+  async fsUpload(dir: string, file: File) {
+    const fd = new FormData()
+    fd.append('path', dir)
+    fd.append('size', String(file.size))
+    fd.append('offset', '0')
+    fd.append('file', file)
+    await axios.post('/api/docs/upload', fd)
+  },
+  fsDownloadUrl(path: string) {
+    return `/api/docs/download?path=${encodeURIComponent(path)}`
+  },
+  getUser(): { user_id: string; username: string } | null {
+    try {
+      const raw = localStorage.getItem('authUser')
+      return raw ? JSON.parse(raw) : null
+    } catch { return null }
+  }
+}
+
+const KEY = 'wallpaperPath'
+function getWallpaper(): string {
+  const p = localStorage.getItem(KEY) || ''
+  if (!p) return ''
+  return `/api/docs/download?path=${encodeURIComponent(p)}`
+}
+function setWallpaper(path: string | null) {
+  if (!path) localStorage.removeItem(KEY)
+  else localStorage.setItem(KEY, path)
+  const url = path ? `/api/docs/download?path=${encodeURIComponent(path)}` : ''
+  try {
+    const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
+    window.dispatchEvent(ev)
+  } catch {}
+}
+
 export default function UserCenter() {
   const [active, setActive] = useState<Item>('profile')
-  const user = api.getUser()
+  const user = fmApi.getUser()
 
   const [busy, setBusy] = useState(false)
   const [entries, setEntries] = useState<{ name: string; is_dir: boolean }[]>([])
@@ -27,10 +69,10 @@ export default function UserCenter() {
     ;(async () => {
       setBusy(true)
       try {
-        await api.fsMkdir(WALL_DIR)
+        await fmApi.fsMkdir(WALL_DIR)
       } catch {}
       try {
-        const rs = await api.fsList(WALL_DIR)
+        const rs = await fmApi.fsList(WALL_DIR)
         setEntries(rs.entries)
       } catch {
         setEntries([])
@@ -43,8 +85,8 @@ export default function UserCenter() {
   useEffect(() => {
     ;(async () => {
       try {
-        const path = await api.getWallpaper()
-        const url = path ? api.fsDownloadUrl(path) : ''
+        const path = localStorage.getItem(KEY) || ''
+        const url = path ? fmApi.fsDownloadUrl(path) : ''
         if (url) {
           try {
             const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
@@ -108,9 +150,9 @@ export default function UserCenter() {
                     setBusy(true)
                     try {
                       for (const f of Array.from(files)) {
-                        await api.fsUpload(WALL_DIR, f)
+                        await fmApi.fsUpload(WALL_DIR, f)
                       }
-                      const rs = await api.fsList(WALL_DIR)
+                      const rs = await fmApi.fsList(WALL_DIR)
                       setEntries(rs.entries)
                     } finally {
                       setBusy(false)
@@ -123,7 +165,7 @@ export default function UserCenter() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
               {imgs.map(it => {
                 const full = WALL_DIR.endsWith('/') ? `${WALL_DIR}${it.name}` : `${WALL_DIR}/${it.name}`
-                const url = api.fsDownloadUrl(full)
+                const url = fmApi.fsDownloadUrl(full)
                 const selected = curWallpaper && curWallpaper.includes(it.name)
                 return (
                   <button

@@ -789,8 +789,8 @@ export const api = {
     }
   },
   // Docker API
-  async dockerListContainers() {
-    const r = await axios.get(`${base}/api/docker/containers`)
+  async podmanListContainers() {
+    const r = await axios.get(`${base}/api/podman/containers`)
     return r.data as {
       id: string
       names: string[]
@@ -801,8 +801,8 @@ export const api = {
       ports: [number, number | null, string | null][]
     }[]
   },
-  async dockerListImages() {
-    const r = await axios.get(`${base}/api/docker/images`)
+  async podmanListImages() {
+    const r = await axios.get(`${base}/api/podman/images`)
     return r.data as {
       id: string
       repo_tags: string[]
@@ -810,54 +810,54 @@ export const api = {
       created: number
     }[]
   },
-  async dockerStart(id: string) {
-    const r = await axios.post(`${base}/api/docker/container/start`, { id })
+  async podmanStart(id: string) {
+    const r = await axios.post(`${base}/api/podman/container/start`, { id })
     return r.data as { ok: boolean }
   },
-  async dockerStop(id: string) {
-    const r = await axios.post(`${base}/api/docker/container/stop`, { id })
+  async podmanStop(id: string) {
+    const r = await axios.post(`${base}/api/podman/container/stop`, { id })
     return r.data as { ok: boolean }
   },
-  async dockerRestart(id: string) {
-    const r = await axios.post(`${base}/api/docker/container/restart`, { id })
+  async podmanRestart(id: string) {
+    const r = await axios.post(`${base}/api/podman/container/restart`, { id })
     return r.data as { ok: boolean }
   },
-  async dockerRemove(id: string) {
-    const r = await axios.post(`${base}/api/docker/container/remove`, { id })
+  async podmanRemove(id: string) {
+    const r = await axios.post(`${base}/api/podman/container/remove`, { id })
     return r.data as { ok: boolean }
   },
-  async dockerPull(image: string, tag?: string) {
-    const r = await axios.post(`${base}/api/docker/image/pull`, { image, tag })
+  async podmanPull(image: string, tag?: string) {
+    const r = await axios.post(`${base}/api/podman/image/pull`, { image, tag })
     return r.data as { ok: boolean }
   },
-  async dockerMirrorsGet() {
-    const r = await axios.get(`${base}/api/docker/mirrors`)
-    return (Array.isArray(r.data) ? r.data : []) as { id: string; name: string; host: string; enabled: boolean }[]
+  async podmanMirrorsGet() {
+    const r = await axios.get(`${base}/api/podman/mirrors`)
+    return r.data as { id: string; name: string; host: string; enabled: boolean }[]
   },
-  async dockerMirrorsSet(items: { id: string; name: string; host: string; enabled: boolean }[]) {
-    const r = await axios.post(`${base}/api/docker/mirrors`, items)
+  async podmanMirrorsSet(items: { id: string; name: string; host: string; enabled: boolean }[]) {
+    const r = await axios.post(`${base}/api/podman/mirrors`, items)
     return r.status === 200
   },
-  async dockerSettingsGet() {
-    const r = await axios.get(`${base}/api/docker/settings`)
-    return r.data as { mode: string; host?: string }
+  async podmanSettingsGet() {
+    const r = await axios.get(`${base}/api/podman/settings`)
+    return r.data as { mode: string; host: string }
   },
-  async dockerSettingsSet(mode: string, host?: string) {
-    const r = await axios.post(`${base}/api/docker/settings`, { mode, host })
+  async podmanSettingsSet(mode: string, host?: string) {
+    const r = await axios.post(`${base}/api/podman/settings`, { mode, host })
     return r.status === 200
   },
-  async dockerRegistrySearch(q: string, page = 1, pageSize = 24) {
-    const r = await axios.get(`${base}/api/docker/registry/search`, { params: { q, page, page_size: pageSize } })
-    const data = r.data as { results: { name: string; namespace?: string; description?: string; star_count?: number; pull_count?: number; is_official?: boolean }[]; next?: boolean; prev?: boolean }
+  async podmanRegistrySearch(q: string, page = 1, pageSize = 24) {
+    const r = await axios.get(`${base}/api/podman/registry/search`, { params: { q, page, page_size: pageSize } })
+    const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
     return {
       items: Array.isArray(data.results) ? data.results : [],
       hasNext: !!data.next,
       hasPrev: !!data.prev
     }
   },
-  async dockerRegistryHot(page = 1, pageSize = 24) {
-    const r = await axios.get(`${base}/api/docker/registry/hot`, { params: { page, page_size: pageSize } })
-    const data = r.data as { results: { name: string; namespace?: string; description?: string; star_count?: number; pull_count?: number; is_official?: boolean }[]; next?: boolean; prev?: boolean }
+  async podmanRegistryHot(page = 1, pageSize = 24) {
+    const r = await axios.get(`${base}/api/podman/registry/hot`, { params: { page, page_size: pageSize } })
+    const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
     return {
       items: Array.isArray(data.results) ? data.results : [],
       hasNext: !!data.next,
