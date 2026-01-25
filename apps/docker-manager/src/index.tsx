@@ -54,37 +54,47 @@ export default function DockerManager() {
 
   const podmanApi = {
     async listContainers() {
-      const r = await axios.get('/api/podman/containers')
+      const token = localStorage.getItem('authToken') || ''
+      const r = await axios.get('/api/podman/containers', { params: token ? { token } : {} })
       return r.data as Container[]
     },
     async listImages() {
-      const r = await axios.get('/api/podman/images')
+      const token = localStorage.getItem('authToken') || ''
+      const r = await axios.get('/api/podman/images', { params: token ? { token } : {} })
       return r.data as Image[]
     },
     async start(id: string) {
-      await axios.post('/api/podman/container/start', { id })
+      const token = localStorage.getItem('authToken') || ''
+      await axios.post('/api/podman/container/start', { id }, { params: token ? { token } : {} })
     },
     async stop(id: string) {
-      await axios.post('/api/podman/container/stop', { id })
+      const token = localStorage.getItem('authToken') || ''
+      await axios.post('/api/podman/container/stop', { id }, { params: token ? { token } : {} })
     },
     async restart(id: string) {
-      await axios.post('/api/podman/container/restart', { id })
+      const token = localStorage.getItem('authToken') || ''
+      await axios.post('/api/podman/container/restart', { id }, { params: token ? { token } : {} })
     },
     async remove(id: string) {
-      await axios.post('/api/podman/container/remove', { id })
+      const token = localStorage.getItem('authToken') || ''
+      await axios.post('/api/podman/container/remove', { id }, { params: token ? { token } : {} })
     },
     async pull(image: string, tag?: string) {
-      await axios.post('/api/podman/image/pull', { image, tag })
+      const token = localStorage.getItem('authToken') || ''
+      await axios.post('/api/podman/image/pull', { image, tag }, { params: token ? { token } : {} })
     },
     async mirrorsGet() {
-      const r = await axios.get('/api/podman/mirrors')
+      const token = localStorage.getItem('authToken') || ''
+      const r = await axios.get('/api/podman/mirrors', { params: token ? { token } : {} })
       return (Array.isArray(r.data) ? r.data : []) as { id: string; name: string; host: string; enabled: boolean }[]
     },
     async mirrorsSet(items: { id: string; name: string; host: string; enabled: boolean }[]) {
-      await axios.post('/api/podman/mirrors', items)
+      const token = localStorage.getItem('authToken') || ''
+      await axios.post('/api/podman/mirrors', items, { params: token ? { token } : {} })
     },
     async registrySearch(q: string, page = 1, pageSize = 24) {
-      const r = await axios.get('/api/podman/registry/search', { params: { q, page, page_size: pageSize } })
+      const token = localStorage.getItem('authToken') || ''
+      const r = await axios.get('/api/podman/registry/search', { params: { q, page, page_size: pageSize, ...(token ? { token } : {}) } })
       const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
       return {
         items: Array.isArray(data.results) ? data.results : [],
@@ -93,7 +103,8 @@ export default function DockerManager() {
       }
     },
     async registryHot(page = 1, pageSize = 24) {
-      const r = await axios.get('/api/podman/registry/hot', { params: { page, page_size: pageSize } })
+      const token = localStorage.getItem('authToken') || ''
+      const r = await axios.get('/api/podman/registry/hot', { params: { page, page_size: pageSize, ...(token ? { token } : {}) } })
       const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
       return {
         items: Array.isArray(data.results) ? data.results : [],
