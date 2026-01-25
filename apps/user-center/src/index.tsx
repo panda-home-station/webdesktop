@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
 import axios from 'axios'
 import Icon from '@mdi/react'
 import { mdiAccountCircleOutline, mdiImageOutline } from '@mdi/js'
+import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '../../../src/state/desktop'
 
 type Item = 'profile' | 'wallpapers'
 
@@ -25,7 +26,15 @@ const fmApi = {
     await axios.post('/api/docs/upload', fd)
   },
   fsDownloadUrl(path: string) {
-    return `/api/docs/download?path=${encodeURIComponent(path)}`
+    const host = window.location.hostname || 'localhost'
+    const apiPort = (import.meta as any).env?.VITE_PNAS_PORT ?? '8000'
+    const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
+    const base = `${protocol}://${host}:${apiPort}`
+    const token = localStorage.getItem('authToken') || ''
+    const u = new URL(`${base}/api/docs/download`)
+    u.searchParams.set('path', path || '')
+    if (token) u.searchParams.set('token', token)
+    return u.toString()
   },
   getUser(): { user_id: string; username: string } | null {
     try {
@@ -35,25 +44,10 @@ const fmApi = {
   }
 }
 
-const KEY = 'wallpaperPath'
-function getWallpaper(): string {
-  const p = localStorage.getItem(KEY) || ''
-  if (!p) return ''
-  return `/api/docs/download?path=${encodeURIComponent(p)}`
-}
-function setWallpaper(path: string | null) {
-  if (!path) localStorage.removeItem(KEY)
-  else localStorage.setItem(KEY, path)
-  const url = path ? `/api/docs/download?path=${encodeURIComponent(path)}` : ''
-  try {
-    const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
-    window.dispatchEvent(ev)
-  } catch {}
-}
-
 export default function UserCenter() {
   const [active, setActive] = useState<Item>('profile')
   const user = fmApi.getUser()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [busy, setBusy] = useState(false)
   const [entries, setEntries] = useState<{ name: string; is_dir: boolean }[]>([])
@@ -62,7 +56,7 @@ export default function UserCenter() {
     return entries.filter(e => !e.is_dir && allow.has((e.name.split('.').pop() || '').toLowerCase()))
   }, [entries])
 
-  const curWallpaper = getWallpaper()
+  const curWallpaper = getDesktopWallpaper()
 
   useEffect(() => {
     if (active !== 'wallpapers') return
@@ -85,8 +79,7 @@ export default function UserCenter() {
   useEffect(() => {
     ;(async () => {
       try {
-        const path = localStorage.getItem(KEY) || ''
-        const url = path ? fmApi.fsDownloadUrl(path) : ''
+        const url = getDesktopWallpaper()
         if (url) {
           try {
             const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
@@ -130,7 +123,7 @@ export default function UserCenter() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <button
                 style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: 'var(--text)' }}
-                onClick={() => setWallpaper(null)}
+                onClick={() => setDesktopWallpaper(null)}
                 title="恢复默认壁纸"
               >
                 使用默认壁纸
@@ -144,6 +137,7 @@ export default function UserCenter() {
                   accept="image/*"
                   multiple
                   style={{ display: 'none' }}
+                  ref={fileInputRef}
                   onChange={async (e) => {
                     const files = e.target.files
                     if (!files || files.length === 0) return
@@ -156,7 +150,7 @@ export default function UserCenter() {
                       setEntries(rs.entries)
                     } finally {
                       setBusy(false)
-                      e.currentTarget.value = ''
+                      if (fileInputRef.current) fileInputRef.current.value = ''
                     }
                   }}
                 />
@@ -171,7 +165,7 @@ export default function UserCenter() {
                   <button
                     key={it.name}
                     title={it.name}
-                    onClick={() => setWallpaper(full)}
+                    onClick={() => setDesktopWallpaper(full)}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',

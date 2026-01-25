@@ -182,8 +182,15 @@ export default function App() {
       } catch {}
     }).catch(() => {})
     const onWp = (e: any) => {
-      const next = e?.detail?.url ?? getWallpaper()
-      setWallpaperUrl(next)
+      const u = e?.detail?.url
+      if (typeof u === 'string' && u.length > 0) {
+        setWallpaperUrl(u)
+      } else {
+        const next = getWallpaper()
+        if (next && next.length > 0) {
+          setWallpaperUrl(next)
+        }
+      }
     }
     window.addEventListener('desktop:wallpaper', onWp)
     return () => {

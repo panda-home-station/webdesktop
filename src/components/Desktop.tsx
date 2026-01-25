@@ -106,8 +106,16 @@ export default function Desktop() {
     const url = getWallpaper()
     setWallpaperUrl(url)
     const onWp = (e: any) => {
-      const next = e?.detail?.url ?? getWallpaper()
-      setWallpaperUrl(next)
+      const u = e?.detail?.url
+      if (typeof u === 'string' && u.length > 0) {
+        setWallpaperUrl(u)
+      } else {
+        const fallback = getWallpaper()
+        if (fallback && fallback.length > 0) {
+          setWallpaperUrl(fallback)
+        }
+        // Ignore empty to avoid clearing current wallpaper
+      }
     }
     window.addEventListener('desktop:wallpaper', onWp)
     return () => window.removeEventListener('desktop:wallpaper', onWp)
