@@ -19,6 +19,7 @@ type Image = {
   repo_tags: string[]
   size: number
   created: number
+  exposed_ports?: number[]
 }
 
 const TABS = [
@@ -51,6 +52,25 @@ export default function DockerManager() {
   const [newHost, setNewHost] = useState('')
   const [settingsLoading, setSettingsLoading] = useState(false)
   const [settingsSaving, setSettingsSaving] = useState(false)
+  const [createContainerOpen, setCreateContainerOpen] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<Image | null>(null)
+  const [containerName, setContainerName] = useState('')
+  const [enableResourceLimit, setEnableResourceLimit] = useState(false)
+  const [cpuLimit, setCpuLimit] = useState(2)
+  const [memoryLimit, setMemoryLimit] = useState(4)
+  const [autoStart, setAutoStart] = useState(true)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [imageToDelete, setImageToDelete] = useState<Image | null>(null)
+  const [createStep, setCreateStep] = useState(1)
+  const [ports, setPorts] = useState<{ host: string, container: string }[]>([])
+  const [newHostPort, setNewHostPort] = useState('')
+  const [newContainerPort, setNewContainerPort] = useState('')
+  const [volumes, setVolumes] = useState<{ host: string, container: string }[]>([])
+  const [newHostPath, setNewHostPath] = useState('')
+  const [newContainerPath, setNewContainerPath] = useState('')
+  const [envVars, setEnvVars] = useState<{ key: string, value: string }[]>([])
+  const [newEnvKey, setNewEnvKey] = useState('')
+  const [newEnvValue, setNewEnvValue] = useState('')
 
   const podmanApi = {
     async listContainers() {
@@ -258,15 +278,22 @@ export default function DockerManager() {
   }
 
   const fmtSize = (n: number) => {
-    if (n < 1024) return `${n} B`
-    const units = ['KB', 'MB', 'GB', 'TB']
+    if (n < 1000) return `${n} B`
+    const units = ['B', 'KB', 'MB', 'GB', 'TB']
     let v = n
     let i = 0
-    while (v >= 1024 && i < units.length - 1) {
-      v /= 1024
+    while (v >= 1000 && i < units.length - 1) {
+      v /= 1000
       i++
     }
-    return `${v.toFixed(1)} ${units[i]}`
+    return `${v.toFixed(2)} ${units[i]}`
+  }
+
+  const fmtImageName = (repoTag: string) => {
+    if (!repoTag) return ''
+    const parts = repoTag.split('/')
+    const lastPart = parts[parts.length - 1]
+    return lastPart
   }
 
   const onStart = async (id: string) => {
@@ -297,6 +324,112 @@ export default function DockerManager() {
     } finally {
       setPulling(false)
     }
+  }
+  const onDeleteImage = (img: Image) => {
+    setImageToDelete(img)
+    setDeleteConfirmOpen(true)
+  }
+  const onConfirmDelete = async () => {
+    if (!imageToDelete) return
+    const token = localStorage.getItem('authToken') || ''
+    await axios.post('/api/podman/image/remove', { id: imageToDelete.id }, { params: token ? { token } : {} })
+    setDeleteConfirmOpen(false)
+    setImageToDelete(null)
+    await loadAll()
+  }
+  const onCancelDelete = () => {
+    setDeleteConfirmOpen(false)
+    setImageToDelete(null)
+  }
+  const onOpenCreateContainer = (img: Image) => {
+    setSelectedImage(img)
+    const imageName = (img.repo_tags && img.repo_tags[0]) ? fmtImageName(img.repo_tags[0]) : img.id.slice(0, 12)
+    setContainerName(imageName.split(':')[0])
+    setEnableResourceLimit(false)
+    setCpuLimit(2)
+    setMemoryLimit(4)
+    setAutoStart(true)
+    setCreateContainerOpen(true)
+  }
+  const onCloseCreateContainer = () => {
+    setCreateContainerOpen(false)
+    setSelectedImage(null)
+    setContainerName('')
+    setEnableResourceLimit(false)
+    setCpuLimit(2)
+    setMemoryLimit(4)
+    setAutoStart(true)
+    setCreateStep(1)
+    setPorts([])
+    setNewHostPort('')
+    setNewContainerPort('')
+    setVolumes([])
+    setNewHostPath('')
+    setNewContainerPath('')
+    setEnvVars([])
+    setNewEnvKey('')
+    setNewEnvValue('')
+  }
+  const onCreateContainer = async () => {
+    if (!selectedImage) return
+    const token = localStorage.getItem('authToken') || ''
+    const payload: any = {
+      image_id: selectedImage.id,
+      name: containerName || undefined,
+      cpu_limit: enableResourceLimit ? cpuLimit : undefined,
+      memory_limit: enableResourceLimit ? memoryLimit : undefined,
+      auto_start: autoStart,
+      ports: ports.length > 0 ? ports : undefined,
+      volumes: volumes.length > 0 ? volumes.map(v => `${v.host}:${v.container}`) : undefined,
+      env: envVars.length > 0 ? envVars.map(v => `${v.key}=${v.value}`) : undefined,
+    }
+    await axios.post('/api/podman/container/create', payload, { params: token ? { token } : {} })
+    onCloseCreateContainer()
+    await loadAll()
+  }
+  const onNextStep = () => {
+    setCreateStep(createStep + 1)
+  }
+  const onPrevStep = () => {
+    setCreateStep(createStep - 1)
+  }
+  const onAddPort = () => {
+    console.log('onAddPort called', { newHostPort, newContainerPort, ports })
+    if (newHostPort && newContainerPort) {
+      const newPorts = [...ports, { host: newHostPort, container: newContainerPort }]
+      console.log('Setting ports to:', newPorts)
+      setPorts(newPorts)
+      setNewHostPort('')
+      setNewContainerPort('')
+    }
+  }
+  const onRemovePort = (index: number) => {
+    console.log('onRemovePort called', index)
+    setPorts(ports.filter((_, i) => i !== index))
+  }
+  const onAddVolume = () => {
+    console.log('onAddVolume called', { newHostPath, newContainerPath, volumes })
+    if (newHostPath && newContainerPath) {
+      const newVolumes = [...volumes, { host: newHostPath, container: newContainerPath }]
+      console.log('Setting volumes to:', newVolumes)
+      setVolumes(newVolumes)
+      setNewHostPath('')
+      setNewContainerPath('')
+    }
+  }
+  const onRemoveVolume = (index: number) => {
+    console.log('onRemoveVolume called', index)
+    setVolumes(volumes.filter((_, i) => i !== index))
+  }
+  const onAddEnvVar = () => {
+    if (newEnvKey) {
+      setEnvVars([...envVars, { key: newEnvKey, value: newEnvValue }])
+      setNewEnvKey('')
+      setNewEnvValue('')
+    }
+  }
+  const onRemoveEnvVar = (index: number) => {
+    setEnvVars(envVars.filter((_, i) => i !== index))
   }
 
   return (
@@ -373,10 +506,16 @@ export default function DockerManager() {
               <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>本地镜像</h2>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
                 {images.map(img => (
-                  <div key={img.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, background: '#f9fafb' }}>
-                    <div style={{ fontWeight: 600 }}>{(img.repo_tags && img.repo_tags[0]) || img.id.slice(0, 12)}</div>
-                    <div style={{ color: '#6b7280', fontSize: 12 }}>
-                      大小 {fmtSize(img.size)}
+                  <div key={img.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, background: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <div style={{ fontSize: 13 }}>{(img.repo_tags && img.repo_tags[0]) ? fmtImageName(img.repo_tags[0]) : img.id.slice(0, 12)}</div>
+                      <div style={{ color: '#6b7280', fontSize: 13 }}>
+                        大小 {fmtSize(img.size)}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="puter-button" onClick={() => onOpenCreateContainer(img)} style={{ padding: '4px 12px', height: 28 }}>启动</button>
+                      <button className="puter-button danger" onClick={() => onDeleteImage(img)} style={{ padding: '4px 12px', height: 28 }}>删除</button>
                     </div>
                   </div>
                 ))}
@@ -487,6 +626,264 @@ export default function DockerManager() {
                 </div>
               )}
             </>
+          )}
+          {deleteConfirmOpen && imageToDelete && (
+            <div style={{ position: 'absolute', inset: 0, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <div style={{ width: 380, border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', boxShadow: '0 6px 20px rgba(0,0,0,0.1)' }}>
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: 600 }}>确认删除</div>
+                <div style={{ padding: 14 }}>
+                  <div style={{ fontSize: 13, color: '#374151' }}>
+                    确认删除镜像 <span style={{ fontWeight: 600 }}>{( (imageToDelete.repo_tags && imageToDelete.repo_tags[0]) ? fmtImageName(imageToDelete.repo_tags[0]) : imageToDelete.id.slice(0, 12) )}</span>？
+                  </div>
+                </div>
+                <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                  <button className="puter-button" onClick={onCancelDelete}>取消</button>
+                  <button className="puter-button danger" onClick={onConfirmDelete}>删除</button>
+                </div>
+              </div>
+            </div>
+          )}
+          {createContainerOpen && selectedImage && (
+            <div style={{ position: 'absolute', inset: 0, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+              <div style={{ width: 500, border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', boxShadow: '0 6px 20px rgba(0,0,0,0.1)' }}>
+                <div style={{ padding: '12px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: 600 }}>创建容器 - 步骤 {createStep}/3</div>
+                {createStep === 1 && (
+                  <div style={{ padding: 14 }}>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>镜像名称</div>
+                      <div style={{ fontSize: 13, color: '#6b7280', padding: '6px 8px', background: '#f3f4f6', borderRadius: 6 }}>
+                        {(selectedImage.repo_tags && selectedImage.repo_tags[0]) ? fmtImageName(selectedImage.repo_tags[0]) : selectedImage.id.slice(0, 12)}
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>容器名称</div>
+                      <input
+                        className="puter-input"
+                        value={containerName}
+                        onChange={e => setContainerName(e.target.value)}
+                        placeholder="容器名称"
+                        style={{ width: 'calc(100% - 28px)', height: 28, padding: '0 8px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>资源限制</div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 8 }}>
+                        <input
+                          type="checkbox"
+                          checked={enableResourceLimit}
+                          onChange={e => setEnableResourceLimit(e.target.checked)}
+                          style={{ width: 16, height: 16 }}
+                        />
+                        <span style={{ fontSize: 13, color: '#374151' }}>启用资源限制</span>
+                      </label>
+                      {enableResourceLimit && (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                          <div>
+                            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>CPU 核数: {cpuLimit}</div>
+                            <input
+                              type="range"
+                              min="1"
+                              max="16"
+                              step="1"
+                              value={cpuLimit}
+                              onChange={e => setCpuLimit(Number(e.target.value))}
+                              style={{ width: '100%', height: 24 }}
+                            />
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>内存: {memoryLimit} GB</div>
+                            <input
+                              type="range"
+                              min="1"
+                              max="32"
+                              step="1"
+                              value={memoryLimit}
+                              onChange={e => setMemoryLimit(Number(e.target.value))}
+                              style={{ width: '100%', height: 24 }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={autoStart}
+                          onChange={e => setAutoStart(e.target.checked)}
+                          style={{ width: 16, height: 16 }}
+                        />
+                        <span style={{ fontSize: 13, color: '#374151' }}>开机自启动</span>
+                      </label>
+                    </div>
+                  </div>
+                )}
+                {createStep === 2 && (
+                  <div style={{ padding: 14 }}>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>端口映射</div>
+                      {selectedImage.exposed_ports && selectedImage.exposed_ports.length > 0 && (
+                        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
+                          镜像暴露的端口: {selectedImage.exposed_ports.join(', ')}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                        <input
+                          className="puter-input"
+                          value={newHostPort}
+                          onChange={e => setNewHostPort(e.target.value)}
+                          placeholder="主机端口"
+                          style={{ width: '100px', height: 28, padding: '0 8px' }}
+                        />
+                        <input
+                          className="puter-input"
+                          value={newContainerPort}
+                          onChange={e => setNewContainerPort(e.target.value)}
+                          placeholder="容器端口"
+                          style={{ width: '100px', height: 28, padding: '0 8px' }}
+                        />
+                        <button className="puter-button" onClick={onAddPort}>添加</button>
+                      </div>
+                      {ports.map((p, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
+                          <span>{p.host} → {p.container}</span>
+                          <button className="puter-button danger" onClick={() => onRemovePort(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>存储位置</div>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                        <input
+                          className="puter-input"
+                          value={newHostPath}
+                          onChange={e => setNewHostPath(e.target.value)}
+                          placeholder="主机路径"
+                          style={{ width: '150px', height: 28, padding: '0 8px' }}
+                        />
+                        <input
+                          className="puter-input"
+                          value={newContainerPath}
+                          onChange={e => setNewContainerPath(e.target.value)}
+                          placeholder="容器路径"
+                          style={{ width: '150px', height: 28, padding: '0 8px' }}
+                        />
+                        <button className="puter-button" onClick={onAddVolume}>添加</button>
+                      </div>
+                      {volumes.map((v, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
+                          <span>{v.host} → {v.container}</span>
+                          <button className="puter-button danger" onClick={() => onRemoveVolume(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>环境变量</div>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                        <input
+                          className="puter-input"
+                          value={newEnvKey}
+                          onChange={e => setNewEnvKey(e.target.value)}
+                          placeholder="键"
+                          style={{ width: '120px', height: 28, padding: '0 8px' }}
+                        />
+                        <input
+                          className="puter-input"
+                          value={newEnvValue}
+                          onChange={e => setNewEnvValue(e.target.value)}
+                          placeholder="值"
+                          style={{ width: '120px', height: 28, padding: '0 8px' }}
+                        />
+                        <button className="puter-button" onClick={onAddEnvVar}>添加</button>
+                      </div>
+                      {envVars.map((v, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
+                          <span>{v.key} = {v.value}</span>
+                          <button className="puter-button danger" onClick={() => onRemoveEnvVar(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {createStep === 3 && (
+                  <div style={{ padding: 14 }}>
+                    <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 12 }}>设置预览</div>
+                    {console.log('Preview - ports:', ports, 'volumes:', volumes, 'envVars:', envVars)}
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>镜像</div>
+                      <div style={{ fontSize: 13, color: '#374151' }}>
+                        {(selectedImage.repo_tags && selectedImage.repo_tags[0]) ? fmtImageName(selectedImage.repo_tags[0]) : selectedImage.id.slice(0, 12)}
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>容器名称</div>
+                      <div style={{ fontSize: 13, color: '#374151' }}>{containerName || '未设置'}</div>
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>资源限制</div>
+                      <div style={{ fontSize: 13, color: '#374151' }}>
+                        {enableResourceLimit ? `CPU: ${cpuLimit} 核, 内存: ${memoryLimit} GB` : '未启用'}
+                      </div>
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>开机自启动</div>
+                      <div style={{ fontSize: 13, color: '#374151' }}>{autoStart ? '是' : '否'}</div>
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>端口映射</div>
+                      {ports.length > 0 ? (
+                        ports.map((p, i) => (
+                          <div key={i} style={{ fontSize: 13, color: '#374151', marginBottom: 2 }}>
+                            {p.host} → {p.container}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: 13, color: '#374151' }}>无</div>
+                      )}
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>存储位置</div>
+                      {volumes.length > 0 ? (
+                        volumes.map((v, i) => (
+                          <div key={i} style={{ fontSize: 13, color: '#374151', marginBottom: 2 }}>
+                            {v.host} → {v.container}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: 13, color: '#374151' }}>无</div>
+                      )}
+                    </div>
+                    <div style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>环境变量</div>
+                      {envVars.length > 0 ? (
+                        envVars.map((v, i) => (
+                          <div key={i} style={{ fontSize: 13, color: '#374151', marginBottom: 2 }}>
+                            {v.key} = {v.value}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={{ fontSize: 13, color: '#374151' }}>无</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
+                  {createStep > 1 && (
+                    <button className="puter-button" onClick={onPrevStep}>上一步</button>
+                  )}
+                  {createStep === 1 && <div />}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="puter-button" onClick={onCloseCreateContainer}>取消</button>
+                    {createStep < 3 && (
+                      <button className="puter-button" onClick={onNextStep}>下一步</button>
+                    )}
+                    {createStep === 3 && (
+                      <button className="puter-button" onClick={onCreateContainer}>创建</button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       {active === 'registry' && (
