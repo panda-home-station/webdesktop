@@ -1,0 +1,11 @@
+{
+  "name": "agent-chat",
+  "title": "AI Assistant",
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./robot.svg"
+  },
+  "capabilities": ["core"],
+  "minWidth": 400,
+  "minHeight": 600
+}

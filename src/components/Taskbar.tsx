@@ -3,7 +3,7 @@ import { listApps } from '../apps/registry'
 import { openApp, showDesktop } from '../sdk/desktop'
 import { getAppContextMenu } from '../sdk/desktop'
 import Icon from '@mdi/react'
-import { mdiCogOutline } from '@mdi/js'
+import { mdiCogOutline, mdiRobot } from '@mdi/js'
 
 type WinItem = {
   id: string
@@ -150,6 +150,19 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
         })}
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+        <button
+          className="dock-item"
+          title="AI助手"
+          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          onClick={() => {
+            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
+            openApp('agent-chat')
+          }}
+          onMouseEnter={(e) => showTip('AI助手', e.currentTarget)}
+          onMouseLeave={() => setTip(null)}
+        >
+          <Icon path={mdiRobot} size={0.9} color="#60a5fa" />
+        </button>
         <button
           className="dock-item"
           title="通知"
