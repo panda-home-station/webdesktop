@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "entry": "./src/index.tsx",
   "icons": {
-    "default": "./assets/icon.svg"
+    "default": "./icon.svg"
   },
-  "minWidth": 800,
-  "minHeight": 600
+  "minWidth": 1100,
+  "minHeight": 640
 }

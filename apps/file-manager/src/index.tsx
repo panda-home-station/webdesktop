@@ -78,8 +78,8 @@ function useNavigation(initialPath: string = '/') {
   return { path, setPath, navHist, navIndex, navigate, back, forward, up, crumbs }
 }
 
-export default function FileManager() {
-  const { path, setPath, navHist, navIndex, navigate, back, forward, crumbs } = useNavigation('/')
+export default function FileManager({ initialPath }: { initialPath?: string }) {
+  const { path, setPath, navHist, navIndex, navigate, back, forward, crumbs } = useNavigation(initialPath || '/')
   const [entries, setEntries] = useState<
     { name: string; is_dir: boolean; size: number; modified_ts: number }[]
   >([])

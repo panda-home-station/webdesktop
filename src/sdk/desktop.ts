@@ -40,14 +40,14 @@ export function subscribeLauncher(handler: () => void) {
   return () => ev.removeEventListener('openLauncher', h as EventListener)
 }
 
-export function openApp(id: string) {
-  ev.dispatchEvent(new CustomEvent('openApp', { detail: { id } }))
+export function openApp(id: string, args?: any) {
+  ev.dispatchEvent(new CustomEvent('openApp', { detail: { id, args } }))
 }
 
-export function subscribeOpenApp(handler: (id: string) => void) {
+export function subscribeOpenApp(handler: (id: string, args?: any) => void) {
   const h = (e: Event) => {
     const ce = e as CustomEvent
-    handler(ce.detail.id as string)
+    handler(ce.detail.id as string, ce.detail.args)
   }
   ev.addEventListener('openApp', h as EventListener)
   return () => ev.removeEventListener('openApp', h as EventListener)

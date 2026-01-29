@@ -68,7 +68,7 @@ export default function WindowManager() {
 
     const existing = winsRef.current.find(ww => ww.appId === w.appId)
     if (existing) {
-      setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false } : ww)))
+      setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false, content: w.content } : ww)))
       setZOrder(z => [...z.filter(id => id !== existing.id), existing.id])
       return
     }
@@ -214,9 +214,9 @@ export default function WindowManager() {
       setPersistLoaded(true)
     })()
 
-    const unsub = subscribeOpenApp(async (id) => {
+    const unsub = subscribeOpenApp(async (id, args) => {
       const existing = winsRef.current.find(w => w.appId === id)
-      if (existing) {
+      if (existing && !args) {
         setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false } : ww)))
         setZOrder(z => [...z.filter(eid => eid !== existing.id), existing.id])
         return
@@ -231,7 +231,7 @@ export default function WindowManager() {
         }
       }
       const Comp = await loadApp(a.id)
-      open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp />, appId: a.id, iconUrl: a.iconUrl })
+      open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp {...args} />, appId: a.id, iconUrl: a.iconUrl })
     })
 
     const onKey = (e: KeyboardEvent) => {

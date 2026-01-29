@@ -202,8 +202,8 @@ export const api = {
     const r = await axios.get(`${base}/api/downloads`)
     return r.data
   },
-  async createDownload(url: string) {
-    const r = await axios.post(`${base}/api/downloads`, { url })
+  async createDownload(url: string, path?: string) {
+    const r = await axios.post(`${base}/api/downloads`, { url, path })
     return r.data
   },
   async controlDownload(id: string, action: string) {
