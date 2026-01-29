@@ -117,7 +117,7 @@ export default function FileManager() {
     try {
       await fmApi.fsUpload(dir, file, (info) => {
         updateFileTask(id, { progress: info.percent, total: info.total, loaded: info.loaded, bps: info.bps })
-      }, controller.signal, offset)
+      }, controller.signal)
       console.log(`[${new Date().toLocaleTimeString()}] FileManager: upload finished ${file.name}`);
       updateFileTask(id, { progress: 100, status: 'done' })
       uploadFilesMap.current.delete(id)
