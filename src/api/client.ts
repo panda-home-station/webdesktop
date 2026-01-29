@@ -198,6 +198,18 @@ export const api = {
     currentWallpaper = local
     return local
   },
+  async listDownloads() {
+    const r = await axios.get(`${base}/api/downloads`)
+    return r.data
+  },
+  async createDownload(url: string) {
+    const r = await axios.post(`${base}/api/downloads`, { url })
+    return r.data
+  },
+  async controlDownload(id: string, action: string) {
+    const r = await axios.post(`${base}/api/downloads/${id}/control`, { action })
+    return r.data
+  },
   getWallpaperCached(): string {
     return currentWallpaper
   },

@@ -1,0 +1,11 @@
+{
+  "name": "downloader",
+  "title": "下载器",
+  "version": "0.1.0",
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./assets/icon.svg"
+  },
+  "minWidth": 800,
+  "minHeight": 600
+}
