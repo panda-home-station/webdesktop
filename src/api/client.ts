@@ -210,6 +210,14 @@ export const api = {
     const r = await axios.post(`${base}/api/downloads/${id}/control`, { action })
     return r.data
   },
+  async resolveMagnet(magnet_url: string) {
+    const r = await axios.post(`${base}/api/downloads/magnet/resolve`, { magnet_url })
+    return r.data
+  },
+  async startMagnetDownload(token: string, files: number[], path?: string) {
+    const r = await axios.post(`${base}/api/downloads/magnet/start`, { token, files, path })
+    return r.data
+  },
   getWallpaperCached(): string {
     return currentWallpaper
   },

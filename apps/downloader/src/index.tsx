@@ -12,10 +12,21 @@ import {
   mdiAlertCircle,
   mdiFolder,
   mdiArrowLeft,
-  mdiCogOutline
+  mdiCogOutline,
+  mdiChevronDown,
+  mdiChevronUp,
+  mdiFile
 } from '@mdi/js'
 import { Sidebar } from '../../../src/components/Sidebar'
-import { openApp } from '../../../src/sdk/desktop'
+
+type SubTask = {
+    filename: string
+    progress: number
+    total_bytes: number
+    downloaded_bytes: number
+    speed: number
+    status: string
+}
 
 type DownloadTask = {
   id: string
@@ -29,6 +40,18 @@ type DownloadTask = {
   created_at: string
   error_msg?: string
   virtual_path?: string
+  sub_tasks?: SubTask[]
+}
+
+type TorrentFile = {
+    index: number
+    name: string
+    size: number
+}
+
+type MagnetInfo = {
+    token: string
+    files: TorrentFile[]
 }
 
 const statusMap: Record<string, string> = {
@@ -203,6 +226,18 @@ export default function Downloader() {
   const [error, setError] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
 
+  const [resolving, setResolving] = useState(false)
+  const [magnetInfo, setMagnetInfo] = useState<MagnetInfo | null>(null)
+  const [selectedFiles, setSelectedFiles] = useState<number[]>([])
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set())
+
+  const toggleExpand = (id: string) => {
+    const next = new Set(expandedTasks)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    setExpandedTasks(next)
+  }
+
   // Cast api to any because we added methods via SearchReplace but TS might complain if types aren't updated in d.ts
   // In this project structure, client.ts is the source of truth, so it should be fine if VSCode picks it up.
   // But to be safe in this file:
@@ -225,6 +260,22 @@ export default function Downloader() {
 
   const handleAdd = async () => {
     if (!newUrl) return
+    
+    if (newUrl.startsWith('magnet:')) {
+         setResolving(true)
+         setError('')
+         try {
+             const res = await downloaderApi.resolveMagnet(newUrl)
+             setMagnetInfo(res)
+             setSelectedFiles(res.files.map((f: any) => f.index))
+         } catch(e) {
+             setError('解析磁力链接失败')
+         } finally {
+             setResolving(false)
+         }
+         return
+    }
+
     try {
       await downloaderApi.createDownload(newUrl, newPath)
       setShowAdd(false)
@@ -235,6 +286,23 @@ export default function Downloader() {
     } catch (e) {
       setError('添加任务失败')
     }
+  }
+  
+  const handleStartMagnet = async () => {
+      if (!magnetInfo) return
+      try {
+          await downloaderApi.startMagnetDownload(magnetInfo.token, selectedFiles, newPath)
+          setShowAdd(false)
+          setMagnetInfo(null)
+          setNewUrl('')
+          setNewPath('/下载')
+          setError('')
+          fetchTasks()
+      } catch(e: any) {
+          console.error(e)
+          const errorMsg = e.response?.data || e.message || '开始下载失败';
+          setError(typeof errorMsg === 'string' ? errorMsg : '开始下载失败')
+      }
   }
 
   const handleControl = async (id: string, action: string) => {
@@ -316,9 +384,16 @@ export default function Downloader() {
             </thead>
             <tbody>
               {filteredTasks.map(task => (
-                <tr key={task.id} style={{ borderBottom: '1px solid #eee' }}>
+                <React.Fragment key={task.id}>
+                <tr style={{ borderBottom: '1px solid #eee' }}>
                   <td style={{ padding: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Icon path={mdiDownload} size={0.8} color="#666" />
+                    {task.sub_tasks && task.sub_tasks.length > 0 ? (
+                        <button onClick={() => toggleExpand(task.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                            <Icon path={expandedTasks.has(task.id) ? mdiChevronUp : mdiChevronDown} size={0.8} color="#666" />
+                        </button>
+                    ) : (
+                        <Icon path={mdiDownload} size={0.8} color="#666" />
+                    )}
                     <div style={{ maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={task.url}>
                       {task.filename}
                     </div>
@@ -373,6 +448,29 @@ export default function Downloader() {
                     </div>
                   </td>
                 </tr>
+                {expandedTasks.has(task.id) && task.sub_tasks && task.sub_tasks.map((sub, idx) => (
+                    <tr key={`${task.id}-${idx}`} style={{ borderBottom: '1px solid #eee', background: '#fafafa' }}>
+                         <td style={{ padding: '12px 12px 12px 40px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                             <Icon path={mdiFile} size={0.7} color="#999" />
+                             <div style={{ maxWidth: '260px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sub.filename}>
+                                {sub.filename}
+                             </div>
+                         </td>
+                         <td style={{ padding: '12px', color: '#666', fontSize: '13px' }}>{formatBytes(sub.total_bytes)}</td>
+                         <td style={{ padding: '12px', width: '200px' }}>
+                            <div style={{ width: '100%', height: '4px', background: '#eee', borderRadius: '2px', overflow: 'hidden' }}>
+                              <div style={{ width: `${sub.progress}%`, height: '100%', background: '#1890ff', transition: 'width 0.3s' }} />
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#999', marginTop: '2px' }}>{sub.progress.toFixed(1)}%</div>
+                         </td>
+                         <td style={{ padding: '12px', color: '#666', fontSize: '13px' }}>{sub.status === 'downloading' ? formatSpeed(sub.speed) : '-'}</td>
+                         <td style={{ padding: '12px' }}>
+                            <span style={{ fontSize: '12px', color: '#999' }}>{sub.status === 'done' ? '已完成' : statusMap[sub.status] || sub.status}</span>
+                         </td>
+                         <td style={{ padding: '12px' }}></td>
+                    </tr>
+                ))}
+                </React.Fragment>
               ))}
               {filteredTasks.length === 0 && (
                 <tr>
@@ -392,13 +490,71 @@ export default function Downloader() {
             background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             zIndex: 100
           }}>
-            <div style={{ background: '#fff', padding: '30px', borderRadius: '8px', width: '600px', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', position: 'relative', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ background: '#fff', padding: '30px', borderRadius: '8px', width: '600px', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', position: 'relative', maxHeight: '600px', minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
               {showPicker ? (
                 <PathPicker 
                    initialPath={newPath} 
                    onClose={() => setShowPicker(false)} 
                    onSelect={(p) => { setNewPath(p); setShowPicker(false); }} 
                 />
+              ) : resolving ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', minHeight: '200px' }}>
+                   <div className="spinner" style={{ width: '32px', height: '32px', border: '3px solid #f3f3f3', borderTop: '3px solid #1890ff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                   <div style={{ color: '#666' }}>正在解析种子信息...</div>
+                   <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+                </div>
+              ) : magnetInfo ? (
+                <>
+                  <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', color: '#333' }}>选择下载文件</h3>
+                  <div style={{ height: '300px', overflow: 'auto', border: '1px solid #eee', borderRadius: '4px', marginBottom: '16px' }}>
+                      {magnetInfo.files.map(file => (
+                          <div key={file.index} style={{ padding: '8px 12px', borderBottom: '1px solid #f5f5f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <input 
+                                  type="checkbox" 
+                                  checked={selectedFiles.includes(file.index)}
+                                  onChange={e => {
+                                      if (e.target.checked) {
+                                          setSelectedFiles([...selectedFiles, file.index])
+                                      } else {
+                                          setSelectedFiles(selectedFiles.filter(i => i !== file.index))
+                                      }
+                                  }}
+                                  style={{ cursor: 'pointer' }}
+                              />
+                              <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }} title={file.name}>{file.name}</div>
+                              <div style={{ fontSize: '12px', color: '#999', whiteSpace: 'nowrap' }}>{formatBytes(file.size)}</div>
+                          </div>
+                      ))}
+                  </div>
+                  <div style={{ padding: '8px 12px', background: '#f9f9f9', borderRadius: '4px', marginBottom: '16px', fontSize: '13px', color: '#666', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>已选 {selectedFiles.length} 个文件</span>
+                      <span>总大小: {formatBytes(magnetInfo.files.filter(f => selectedFiles.includes(f.index)).reduce((acc, cur) => acc + cur.size, 0))}</span>
+                  </div>
+
+                  <div style={{ marginBottom: '24px' }}>
+                    <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666', fontWeight: 500 }}>存储位置</div>
+                    <div 
+                      onClick={() => setShowPicker(true)}
+                      style={{ 
+                        width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid #d9d9d9', 
+                        cursor: 'pointer', background: '#fafafa', color: '#666', display: 'flex', alignItems: 'center', 
+                        boxSizing: 'border-box', transition: 'all 0.2s'
+                      }}
+                    >
+                      <Icon path={mdiFolder} size={0.8} color="#888" style={{ marginRight: '8px' }} />
+                      <span style={{ color: '#333', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '14px' }}>
+                        {formatPathDisplay(newPath)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {error && <div style={{ color: '#ff4d4f', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
+
+                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                    <button onClick={() => { setMagnetInfo(null); setNewUrl(''); }} style={{ padding: '8px 24px', background: '#fff', border: '1px solid #d9d9d9', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', color: '#666' }}>取消</button>
+                    <button onClick={handleStartMagnet} style={{ padding: '8px 24px', background: '#1890ff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', boxShadow: '0 2px 0 rgba(0,0,0,0.045)' }}>立即下载</button>
+                  </div>
+                </>
               ) : (
                 <>
                   <h3 style={{ marginTop: 0, marginBottom: '24px', fontSize: '18px', color: '#333' }}>新建下载任务</h3>
@@ -433,7 +589,7 @@ export default function Downloader() {
                     </div>
                   </div>
                   {error && <div style={{ color: '#ff4d4f', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
-                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                     <button onClick={() => setShowAdd(false)} style={{ padding: '8px 24px', background: '#fff', border: '1px solid #d9d9d9', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', color: '#666' }}>取消</button>
                     <button onClick={handleAdd} style={{ padding: '8px 24px', background: '#1890ff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', boxShadow: '0 2px 0 rgba(0,0,0,0.045)' }}>下载</button>
                   </div>
