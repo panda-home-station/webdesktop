@@ -375,11 +375,11 @@ export default function Downloader() {
             <thead style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
               <tr style={{ borderBottom: '1px solid #eee', textAlign: 'left', color: '#666' }}>
                 <th style={{ padding: '12px' }}>文件名</th>
-                <th style={{ padding: '12px' }}>大小</th>
-                <th style={{ padding: '12px' }}>进度</th>
-                <th style={{ padding: '12px' }}>速度</th>
-                <th style={{ padding: '12px' }}>状态</th>
-                <th style={{ padding: '12px' }}>操作</th>
+                <th style={{ padding: '12px', width: '100px' }}>大小</th>
+                <th style={{ padding: '12px', width: '200px' }}>进度</th>
+                <th style={{ padding: '12px', width: '120px' }}>速度</th>
+                <th style={{ padding: '12px', width: '100px' }}>状态</th>
+                <th style={{ padding: '12px', width: '140px' }}>操作</th>
               </tr>
             </thead>
             <tbody>
