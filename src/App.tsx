@@ -40,7 +40,7 @@ const api = {
     return { initialized: !!d.initialized }
   },
   async getWallpaper(): Promise<string> {
-    const p = localStorage.getItem('wallpaperPath') || ''
+    const p = localStorage.getItem('current_wallpaper_path') || ''
     return p
   },
   fsDownloadUrl(path: string): string {
@@ -174,7 +174,7 @@ export default function App() {
     })
     api.getWallpaper().then(path => {
       const fallback = (path && path.length > 0) ? path : (localStorage.getItem('wallpaperPath') || '')
-      const url = fallback ? api.fsDownloadUrl(fallback) : ''
+      const url = fallback ? api.fsDownloadUrl(fallback) : '/wallpaper_default.webp'
       setWallpaperUrl(url)
       try {
         const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })

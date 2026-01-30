@@ -1,8 +1,9 @@
-const KEY = 'wallpaperPath'
+const KEY = 'current_wallpaper_path'
+export const DEFAULT_WALLPAPER = '/wallpaper_default.webp'
 
 export function getWallpaper() {
-  const p = localStorage.getItem(KEY) || ''
-  if (!p) return ''
+  const p = localStorage.getItem(KEY)
+  if (!p) return DEFAULT_WALLPAPER
   const host = window.location.hostname || 'localhost'
   const apiPort = (import.meta as any).env?.VITE_PNAS_PORT ?? '8000'
   const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
@@ -26,7 +27,7 @@ export function setWallpaper(path: string | null) {
   const base = `${protocol}://${host}:${apiPort}`
   const token = localStorage.getItem('authToken') || ''
   const url = (() => {
-    if (!path) return ''
+    if (!path) return DEFAULT_WALLPAPER
     const u = new URL(`${base}/api/docs/download`)
     u.searchParams.set('path', path)
     if (token) u.searchParams.set('token', token)

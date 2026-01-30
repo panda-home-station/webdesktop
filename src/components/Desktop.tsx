@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import WindowManager from './WindowManager'
 import { getWallpaper, setWallpaper } from '../state/desktop'
 import { openApp } from '../sdk/desktop'
+import { listApps } from '../apps/registry'
 import Icon from '@mdi/react'
-import { mdiRefresh, mdiCogOutline, mdiAccountCircleOutline } from '@mdi/js'
+import { mdiRefresh, mdiCogOutline, mdiAccountCircleOutline, mdiChevronRight } from '@mdi/js'
 import { showDesktop, openLauncher } from '../sdk/desktop'
 import { mdiFolderOutline, mdiViewGridOutline, mdiMonitor } from '@mdi/js'
 
@@ -97,10 +98,32 @@ function SmoothWallpaper({ src }: { src?: string }) {
   )
 }
 
+const menuItemStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '8px 10px',
+  border: 'none',
+  textAlign: 'left',
+  borderRadius: 6,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 8,
+  color: 'inherit',
+  fontSize: 14,
+  fontFamily: 'inherit',
+  boxSizing: 'border-box'
+}
+
+const hoverColor = '#d1d5db'
+
 export default function Desktop() {
   const [wallpaper, setWallpaperUrl] = useState<string>(getWallpaper())
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
+
+  const allApps = useMemo(() => {
+    return listApps().filter(a => !['file-manager', 'system-settings', 'user-center'].includes(a.id))
+  }, [])
 
   useEffect(() => {
     const url = getWallpaper()
@@ -164,17 +187,8 @@ export default function Desktop() {
             >
               <button
                 style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  border: 'none',
-                  textAlign: 'left',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: hoverIndex === 0 ? '#e5e7eb' : 'transparent',
-                  color: 'inherit'
+                  ...menuItemStyle,
+                  background: hoverIndex === 0 ? hoverColor : 'transparent'
                 }}
                 onClick={() => {
                   closeMenu()
@@ -188,19 +202,11 @@ export default function Desktop() {
                 <Icon path={mdiMonitor} size={0.85} />
                 显示桌面
               </button>
-              <button
+              <div
                 style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  border: 'none',
-                  textAlign: 'left',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: hoverIndex === 1 ? '#e5e7eb' : 'transparent',
-                  color: 'inherit'
+                  ...menuItemStyle,
+                  background: hoverIndex === 1 ? hoverColor : 'transparent',
+                  position: 'relative'
                 }}
                 onClick={() => {
                   closeMenu()
@@ -208,25 +214,62 @@ export default function Desktop() {
                 }}
                 onMouseEnter={() => setHoverIndex(1)}
                 onMouseLeave={() => setHoverIndex(null)}
-                onFocus={() => setHoverIndex(1)}
-                onBlur={() => setHoverIndex(null)}
               >
                 <Icon path={mdiViewGridOutline} size={0.85} />
-                全部应用
-              </button>
+                <span style={{ flex: 1 }}>全部应用</span>
+                <Icon path={mdiChevronRight} size={0.85} />
+
+                {hoverIndex === 1 && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '100%',
+                      top: -4,
+                      marginLeft: 4,
+                      minWidth: 160,
+                      padding: 6,
+                      borderRadius: 10,
+                      background: 'rgba(243,244,246,0.96)',
+                      backdropFilter: 'blur(8px)',
+                      border: '1px solid var(--win-border)',
+                      boxShadow: '0 10px 24px rgba(0,0,0,0.18)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      zIndex: 10007
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    {allApps.map((app) => (
+                      <div
+                        key={app.id}
+                        style={{
+                          ...menuItemStyle,
+                          width: undefined // Override width 100% to allow flex container sizing if needed, but 100% is fine in flex col
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          closeMenu()
+                          openApp(app.id)
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = hoverColor}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                      >
+                        {app.iconUrl ? (
+                          <img src={app.iconUrl} style={{ width: 20, height: 20, objectFit: 'contain' }} alt="" />
+                        ) : (
+                          <div style={{ width: 20, height: 20, background: hoverColor, borderRadius: 4 }} />
+                        )}
+                        {app.title}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               <button
                 style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  border: 'none',
-                  textAlign: 'left',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: hoverIndex === 2 ? '#e5e7eb' : 'transparent',
-                  color: 'inherit'
+                  ...menuItemStyle,
+                  background: hoverIndex === 2 ? hoverColor : 'transparent'
                 }}
                 onClick={() => {
                   closeMenu()
@@ -242,17 +285,8 @@ export default function Desktop() {
               </button>
               <button
                 style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  border: 'none',
-                  textAlign: 'left',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: hoverIndex === 3 ? '#e5e7eb' : 'transparent',
-                  color: 'inherit'
+                  ...menuItemStyle,
+                  background: hoverIndex === 3 ? hoverColor : 'transparent'
                 }}
                 onClick={() => {
                   closeMenu()
@@ -268,17 +302,8 @@ export default function Desktop() {
               </button>
               <button
                 style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  border: 'none',
-                  textAlign: 'left',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: hoverIndex === 4 ? '#e5e7eb' : 'transparent',
-                  color: 'inherit'
+                  ...menuItemStyle,
+                  background: hoverIndex === 4 ? hoverColor : 'transparent'
                 }}
                 onClick={() => {
                   closeMenu()
@@ -294,17 +319,8 @@ export default function Desktop() {
               </button>
               <button
                 style={{
-                  width: '100%',
-                  padding: '8px 10px',
-                  border: 'none',
-                  textAlign: 'left',
-                  borderRadius: 6,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  background: hoverIndex === 5 ? '#e5e7eb' : 'transparent',
-                  color: 'inherit'
+                  ...menuItemStyle,
+                  background: hoverIndex === 5 ? hoverColor : 'transparent'
                 }}
                 onClick={() => {
                   closeMenu()

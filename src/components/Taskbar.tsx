@@ -54,7 +54,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
       className="puter-taskbar"
       style={{
         position: 'fixed',
-        left: 6,
+        left: 12,
         top: 32,
         bottom: 32,
         width: 60,
@@ -68,6 +68,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
         zIndex: 10000,
         backdropFilter: 'blur(8px)',
         background: 'rgba(255,255,255,0.25)',
+        border: '1px solid rgba(255,255,255,0.2)'
       }}
       onMouseDownCapture={(e) => {
         const t = e.target as HTMLElement
