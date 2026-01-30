@@ -76,7 +76,7 @@ export default function ListView({
           <th style={{ textAlign: 'left', width: colWidths.owner, position: 'relative' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 8 }}>
               <span>所有者</span>
-              <button className="puter-button" title="字段设置" style={{ height: 24, width: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              <button className="panda-button" title="字段设置" style={{ height: 24, width: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                 <Icon path={mdiCogOutline} size={0.8} />
               </button>
             </div>

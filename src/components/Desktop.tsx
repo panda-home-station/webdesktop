@@ -164,7 +164,7 @@ export default function Desktop() {
   const closeMenu = useCallback(() => setMenu(null), [])
 
   return (
-    <div style={style} className="puter-desktop" onContextMenu={onContextMenu}>
+    <div style={style} className="panda-desktop" onContextMenu={onContextMenu}>
       <SmoothWallpaper src={wallpaper} />
       <WindowManager />
       {menu && (

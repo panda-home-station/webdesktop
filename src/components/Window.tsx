@@ -171,7 +171,7 @@ export default function Window({
     >
       {/* Title Bar */}
       <div
-        className="puter-titlebar"
+        className="panda-titlebar"
         style={{
           height: 36,
           display: 'flex',

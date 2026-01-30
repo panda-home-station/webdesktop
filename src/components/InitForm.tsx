@@ -94,7 +94,7 @@ export default function InitForm({ onDone }: Props) {
           初始化完成，请使用管理员账号登录
         </div>
       )}
-      <button type="submit" className="puter-button" disabled={loading} style={{ height: 38, borderRadius: 10, background: 'linear-gradient(90deg, #10b981, #22c55e)', color: '#fff', fontWeight: 600 }}>
+      <button type="submit" className="panda-button" disabled={loading} style={{ height: 38, borderRadius: 10, background: 'linear-gradient(90deg, #10b981, #22c55e)', color: '#fff', fontWeight: 600 }}>
         {loading ? '初始化中…' : '完成初始化'}
       </button>
     </form>

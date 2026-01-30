@@ -434,7 +434,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <button
-              className="puter-button"
+              className="panda-button"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -456,7 +456,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
               )}
             </button>
             <button
-              className="puter-button"
+              className="panda-button"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -479,7 +479,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             </button>
           </div>
           <button
-            className="puter-button pressable"
+            className="panda-button pressable"
             style={{ marginLeft: 'auto' }}
             onClick={() => clearCompletedFileTasks()}
           >
@@ -527,7 +527,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                   <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                     {(t.kind === 'upload' && t.status === 'done') && (
                       <button
-                        className="puter-icon-button"
+                        className="panda-icon-button"
                         style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => navigate(t.dir)}
                         title="打开文件目录"
@@ -537,7 +537,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                     )}
                     {t.status !== 'done' && (
                       <button 
-                        className="puter-icon-button"
+                        className="panda-icon-button"
                         style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         onClick={() => handleTogglePause(t)}
                         title={t.status === 'running' ? '暂停' : '继续'}
@@ -546,7 +546,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                       </button>
                     )}
                     <button 
-                      className="puter-icon-button"
+                      className="panda-icon-button"
                       style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       onClick={() => handleRemoveTask(t)}
                       title="删除任务"
@@ -567,21 +567,21 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
           <button
-            className="puter-button pressable"
+            className="panda-button pressable"
             onClick={onRestoreSelected}
             disabled={selected.size === 0}
           >
             还原所选
           </button>
           <button
-            className="puter-button pressable"
+            className="panda-button pressable"
             onClick={onDeleteSelected}
             disabled={selected.size === 0}
           >
             删除所选
           </button>
           <button
-            className="puter-button pressable"
+            className="panda-button pressable"
             style={{ marginLeft: 'auto' }}
             onClick={onEmptyTrash}
           >
@@ -606,8 +606,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                       <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--muted)' }}>大小：{e.is_dir ? '-' : fmtSize(e.size)} · 修改：{fmtTime(e.modified_ts)}</div>
                     </div>
-                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onRestoreOne(e.name) }}>还原</button>
-                    <button className="puter-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onDeleteOne(e.name) }}>删除</button>
+                    <button className="panda-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onRestoreOne(e.name) }}>还原</button>
+                    <button className="panda-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onDeleteOne(e.name) }}>删除</button>
                   </div>
                 )
               })}

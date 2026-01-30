@@ -80,25 +80,31 @@ export default function Toolbar({
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
         <div className="button-group">
-          <button className="puter-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={back} disabled={navIndex === 0} title="后退">
+          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={back} disabled={navIndex === 0} title="后退">
             <Icon path={mdiArrowLeft} size={0.9} />
           </button>
-          <button className="puter-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={forward} disabled={navIndex >= navHist.length - 1} title="前进">
+          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={forward} disabled={navIndex >= navHist.length - 1} title="前进">
             <Icon path={mdiArrowRight} size={0.9} />
           </button>
         </div>
-        <button className="puter-button" style={{ height: 28, width: 40, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={refresh} title="刷新">
-          <Icon path={mdiRefresh} size={1} />
-        </button>
+
+        <div className="button-group">
+          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={refresh} title="刷新">
+            <Icon path={mdiRefresh} size={0.9} />
+          </button>
+          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => navigate('/')} title="主页">
+            <Icon path={mdiHome} size={0.9} />
+          </button>
+        </div>
         <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: '100%', minWidth: 0, height: 28, padding: '0 6px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)' }}>
-            <button className="puter-button" style={{ height: 28, width: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none' }} onClick={() => navigate('/')} title="主文件夹">
+            <button className="panda-button" style={{ height: 28, width: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none' }} onClick={() => navigate('/')} title="主文件夹">
               <Icon path={mdiHome} size={1} />
             </button>
             {crumbs.slice(1).map((c, i) => (
               <React.Fragment key={`crumb-${i}-${c.to}`}>
                 <span style={{ color: 'var(--muted)', padding: i === 0 ? '0 2px' : '0 6px' }}>{'/'}</span>
-                <button className="puter-button" style={{ height: 28, padding: i === 0 ? '0 6px' : '0 8px', whiteSpace: 'nowrap', maxWidth: '30%', overflow: 'hidden', textOverflow: 'ellipsis', background: 'transparent', border: 'none' }} onClick={() => navigate(c.to)} title={c.label}>
+                <button className="panda-button" style={{ height: 28, padding: i === 0 ? '0 6px' : '0 8px', whiteSpace: 'nowrap', maxWidth: '30%', overflow: 'hidden', textOverflow: 'ellipsis', background: 'transparent', border: 'none' }} onClick={() => navigate(c.to)} title={c.label}>
                   {c.label}
                 </button>
               </React.Fragment>
@@ -119,7 +125,7 @@ export default function Toolbar({
           const press = usePress()
           return (
             <button
-              className="puter-button"
+              className="panda-button"
               style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
               onMouseDown={press.onMouseDown}
               onMouseUp={press.onMouseUp}
@@ -134,7 +140,7 @@ export default function Toolbar({
           const press = usePress()
           return (
             <button
-              className="puter-button"
+              className="panda-button"
               style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
               onMouseDown={press.onMouseDown}
               onMouseUp={press.onMouseUp}
@@ -149,7 +155,7 @@ export default function Toolbar({
           const press = usePress()
           return (
             <button
-              className="puter-button"
+              className="panda-button"
               style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
               onMouseDown={press.onMouseDown}
               onMouseUp={press.onMouseUp}
@@ -164,7 +170,7 @@ export default function Toolbar({
           const press = usePress()
           return (
             <button
-              className="puter-button"
+              className="panda-button"
               style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
               onMouseDown={press.onMouseDown}
               onMouseUp={press.onMouseUp}
@@ -179,7 +185,7 @@ export default function Toolbar({
           const press = usePress()
           return (
             <button
-              className="puter-button"
+              className="panda-button"
               style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
               onMouseDown={press.onMouseDown}
               onMouseUp={press.onMouseUp}
@@ -192,7 +198,7 @@ export default function Toolbar({
         })()}
         <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <div style={{ position: 'relative' }}>
-            <button ref={sortButtonRef} className="puter-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={() => setShowSortMenu(!showSortMenu)} title="排序">
+            <button ref={sortButtonRef} className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={() => setShowSortMenu(!showSortMenu)} title="排序">
               <Icon path={mdiSort} size={0.9} />
             </button>
             {showSortMenu && (
@@ -231,7 +237,7 @@ export default function Toolbar({
               </ul>
             )}
           </div>
-          <div title="切换列表视图" className="puter-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 2px', border: '1px solid var(--button-border)', borderRadius: 8, background: 'var(--button-bg)' }}>
+          <div title="切换列表视图" className="panda-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 2px', border: '1px solid var(--button-border)', borderRadius: 8, background: 'var(--button-bg)' }}>
             <div
               style={{
                 display: 'flex',

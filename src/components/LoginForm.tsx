@@ -89,7 +89,7 @@ export default function LoginForm({ onSuccess, onClose }: Props) {
       )}
       <button
         type="submit"
-        className="puter-button"
+        className="panda-button"
         disabled={loading}
         style={{
           height: 38,

@@ -40,7 +40,7 @@ export default function TransfersPane({
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <button
-            className="puter-button"
+            className="panda-button"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -62,7 +62,7 @@ export default function TransfersPane({
             )}
           </button>
           <button
-            className="puter-button"
+            className="panda-button"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -85,7 +85,7 @@ export default function TransfersPane({
           </button>
         </div>
         <button
-          className="puter-button pressable"
+          className="panda-button pressable"
           style={{ marginLeft: 'auto' }}
           onClick={onClearCompleted}
         >
@@ -133,7 +133,7 @@ export default function TransfersPane({
                 <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
                   {(t.kind === 'upload' && t.status === 'done') && (
                     <button
-                      className="puter-icon-button"
+                      className="panda-icon-button"
                       style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       onClick={() => navigate(t.dir)}
                       title="打开文件目录"
@@ -143,7 +143,7 @@ export default function TransfersPane({
                   )}
                   {t.status !== 'done' && (
                     <button 
-                      className="puter-icon-button"
+                      className="panda-icon-button"
                       style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       onClick={() => onTogglePause(t)}
                       title={t.status === 'running' ? '暂停' : '继续'}
@@ -152,7 +152,7 @@ export default function TransfersPane({
                     </button>
                   )}
                   <button 
-                    className="puter-icon-button"
+                    className="panda-icon-button"
                     style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                     onClick={() => onRemoveTask(t)}
                     title="删除任务"

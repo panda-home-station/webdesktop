@@ -477,10 +477,10 @@ export default function DockerManager() {
                       </div>
                     </div>
                     <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button className="puter-button" onClick={() => onStart(c.id)} disabled={c.state === 'running'}>启动</button>
-                      <button className="puter-button" onClick={() => onStop(c.id)} disabled={c.state !== 'running'}>停止</button>
-                      <button className="puter-button" onClick={() => onRestart(c.id)} disabled={c.state !== 'running'}>重启</button>
-                      <button className="puter-button danger" onClick={() => onRemove(c.id)}>删除</button>
+                      <button className="panda-button" onClick={() => onStart(c.id)} disabled={c.state === 'running'}>启动</button>
+                      <button className="panda-button" onClick={() => onStop(c.id)} disabled={c.state !== 'running'}>停止</button>
+                      <button className="panda-button" onClick={() => onRestart(c.id)} disabled={c.state !== 'running'}>重启</button>
+                      <button className="panda-button danger" onClick={() => onRemove(c.id)}>删除</button>
                     </div>
                     {c.ports?.length ? (
                       <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
@@ -514,8 +514,8 @@ export default function DockerManager() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="puter-button" onClick={() => onOpenCreateContainer(img)} style={{ padding: '4px 12px', height: 28 }}>启动</button>
-                      <button className="puter-button danger" onClick={() => onDeleteImage(img)} style={{ padding: '4px 12px', height: 28 }}>删除</button>
+                      <button className="panda-button" onClick={() => onOpenCreateContainer(img)} style={{ padding: '4px 12px', height: 28 }}>启动</button>
+                      <button className="panda-button danger" onClick={() => onDeleteImage(img)} style={{ padding: '4px 12px', height: 28 }}>删除</button>
                     </div>
                   </div>
                 ))}
@@ -536,13 +536,13 @@ export default function DockerManager() {
                     onKeyDown={e => {
                       if (e.key === 'Enter') onSearchRegistry()
                     }}
-                    className="puter-input"
+                    className="panda-input"
                     style={{ width: 220, height: 30, padding: '0 8px', boxSizing: 'border-box' }}
                   />
-                  <button className="puter-button" title="搜索" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={onSearchRegistry} disabled={registryLoading}>
+                  <button className="panda-button" title="搜索" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={onSearchRegistry} disabled={registryLoading}>
                     <Icon path={mdiMagnify} size={0.9} />
                   </button>
-                  <button className="puter-button" title="设置" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={openSettings}>
+                  <button className="panda-button" title="设置" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={openSettings}>
                     <Icon path={mdiCogOutline} size={0.9} />
                   </button>
                 </span>
@@ -567,9 +567,9 @@ export default function DockerManager() {
                               <span style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>⭐ {stars} · ⬇️ {pulls}</span>
                             </div>
                             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-                              <button className="puter-button" onClick={() => pullFromRegistry(ref)} disabled={pulling} style={{ padding: '4px 10px', height: 28 }}>下载</button>
+                              <button className="panda-button" onClick={() => pullFromRegistry(ref)} disabled={pulling} style={{ padding: '4px 10px', height: 28 }}>下载</button>
                               <button
-                                className="puter-button"
+                                className="panda-button"
                                 title="打开镜像页面"
                                 onClick={() => {
                                   const href = official
@@ -608,19 +608,19 @@ export default function DockerManager() {
                         </div>
                         {mirrors.map(m => (
                           <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 80px', gap: 8, alignItems: 'center', marginTop: 6 }}>
-                            <input className="puter-input" value={m.name} onChange={e => onUpdateMirror(m.id, { name: e.target.value })} placeholder="名称（可选）" style={{ height: 28, padding: '0 8px' }} />
-                            <input className="puter-input" value={m.host} onChange={e => onUpdateMirror(m.id, { host: e.target.value })} placeholder="镜像域名，如 mirror.example.com" style={{ height: 28, padding: '0 8px' }} />
-                            <button className="puter-button danger" onClick={() => onRemoveMirror(m.id)} style={{ height: 28 }}>删除</button>
+                            <input className="panda-input" value={m.name} onChange={e => onUpdateMirror(m.id, { name: e.target.value })} placeholder="名称（可选）" style={{ height: 28, padding: '0 8px' }} />
+                            <input className="panda-input" value={m.host} onChange={e => onUpdateMirror(m.id, { host: e.target.value })} placeholder="镜像域名，如 mirror.example.com" style={{ height: 28, padding: '0 8px' }} />
+                            <button className="panda-button danger" onClick={() => onRemoveMirror(m.id)} style={{ height: 28 }}>删除</button>
                           </div>
                         ))}
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="puter-button" onClick={onAddMirror} style={{ height: 30 }}>添加</button>
+                        <button className="panda-button" onClick={onAddMirror} style={{ height: 30 }}>添加</button>
                       </div>
                     </div>
                     <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                      <button className="puter-button" onClick={() => setSettingsOpen(false)} disabled={settingsSaving}>取消</button>
-                      <button className="puter-button" onClick={saveSettings} disabled={settingsSaving}>保存</button>
+                      <button className="panda-button" onClick={() => setSettingsOpen(false)} disabled={settingsSaving}>取消</button>
+                      <button className="panda-button" onClick={saveSettings} disabled={settingsSaving}>保存</button>
                     </div>
                   </div>
                 </div>
@@ -637,8 +637,8 @@ export default function DockerManager() {
                   </div>
                 </div>
                 <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <button className="puter-button" onClick={onCancelDelete}>取消</button>
-                  <button className="puter-button danger" onClick={onConfirmDelete}>删除</button>
+                  <button className="panda-button" onClick={onCancelDelete}>取消</button>
+                  <button className="panda-button danger" onClick={onConfirmDelete}>删除</button>
                 </div>
               </div>
             </div>
@@ -658,7 +658,7 @@ export default function DockerManager() {
                     <div style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>容器名称</div>
                       <input
-                        className="puter-input"
+                        className="panda-input"
                         value={containerName}
                         onChange={e => setContainerName(e.target.value)}
                         placeholder="容器名称"
@@ -729,25 +729,25 @@ export default function DockerManager() {
                       )}
                       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                         <input
-                          className="puter-input"
+                          className="panda-input"
                           value={newHostPort}
                           onChange={e => setNewHostPort(e.target.value)}
                           placeholder="主机端口"
                           style={{ width: '100px', height: 28, padding: '0 8px' }}
                         />
                         <input
-                          className="puter-input"
+                          className="panda-input"
                           value={newContainerPort}
                           onChange={e => setNewContainerPort(e.target.value)}
                           placeholder="容器端口"
                           style={{ width: '100px', height: 28, padding: '0 8px' }}
                         />
-                        <button className="puter-button" onClick={onAddPort}>添加</button>
+                        <button className="panda-button" onClick={onAddPort}>添加</button>
                       </div>
                       {ports.map((p, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
                           <span>{p.host} → {p.container}</span>
-                          <button className="puter-button danger" onClick={() => onRemovePort(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
+                          <button className="panda-button danger" onClick={() => onRemovePort(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
                         </div>
                       ))}
                     </div>
@@ -755,25 +755,25 @@ export default function DockerManager() {
                       <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>存储位置</div>
                       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                         <input
-                          className="puter-input"
+                          className="panda-input"
                           value={newHostPath}
                           onChange={e => setNewHostPath(e.target.value)}
                           placeholder="主机路径"
                           style={{ width: '150px', height: 28, padding: '0 8px' }}
                         />
                         <input
-                          className="puter-input"
+                          className="panda-input"
                           value={newContainerPath}
                           onChange={e => setNewContainerPath(e.target.value)}
                           placeholder="容器路径"
                           style={{ width: '150px', height: 28, padding: '0 8px' }}
                         />
-                        <button className="puter-button" onClick={onAddVolume}>添加</button>
+                        <button className="panda-button" onClick={onAddVolume}>添加</button>
                       </div>
                       {volumes.map((v, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
                           <span>{v.host} → {v.container}</span>
-                          <button className="puter-button danger" onClick={() => onRemoveVolume(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
+                          <button className="panda-button danger" onClick={() => onRemoveVolume(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
                         </div>
                       ))}
                     </div>
@@ -781,25 +781,25 @@ export default function DockerManager() {
                       <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>环境变量</div>
                       <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                         <input
-                          className="puter-input"
+                          className="panda-input"
                           value={newEnvKey}
                           onChange={e => setNewEnvKey(e.target.value)}
                           placeholder="键"
                           style={{ width: '120px', height: 28, padding: '0 8px' }}
                         />
                         <input
-                          className="puter-input"
+                          className="panda-input"
                           value={newEnvValue}
                           onChange={e => setNewEnvValue(e.target.value)}
                           placeholder="值"
                           style={{ width: '120px', height: 28, padding: '0 8px' }}
                         />
-                        <button className="puter-button" onClick={onAddEnvVar}>添加</button>
+                        <button className="panda-button" onClick={onAddEnvVar}>添加</button>
                       </div>
                       {envVars.map((v, i) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
                           <span>{v.key} = {v.value}</span>
-                          <button className="puter-button danger" onClick={() => onRemoveEnvVar(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
+                          <button className="panda-button danger" onClick={() => onRemoveEnvVar(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
                         </div>
                       ))}
                     </div>
@@ -869,16 +869,16 @@ export default function DockerManager() {
                 )}
                 <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
                   {createStep > 1 && (
-                    <button className="puter-button" onClick={onPrevStep}>上一步</button>
+                    <button className="panda-button" onClick={onPrevStep}>上一步</button>
                   )}
                   {createStep === 1 && <div />}
                   <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="puter-button" onClick={onCloseCreateContainer}>取消</button>
+                    <button className="panda-button" onClick={onCloseCreateContainer}>取消</button>
                     {createStep < 3 && (
-                      <button className="puter-button" onClick={onNextStep}>下一步</button>
+                      <button className="panda-button" onClick={onNextStep}>下一步</button>
                     )}
                     {createStep === 3 && (
-                      <button className="puter-button" onClick={onCreateContainer}>创建</button>
+                      <button className="panda-button" onClick={onCreateContainer}>创建</button>
                     )}
                   </div>
                 </div>
@@ -889,8 +889,8 @@ export default function DockerManager() {
       {active === 'registry' && (
         <div style={{ height: 36, display: 'flex', alignItems: 'center', borderTop: '1px solid #e5e7eb' }}>
           <span style={{ marginLeft: 'auto', color: '#6b7280', fontSize: 14 }}>第 {page} 页</span>
-          <button className="puter-button" onClick={onPagePrev} disabled={!hasPrev || page <= 1 || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>上一页</button>
-          <button className="puter-button" onClick={onPageNext} disabled={!hasNext || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>下一页</button>
+          <button className="panda-button" onClick={onPagePrev} disabled={!hasPrev || page <= 1 || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>上一页</button>
+          <button className="panda-button" onClick={onPageNext} disabled={!hasNext || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>下一页</button>
         </div>
       )}
       </div>

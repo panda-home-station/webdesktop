@@ -217,7 +217,7 @@ export default function App() {
       <div style={bgStyle}>
         <SmoothWallpaper src={wallpaper} />
         <div
-          className="puter-window"
+          className="panda-window"
           style={{
             width: 420,
             padding: 20,
@@ -241,7 +241,7 @@ export default function App() {
       <div style={bgStyle}>
         <SmoothWallpaper src={wallpaper} />
         <div
-          className="puter-window"
+          className="panda-window"
           style={{
             width: 360,
             padding: 20,

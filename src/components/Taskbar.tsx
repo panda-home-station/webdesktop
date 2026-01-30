@@ -51,7 +51,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
   }
   return (
     <div
-      className="puter-taskbar"
+      className="panda-taskbar"
       style={{
         position: 'fixed',
         left: 12,
@@ -138,7 +138,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
                   openApp(id)
                 }
               }}
-              className="puter-button dock-item"
+              className="panda-button dock-item"
               title={title}
               style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, position: 'relative' }}
               onMouseEnter={(e) => showTip(title, e.currentTarget)}
