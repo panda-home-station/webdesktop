@@ -8,7 +8,13 @@ import {
   mdiSort,
   mdiCheckBold,
   mdiViewList,
-  mdiViewGridOutline
+  mdiViewGridOutline,
+  mdiUploadOutline,
+  mdiFolderPlusOutline,
+  mdiDownloadOutline,
+  mdiTrashCanOutline,
+  mdiDotsHorizontal,
+  mdiMagnify
 } from '@mdi/js'
 
 function usePress() {
@@ -19,6 +25,36 @@ function usePress() {
     onMouseUp: () => setPressed(false),
     onMouseLeave: () => setPressed(false),
   }
+}
+
+function IconButton({ onClick, icon, title, disabled, active }: { onClick: () => void; icon: string; title: string; disabled?: boolean; active?: boolean }) {
+  const { pressed, onMouseDown, onMouseUp, onMouseLeave } = usePress()
+  return (
+    <button
+      style={{
+        height: 32,
+        width: 32,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 0,
+        borderRadius: 8,
+        border: 'none',
+        background: active ? '#e5e5ea' : (pressed ? 'rgba(0,0,0,0.06)' : 'transparent'),
+        color: disabled ? '#d1d5db' : (active ? '#007AFF' : '#505050'),
+        cursor: disabled ? 'default' : 'pointer',
+        transition: 'background 0.1s, color 0.1s',
+      }}
+      onClick={onClick}
+      onMouseDown={onMouseDown}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseLeave}
+      disabled={disabled}
+      title={title}
+    >
+      <Icon path={icon} size={0.9} />
+    </button>
+  )
 }
 
 export default function Toolbar({
@@ -77,205 +113,150 @@ export default function Toolbar({
   }, [])
 
   return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
-        <div className="button-group">
-          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={back} disabled={navIndex === 0} title="后退">
-            <Icon path={mdiArrowLeft} size={0.9} />
-          </button>
-          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={forward} disabled={navIndex >= navHist.length - 1} title="前进">
-            <Icon path={mdiArrowRight} size={0.9} />
-          </button>
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid #f2f2f7', background: '#fff', height: 48, boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <IconButton onClick={back} icon={mdiArrowLeft} title="后退" disabled={navIndex === 0} />
+        <IconButton onClick={forward} icon={mdiArrowRight} title="前进" disabled={navIndex >= navHist.length - 1} />
+        <IconButton onClick={refresh} icon={mdiRefresh} title="刷新" />
+      </div>
 
-        <div className="button-group">
-          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={refresh} title="刷新">
-            <Icon path={mdiRefresh} size={0.9} />
-          </button>
-          <button className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => navigate('/')} title="主页">
-            <Icon path={mdiHome} size={0.9} />
-          </button>
-        </div>
-        <div style={{ flex: 1, minWidth: 0, marginRight: 12 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, width: '100%', minWidth: 0, height: 28, padding: '0 6px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)' }}>
-            <button className="panda-button" style={{ height: 28, width: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', border: 'none' }} onClick={() => navigate('/')} title="主文件夹">
-              <Icon path={mdiHome} size={1} />
-            </button>
-            {crumbs.slice(1).map((c, i) => (
+      <div style={{ width: 1, height: 20, background: '#e5e5ea', margin: '0 4px' }} />
+
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', alignItems: 'center', background: '#f2f2f7', borderRadius: 8, padding: '2px 8px', height: 32, maxWidth: '100%', overflow: 'hidden' }}>
+           <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/')}>
+             <Icon path={mdiHome} size={0.8} color="#6b7280" />
+           </button>
+           {crumbs.slice(1).map((c, i) => (
               <React.Fragment key={`crumb-${i}-${c.to}`}>
-                <span style={{ color: 'var(--muted)', padding: i === 0 ? '0 2px' : '0 6px' }}>{'/'}</span>
-                <button className="panda-button" style={{ height: 28, padding: i === 0 ? '0 6px' : '0 8px', whiteSpace: 'nowrap', maxWidth: '30%', overflow: 'hidden', textOverflow: 'ellipsis', background: 'transparent', border: 'none' }} onClick={() => navigate(c.to)} title={c.label}>
+                <span style={{ color: '#9ca3af', margin: '0 4px', fontSize: 12 }}>/</span>
+                <button 
+                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 13, color: '#1f2937', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  onClick={() => navigate(c.to)}
+                >
                   {c.label}
                 </button>
               </React.Fragment>
-            ))}
-          </div>
+           ))}
         </div>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="搜索" style={{ width: 180, height: 28, padding: '0 8px', borderRadius: 8, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: '#111827' }} />
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 8, borderBottom: '1px solid var(--win-border)', color: '#111827' }}>
-        {/** 点击动画 */}
-        {/** 上传 */}
-        {/** 新建文件夹 */}
-        {/** 下载 */}
-        {/** 删除 */}
-        {/** 更多 */}
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={(e) => { const files = e.target.files; if (files && files.length) onUploadFiles(files); if (fileInputRef.current) fileInputRef.current.value = '' }} />
-        {(() => {
-          const press = usePress()
-          return (
-            <button
-              className="panda-button"
-              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
-              onMouseDown={press.onMouseDown}
-              onMouseUp={press.onMouseUp}
-              onMouseLeave={press.onMouseLeave}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              上传
-            </button>
-          )
-        })()}
-        {(() => {
-          const press = usePress()
-          return (
-            <button
-              className="panda-button"
-              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
-              onMouseDown={press.onMouseDown}
-              onMouseUp={press.onMouseUp}
-              onMouseLeave={press.onMouseLeave}
-              onClick={onCreateFolder}
-            >
-              新建文件夹
-            </button>
-          )
-        })()}
-        {(() => {
-          const press = usePress()
-          return (
-            <button
-              className="panda-button"
-              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
-              onMouseDown={press.onMouseDown}
-              onMouseUp={press.onMouseUp}
-              onMouseLeave={press.onMouseLeave}
-              onClick={onDownloadSelected}
-            >
-              下载
-            </button>
-          )
-        })()}
-        {(() => {
-          const press = usePress()
-          return (
-            <button
-              className="panda-button"
-              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
-              onMouseDown={press.onMouseDown}
-              onMouseUp={press.onMouseUp}
-              onMouseLeave={press.onMouseLeave}
-              onClick={onDeleteSelected}
-            >
-              删除
-            </button>
-          )
-        })()}
-        {(() => {
-          const press = usePress()
-          return (
-            <button
-              className="panda-button"
-              style={{ height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 10px', transition: 'transform 120ms ease, filter 120ms ease', transform: press.pressed ? 'scale(0.96)' : 'none', filter: press.pressed ? 'brightness(0.97)' : 'none', willChange: 'transform' }}
-              onMouseDown={press.onMouseDown}
-              onMouseUp={press.onMouseUp}
-              onMouseLeave={press.onMouseLeave}
-              onClick={() => alert('更多功能即将上线')}
-            >
-              更多
-            </button>
-          )
-        })()}
-        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <div style={{ position: 'relative' }}>
-            <button ref={sortButtonRef} className="panda-button" style={{ height: 28, width: 36, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 8px' }} onClick={() => setShowSortMenu(!showSortMenu)} title="排序">
-              <Icon path={mdiSort} size={0.9} />
-            </button>
-            {showSortMenu && (
-              <ul role="menu" aria-orientation="vertical" className="semi-dropdown-menu" style={{ position: 'absolute', top: '100%', right: 0, minWidth: 120, background: 'white', border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '4px 0', margin: '4px 0', zIndex: 1000, listStyle: 'none' }}>
-                <li role="menuitem" tabIndex={0} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'name' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortKey('name')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
-                  <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortKey === 'name' ? 'currentColor' : 'transparent' }}>
-                    <Icon path={mdiCheckBold} size={0.9} />
-                  </span>
-                  文件名
-                </li>
-                <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'modified_ts' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortKey('modified_ts')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
-                  <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortKey === 'modified_ts' ? 'currentColor' : 'transparent' }}>
-                    <Icon path={mdiCheckBold} size={0.9} />
-                  </span>
-                  修改时间
-                </li>
-                <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortKey === 'size' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortKey('size')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
-                  <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortKey === 'size' ? 'currentColor' : 'transparent' }}>
-                    <Icon path={mdiCheckBold} size={0.9} />
-                  </span>
-                  大小
-                </li>
-                <div className="semi-dropdown-divider" style={{ height: 1, background: '#e5e7eb', margin: '4px 0' }}></div>
-                <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortOrder === 'asc' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortOrder('asc')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
-                  <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortOrder === 'asc' ? 'currentColor' : 'transparent' }}>
-                    <Icon path={mdiCheckBold} size={0.9} />
-                  </span>
-                  升序
-                </li>
-                <li role="menuitem" tabIndex={-1} aria-disabled="false" className={`semi-dropdown-item semi-dropdown-item-withTick ${sortOrder === 'desc' ? 'semi-dropdown-item-active' : ''}`} onClick={() => setSortOrder('desc')} style={{ display: 'flex', alignItems: 'center', padding: '8px 12px', cursor: 'pointer', fontSize: 14, color: '#111827' }}>
-                  <span role="img" aria-label="tick" className="semi-icon semi-icon-default semi-icon-tick" style={{ width: 16, height: 16, marginRight: 8, color: sortOrder === 'desc' ? 'currentColor' : 'transparent' }}>
-                    <Icon path={mdiCheckBold} size={0.9} />
-                  </span>
-                  降序
-                </li>
-              </ul>
-            )}
-          </div>
-          <div title="切换列表视图" className="panda-button" style={{ height: 28, display: 'inline-flex', alignItems: 'center', padding: '0 2px', border: '1px solid var(--button-border)', borderRadius: 8, background: 'var(--button-bg)' }}>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                position: 'relative',
-                overflow: 'hidden',
-                width: 48,
-                height: 24,
-                borderRadius: 6,
-                background: view === 'grid' ? 'var(--button-bg)' : 'var(--semi-color-primary)',
-                justifyContent: 'flex-start',
-                transition: 'background-color 180ms ease'
-              }}
-              onClick={() => setView(view === 'list' ? 'grid' : 'list')}
-              role="switch"
-              aria-checked={view === 'list'}
-              aria-label="切换显示样式"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  setView(view === 'list' ? 'grid' : 'list')
-                }
-              }}
-            >
-              <div style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '0 4px', zIndex: 0, pointerEvents: 'none' }}>
-                <div style={{ display: 'flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center', opacity: view === 'list' ? 1 : 0.5 }}>
-                  <Icon path={mdiViewList} size={0.9} />
-                </div>
-                <div style={{ display: 'flex', width: 24, height: 24, alignItems: 'center', justifyContent: 'center', opacity: view === 'grid' ? 1 : 0.5 }}>
-                  <Icon path={mdiViewGridOutline} size={0.9} />
-                </div>
-              </div>
-              <div style={{ filter: 'drop-shadow(rgba(32, 35, 39, 0.12) 0px 0.667px 1.333px)', transform: view === 'list' ? 'translateX(2px)' : 'translateX(22px)', transformOrigin: '50% 50% 0px', position: 'relative', zIndex: 1, transition: 'transform 180ms ease', width: 24, height: 24, borderRadius: 6, background: 'var(--semi-color-bg-1)' }}></div>
+        
+        <IconButton onClick={() => fileInputRef.current?.click()} icon={mdiUploadOutline} title="上传" />
+        <IconButton onClick={onCreateFolder} icon={mdiFolderPlusOutline} title="新建文件夹" />
+        <IconButton onClick={onDownloadSelected} icon={mdiDownloadOutline} title="下载" />
+        <IconButton onClick={onDeleteSelected} icon={mdiTrashCanOutline} title="删除" />
+        
+        <div style={{ width: 1, height: 20, background: '#e5e5ea', margin: '0 4px' }} />
+        
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+          <Icon path={mdiMagnify} size={0.8} color="#9ca3af" style={{ position: 'absolute', left: 8, pointerEvents: 'none' }} />
+          <input 
+            value={q} 
+            onChange={e => setQ(e.target.value)} 
+            placeholder="搜索" 
+            style={{ 
+              width: 140, 
+              height: 32, 
+              padding: '0 8px 0 28px', 
+              borderRadius: 8, 
+              border: 'none', 
+              background: '#f2f2f7', 
+              color: '#1c1c1e',
+              fontSize: 13,
+              outline: 'none',
+              transition: 'width 0.2s'
+            }} 
+            onFocus={(e) => e.target.style.width = '200px'}
+            onBlur={(e) => e.target.style.width = '140px'}
+          />
+        </div>
+
+        <div style={{ width: 1, height: 20, background: '#e5e5ea', margin: '0 4px' }} />
+
+        <div style={{ position: 'relative' }}>
+          <button
+            ref={sortButtonRef}
+            style={{
+              height: 32,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '0 8px',
+              border: 'none',
+              background: showSortMenu ? '#e5e5ea' : 'transparent',
+              borderRadius: 8,
+              cursor: 'pointer',
+              color: '#1c1c1e'
+            }}
+            onClick={() => setShowSortMenu(!showSortMenu)}
+            title="排序"
+          >
+            <Icon path={mdiSort} size={0.9} />
+          </button>
+          {showSortMenu && (
+            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#fff', border: '1px solid #e5e5ea', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 140, padding: 4 }}>
+              <div style={{ fontSize: 12, color: '#8e8e93', padding: '4px 8px', fontWeight: 500 }}>排序依据</div>
+              {[
+                { k: 'name', label: '名称' },
+                { k: 'size', label: '大小' },
+                { k: 'modified_ts', label: '修改时间' }
+              ].map(opt => (
+                <button
+                  key={opt.k}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: 13, color: sortKey === opt.k ? '#007AFF' : '#1c1c1e' }}
+                  onClick={() => {
+                    setSortKey(opt.k as any)
+                    setShowSortMenu(false)
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f2f2f7'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span>{opt.label}</span>
+                  {sortKey === opt.k && <Icon path={mdiCheckBold} size={0.7} />}
+                </button>
+              ))}
+              <div style={{ height: 1, background: '#e5e5ea', margin: '4px 0' }} />
+              <div style={{ fontSize: 12, color: '#8e8e93', padding: '4px 8px', fontWeight: 500 }}>顺序</div>
+              {[
+                { k: 'asc', label: '升序' },
+                { k: 'desc', label: '降序' }
+              ].map(opt => (
+                <button
+                  key={opt.k}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '8px', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', borderRadius: 6, fontSize: 13, color: sortOrder === opt.k ? '#007AFF' : '#1c1c1e' }}
+                  onClick={() => {
+                    setSortOrder(opt.k as any)
+                    setShowSortMenu(false)
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f2f2f7'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span>{opt.label}</span>
+                  {sortOrder === opt.k && <Icon path={mdiCheckBold} size={0.7} />}
+                </button>
+              ))}
             </div>
-          </div>
-        </span>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', background: '#f2f2f7', borderRadius: 8, padding: 2 }}>
+          <IconButton 
+            onClick={() => setView('list')} 
+            icon={mdiViewList} 
+            title="列表视图" 
+            active={view === 'list'}
+          />
+          <IconButton 
+            onClick={() => setView('grid')} 
+            icon={mdiViewGridOutline} 
+            title="网格视图" 
+            active={view === 'grid'}
+          />
+        </div>
       </div>
-    </>
+    </div>
   )
 }

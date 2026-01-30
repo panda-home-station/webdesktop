@@ -333,7 +333,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     const startW = colWidths[key]
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
-      const next = Math.max(60, startW + dx)
+      const next = Math.max(100, startW + dx)
       setColWidths((cw) => ({ ...cw, [key]: next }))
     }
     const onUp = () => {
@@ -763,7 +763,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             <style>{`
               #fm-list-container::-webkit-scrollbar { display: none; }
             `}</style>
-            <div id="fm-list-container" style={{ flex: 1, overflow: 'auto', padding: 8, color: '#111827', fontSize: 14 }}>
+            <div id="fm-list-container" style={{ flex: 1, overflow: 'auto', padding: 0, color: '#1c1c1e', fontSize: 14, background: '#ffffff' }}>
               {view === 'list' ? (
                 <>
                   <ListView

@@ -1,6 +1,6 @@
 import React from 'react'
 import Icon from '@mdi/react'
-import { mdiCogOutline } from '@mdi/js'
+import { mdiCogOutline, mdiFolderOutline, mdiFileDocumentOutline } from '@mdi/js'
 
 export default function ListView({
   path,
@@ -29,16 +29,18 @@ export default function ListView({
   fmtSize: (n: number) => string
   onOpenDir: (name: string) => void
 }) {
+  const totalWidth = Object.values(colWidths).reduce((a, b) => a + b, 0)
   return (
-    <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse' }}>
+    <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
       <thead>
-        <tr style={{ borderTop: '2px solid #d1d5db', borderBottom: '2px solid #d1d5db', height: 36 }}>
-          <th style={{ textAlign: 'left', width: colWidths.name, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <tr style={{ height: 44, color: '#8e8e93', fontSize: 13, fontWeight: 500 }}>
+          <th style={{ textAlign: 'left', width: colWidths.name, position: 'relative', borderBottom: '1px solid #e5e5ea', paddingLeft: 16, paddingBottom: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                 <input
                   ref={headerCheckboxRef}
                   type="checkbox"
+                  style={{ accentColor: '#007AFF', width: 16, height: 16 }}
                   onChange={(e) => {
                     if (e.target.checked) {
                       setSelected(new Set(filtered.map(f => f.name)))
@@ -47,70 +49,91 @@ export default function ListView({
                     }
                   }}
                 />
-                <span>文件名</span>
+                <span>名称</span>
               </label>
             </div>
-            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
-            <div onMouseDown={(e) => startResize('name', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
-          </th>
-          <th style={{ textAlign: 'left', width: colWidths.modified, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>修改时间</div>
-            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
-            <div onMouseDown={(e) => startResize('modified', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
-          </th>
-          <th style={{ textAlign: 'left', width: colWidths.type, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>类型</div>
-            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
-            <div onMouseDown={(e) => startResize('type', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
-          </th>
-          <th style={{ textAlign: 'left', width: colWidths.size, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>大小</div>
-            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
-            <div onMouseDown={(e) => startResize('size', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
-          </th>
-          <th style={{ textAlign: 'left', width: colWidths.created, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8 }}>创建时间</div>
-            <div style={{ position: 'absolute', right: 0, top: 8, width: 1, height: 20, background: '#e5e7eb' }} />
-            <div onMouseDown={(e) => startResize('created', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
-          </th>
-          <th style={{ textAlign: 'left', width: colWidths.owner, position: 'relative' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingLeft: 8 }}>
-              <span>所有者</span>
-              <button className="panda-button" title="字段设置" style={{ height: 24, width: 24, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
-                <Icon path={mdiCogOutline} size={0.8} />
-              </button>
+            <div onMouseDown={(e) => startResize('name', e)} style={{ position: 'absolute', right: 0, top: 0, width: 10, height: '100%', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 1 }}>
+              <div style={{ width: 1, height: 20, backgroundColor: '#d1d1d6' }} />
             </div>
-            <div onMouseDown={(e) => startResize('owner', e)} style={{ position: 'absolute', right: 0, top: 0, width: 6, height: '100%', cursor: 'col-resize' }} />
+          </th>
+          <th style={{ textAlign: 'left', width: colWidths.modified, position: 'relative', borderBottom: '1px solid #e5e5ea', paddingBottom: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8, height: '100%' }}>修改时间</div>
+            <div onMouseDown={(e) => startResize('modified', e)} style={{ position: 'absolute', right: 0, top: 0, width: 10, height: '100%', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 1 }}>
+              <div style={{ width: 1, height: 20, backgroundColor: '#d1d1d6' }} />
+            </div>
+          </th>
+          <th style={{ textAlign: 'left', width: colWidths.type, position: 'relative', borderBottom: '1px solid #e5e5ea', paddingBottom: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8, height: '100%' }}>类型</div>
+            <div onMouseDown={(e) => startResize('type', e)} style={{ position: 'absolute', right: 0, top: 0, width: 10, height: '100%', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 1 }}>
+              <div style={{ width: 1, height: 20, backgroundColor: '#d1d1d6' }} />
+            </div>
+          </th>
+          <th style={{ textAlign: 'left', width: colWidths.size, position: 'relative', borderBottom: '1px solid #e5e5ea', paddingBottom: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8, height: '100%' }}>大小</div>
+            <div onMouseDown={(e) => startResize('size', e)} style={{ position: 'absolute', right: 0, top: 0, width: 10, height: '100%', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 1 }}>
+              <div style={{ width: 1, height: 20, backgroundColor: '#d1d1d6' }} />
+            </div>
+          </th>
+          <th style={{ textAlign: 'left', width: colWidths.created, position: 'relative', borderBottom: '1px solid #e5e5ea', paddingBottom: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8, height: '100%' }}>创建时间</div>
+            <div onMouseDown={(e) => startResize('created', e)} style={{ position: 'absolute', right: 0, top: 0, width: 10, height: '100%', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', zIndex: 1 }}>
+              <div style={{ width: 1, height: 20, backgroundColor: '#d1d1d6' }} />
+            </div>
+          </th>
+          <th style={{ textAlign: 'left', position: 'relative', borderBottom: '1px solid #e5e5ea', paddingBottom: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', paddingLeft: 8, height: '100%' }}>
+              <span>所有者</span>
+            </div>
           </th>
         </tr>
       </thead>
       <tbody>
         {filtered.length === 0 ? (
           <tr>
-            <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#6b7280' }}>暂无文件</td>
+            <td colSpan={6} style={{ padding: 40, textAlign: 'center', color: '#8e8e93', fontSize: 16 }}>暂无文件</td>
           </tr>
         ) : null}
-        {filtered.map((e) => (
-          <tr
-            key={`${path}/${e.name}`}
-            style={{ background: selected.has(e.name) ? '#d4d4d8' : undefined, cursor: 'pointer', borderBottom: '1px solid #e5e7eb', height: 36 }}
-            onClick={() => toggleSelect(e.name)}
-            onDoubleClick={() => {
-              if (e.is_dir) {
-                onOpenDir(e.name)
-              }
-            }}
-          >
-            <td style={{ width: colWidths.name, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 24 }}>
-              <span style={{ color: selected.has(e.name) ? '#111827' : (e.is_dir ? '#2563eb' : '#111827') }}>{e.name}</span>
-            </td>
-            <td style={{ width: colWidths.modified, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{fmtTime(e.modified_ts)}</td>
-            <td style={{ width: colWidths.type, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{e.is_dir ? '目录' : '文件'}</td>
-            <td style={{ width: colWidths.size, textAlign: 'left', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{e.is_dir ? '-' : fmtSize(e.size)}</td>
-            <td style={{ width: colWidths.created, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{'-'}</td>
-            <td style={{ width: colWidths.owner, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', verticalAlign: 'middle', paddingLeft: 8 }}>{'-'}</td>
-          </tr>
-        ))}
+        {filtered.map((e, idx) => {
+          const isSelected = selected.has(e.name)
+          return (
+            <tr
+              key={`${path}/${e.name}`}
+              className="list-row"
+              style={{
+                background: isSelected ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
+                cursor: 'pointer',
+                height: 48,
+                transition: 'background-color 0.1s'
+              }}
+              onClick={() => toggleSelect(e.name)}
+              onDoubleClick={() => {
+                if (e.is_dir) {
+                  onOpenDir(e.name)
+                }
+              }}
+            >
+              <td style={{ paddingLeft: 16, borderBottom: '1px solid #f2f2f7', color: isSelected ? '#007AFF' : '#333333', fontWeight: isSelected ? 500 : 400, verticalAlign: 'middle' }}>
+                 <style>{`
+                  .list-row:hover {
+                    background-color: ${isSelected ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0,0,0,0.03)'};
+                  }
+                 `}</style>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
+                   {/* Reusing checkbox logic implicitly via row click, but if needed we can add explicit checkbox or rely on highlight */}
+                   <div style={{ minWidth: 24, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     {e.is_dir ? <Icon path={mdiFolderOutline} size={1} color="#007AFF" /> : <Icon path={mdiFileDocumentOutline} size={1} color="#8E8E93" />}
+                   </div>
+                   <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</span>
+                 </div>
+              </td>
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7', color: '#8e8e93', fontSize: 13, verticalAlign: 'middle' }}>{fmtTime(e.modified_ts)}</td>
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7', color: '#8e8e93', fontSize: 13, verticalAlign: 'middle' }}>{e.is_dir ? '文件夹' : '文件'}</td>
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7', color: '#8e8e93', fontSize: 13, verticalAlign: 'middle' }}>{e.is_dir ? '-' : fmtSize(e.size)}</td>
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7', color: '#8e8e93', fontSize: 13, verticalAlign: 'middle' }}>-</td>
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7', color: '#8e8e93', fontSize: 13, verticalAlign: 'middle' }}>me</td>
+            </tr>
+          )
+        })}
       </tbody>
     </table>
   )
