@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import axios from 'axios'
 import {
   Folder,
@@ -22,6 +23,7 @@ import GridView from './components/GridView'
 import FooterCount from './components/FooterCount'
 import TransfersPane from './components/TransfersPane'
 import TrashPane from './components/TrashPane'
+import ContextMenu, { ContextMenuItem } from './components/ContextMenu'
 
 import { api } from '../../../src/api/client'
  
@@ -85,6 +87,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [sortKey, setSortKey] = useState<'name' | 'size' | 'modified_ts'>('name')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [showSortMenu, setShowSortMenu] = useState<boolean>(false)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; name: string } | null>(null)
   const [q, setQ] = useState<string>('')
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -98,11 +101,22 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     created: 105,
     owner: 120,
   })
+  
+  // New State
+  const [clipboard, setClipboard] = useState<{ items: string[], action: 'copy' | 'move', sourcePath: string } | null>(null)
+  const [dragSelect, setDragSelect] = useState<{ startX: number, startY: number, curX: number, curY: number } | null>(null)
+
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
   const abortControllers = useRef<Map<string, AbortController>>(new Map())
   const uploadFilesMap = useRef<Map<string, File>>(new Map())
   const speedStatsRef = useRef<Map<string, { samples: { ts: number; bps: number }[]; lastAvg: number }>>(new Map())
   const SPEED_WINDOW_MS = 6000
+
+  const joinPath = (dir: string, name: string) => (dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`)
+  const reloadCurrentDir = async () => {
+    const rs = await fmApi.fsList(path)
+    setEntries(rs.entries)
+  }
 
   const startUpload = async (id: string, file: File, dir: string, offset: number = 0) => {
     const controller = new AbortController()
@@ -117,8 +131,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       updateFileTask(id, { progress: 100, status: 'done' })
       uploadFilesMap.current.delete(id)
       if (path === dir) {
-        const rs = await fmApi.fsList(path)
-        setEntries(rs.entries)
+        await reloadCurrentDir()
       }
     } catch (e: any) {
       if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
@@ -221,7 +234,250 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
- 
+
+  // Context Menu Handler
+  const handleContextMenu = (e: React.MouseEvent, name: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    let targetName = name || ''
+    if (targetName) {
+      if (!selected.has(targetName)) {
+        setSelected(new Set([targetName]))
+      }
+    }
+    setContextMenu({ x: e.clientX, y: e.clientY, name: targetName })
+  }
+
+  const closeContextMenu = () => setContextMenu(null)
+
+  // Drag Select Logic
+  const handleContainerMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.list-row, .grid-item')) return
+    if (path === '/Trash' || path === '/Transfers') return
+    
+    // Only left click
+    if (e.button !== 0) return
+
+    const startX = e.clientX
+    const startY = e.clientY
+    
+    setDragSelect({ startX, startY, curX: startX, curY: startY })
+    
+    // Initial selection state
+    const initialSelected = new Set(e.ctrlKey || e.metaKey || e.shiftKey ? selected : [])
+    
+    const move = (ev: MouseEvent) => {
+      setDragSelect(prev => prev ? { ...prev, curX: ev.clientX, curY: ev.clientY } : null)
+      
+      const box = {
+        left: Math.min(startX, ev.clientX),
+        top: Math.min(startY, ev.clientY),
+        right: Math.max(startX, ev.clientX),
+        bottom: Math.max(startY, ev.clientY)
+      }
+      
+      const nextSelected = new Set(initialSelected)
+      
+      const items = document.querySelectorAll(view === 'list' ? '.list-row' : '.grid-item')
+      items.forEach((el) => {
+        const r = el.getBoundingClientRect()
+        // Check overlap
+        if (r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top) {
+          const name = el.getAttribute('data-name')
+          if (name) {
+             nextSelected.add(name)
+          }
+        }
+      })
+      
+      setSelected(nextSelected)
+    }
+    
+    const up = (ev: MouseEvent) => {
+      setDragSelect(null)
+      window.removeEventListener('mousemove', move)
+      window.removeEventListener('mouseup', up)
+      
+      // If no drag happened and clicked on empty space, clear selection
+      if (Math.abs(ev.clientX - startX) <= 5 && Math.abs(ev.clientY - startY) <= 5) {
+         if (!ev.shiftKey && !ev.ctrlKey && !ev.metaKey && !(e.target as HTMLElement).closest('.list-row, .grid-item')) {
+           setSelected(new Set())
+         }
+      }
+    }
+    window.addEventListener('mousemove', move)
+    window.addEventListener('mouseup', up)
+  }
+
+  // Enhanced Operations
+  const getTargetItems = (clickedName?: string) => {
+    if (clickedName && !selected.has(clickedName)) {
+      return [clickedName]
+    }
+    return Array.from(selected)
+  }
+
+  const handleCopy = (names: string[]) => {
+    setClipboard({ items: names, action: 'copy', sourcePath: path })
+  }
+
+  const handleCut = (names: string[]) => {
+    setClipboard({ items: names, action: 'move', sourcePath: path })
+  }
+
+  const handlePaste = async () => {
+    if (!clipboard) return
+    const { items, action, sourcePath } = clipboard
+    if (action === 'move') {
+      for (const name of items) {
+        const from = joinPath(sourcePath, name)
+        const to = joinPath(path, name)
+        if (from !== to) {
+          await fmApi.fsRename(from, to)
+        }
+      }
+      await reloadCurrentDir()
+      setClipboard(null) // Move clears clipboard
+    } else if (action === 'copy') {
+       for (const name of items) {
+         const from = joinPath(sourcePath, name)
+         // Determine new name to avoid collision? Or just overwrite/fail?
+         // For now simple copy
+         const to = joinPath(path, name)
+         if (from === to) {
+            // Copy to same dir -> duplicate name
+            const parts = name.split('.')
+            const ext = parts.length > 1 ? parts.pop() : ''
+            const base = parts.join('.')
+            const newName = `${base} copy${ext ? '.' + ext : ''}`
+            const toNew = joinPath(path, newName)
+            
+            // We need to handle directory copy differently? 
+            // fsDownloadBlob only works for files usually?
+            // If it's a directory, we can't easily copy it with blob download.
+            // Check if it's a directory
+            const entry = entries.find(e => e.name === name) // This checks current dir, but source might be elsewhere
+            // We don't have easy check for source file type if it's not in current dir entries.
+            // But we can try download blob.
+            try {
+               const blob = await fmApi.fsDownloadBlob(from)
+               const file = new File([blob], newName, { type: blob.type })
+               const id = `copy-${newName}-${Date.now()}`
+               pushFileTask({ id, kind: 'upload', name: newName, dir: path, progress: 0, total: blob.size, loaded: 0, bps: 0, status: 'running' })
+               await startUpload(id, file, path)
+            } catch (e) {
+               console.error('Copy failed', e)
+               alert(`复制失败: ${name} (可能是文件夹或太大)`)
+            }
+         } else {
+            // Copy to different dir
+             try {
+               const blob = await fmApi.fsDownloadBlob(from)
+               const file = new File([blob], name, { type: blob.type })
+               const id = `copy-${name}-${Date.now()}`
+               pushFileTask({ id, kind: 'upload', name: name, dir: path, progress: 0, total: blob.size, loaded: 0, bps: 0, status: 'running' })
+               await startUpload(id, file, path)
+            } catch (e) {
+               console.error('Copy failed', e)
+               alert(`复制失败: ${name} (可能是文件夹或太大)`)
+            }
+         }
+       }
+       await reloadCurrentDir()
+       // Copy keeps clipboard
+    }
+  }
+
+  const handleRename = async (name: string) => {
+    const newName = prompt('重命名', name)
+    if (newName && newName !== name) {
+      await fmApi.fsRename(joinPath(path, name), joinPath(path, newName))
+      await reloadCurrentDir()
+    }
+  }
+
+  const handleNewFolder = async () => {
+    const name = prompt('新建文件夹名称', '新建文件夹')
+    if (name) {
+       await fmApi.fsMkdir(joinPath(path, name))
+       await reloadCurrentDir()
+    }
+  }
+
+  const handleNewFile = async () => {
+    const name = prompt('新建文件名称', 'New File.txt')
+    if (name) {
+      const file = new File([""], name, { type: "text/plain" })
+      const id = `new-${name}-${Date.now()}`
+      pushFileTask({ id, kind: 'upload', name, dir: path, progress: 0, total: 0, loaded: 0, bps: 0, status: 'running' })
+      await startUpload(id, file, path)
+    }
+  }
+  
+  const handleDelete = async (names: string[]) => {
+      if (confirm(`确定要删除 ${names.length} 个项目吗？`)) {
+        for (const n of names) {
+          const p = joinPath(path, n)
+          const id = `del-${n}-${Date.now()}`
+          pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
+          try {
+            await api.fsDelete(p)
+            updateFileTask(id, { status: 'done' })
+          } catch (e) {
+            updateFileTask(id, { status: 'error' })
+          }
+        }
+        await reloadCurrentDir()
+        clearSelection()
+      }
+  }
+
+  const contextMenuItems: ContextMenuItem[] = useMemo(() => {
+    if (!contextMenu) return []
+    const { name } = contextMenu
+    if (name) {
+      // File Context
+      return [
+        { 
+          label: '打开', 
+          onClick: () => {
+            const entry = entries.find(e => e.name === name)
+            if (entry?.is_dir) {
+               setSelected(new Set())
+               navigate(joinPath(path, name))
+            } else {
+               // Open file
+            }
+          }
+        },
+        { 
+          label: '下载', 
+          onClick: () => {
+             const fullPath = joinPath(path, name)
+             const url = api.fsDownloadUrl(fullPath)
+             window.open(url, '_blank')
+          }
+        },
+        { divider: true },
+        { label: '剪切', onClick: () => handleCut(getTargetItems(name)) },
+        { label: '复制', onClick: () => handleCopy(getTargetItems(name)) },
+        { label: '粘贴', disabled: !clipboard, onClick: handlePaste },
+        { divider: true },
+        { label: '重命名', onClick: () => handleRename(name) },
+        { label: '删除', color: '#ff3b30', onClick: () => handleDelete(getTargetItems(name)) }
+      ]
+    } else {
+      // Background Context
+      return [
+        { label: '新建文件夹', onClick: handleNewFolder },
+        { label: '新建文本文件', onClick: handleNewFile },
+        { divider: true },
+        { label: '粘贴', disabled: !clipboard, onClick: handlePaste },
+        { divider: true },
+        { label: '刷新', onClick: reloadCurrentDir }
+      ]
+    }
+  }, [contextMenu, clipboard, selected, path, entries])
 
   const fmtTime = (ts: number) => {
     if (!ts) return '-'
@@ -237,12 +493,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     const gb = mb / 1024
     return `${gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10} GB`
   }
-  const joinPath = (dir: string, name: string) => (dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`)
-  const reloadCurrentDir = async () => {
-    const rs = await fmApi.fsList(path)
-    setEntries(rs.entries)
-  }
-  
 
   const goto = async (to: string, key: string) => {
     setActive(key)
@@ -263,9 +513,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     setSelected(new Set())
     navigate(to)
   }
-  const showUploads = () => {}
 
- 
   const refresh = async () => {
     await reloadCurrentDir()
   }
@@ -414,9 +662,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     await reloadCurrentDir()
   }
   
-
-
-
   const sections = useMemo(() => {
     const runningCount = tasks.filter(t => t.status === 'running').length
     return [
@@ -542,15 +787,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                   await startUpload(id, f, path)
                 }
               }}
-              onCreateFolder={async () => {
-                const name = prompt('新建文件夹名称')
-                if (!name) return
-                const next = joinPath(path, name)
-                const r = await api.fsMkdir(next)
-                if (r.ok) {
-                  await reloadCurrentDir()
-                }
-              }}
+              onCreateFolder={handleNewFolder}
               onDownloadSelected={async () => {
                 const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
                 if (names.length === 0) return
@@ -561,18 +798,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                 const id = `dl-${first}-${Date.now()}`
                 pushFileTask({ id, kind: 'download', name: first, dir: path, progress: 100, status: 'done' })
               }}
-              onDeleteSelected={async () => {
-                const names = [...selected]
-                for (const n of names) {
-                  const p = joinPath(path, n)
-                  const id = `del-${n}-${Date.now()}`
-                  pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
-                  await api.fsDelete(p)
-                  updateFileTask(id, { status: 'done' })
-                }
-                await reloadCurrentDir()
-                clearSelection()
-              }}
+              onDeleteSelected={async () => handleDelete([...selected])}
               sortKey={sortKey}
               setSortKey={(k) => setSortKey(k)}
               sortOrder={sortOrder}
@@ -583,7 +809,12 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             <style>{`
               #fm-list-container::-webkit-scrollbar { display: none; }
             `}</style>
-            <div id="fm-list-container" style={{ flex: 1, overflow: 'auto', padding: 0, color: '#1c1c1e', fontSize: 14, background: '#ffffff' }}>
+            <div 
+               id="fm-list-container" 
+               style={{ flex: 1, overflow: 'auto', padding: 0, color: '#1c1c1e', fontSize: 14, background: '#ffffff', position: 'relative' }}
+               onContextMenu={(e) => handleContextMenu(e, '')}
+               onMouseDown={handleContainerMouseDown}
+            >
               {view === 'list' ? (
                 <>
                   <ListView
@@ -599,30 +830,56 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                     fmtTime={fmtTime}
                     fmtSize={fmtSize}
                     onOpenDir={(name) => {
-                      const next = joinPath(path, name)
-                      setPath(next)
+                      setSelected(new Set())
+                      navigate(joinPath(path, name))
                     }}
+                    onContextMenu={handleContextMenu}
                   />
                 </>
               ) : (
-                <>
-                  <GridView
-                    path={path}
-                    filtered={filtered}
-                    selected={selected}
-                    toggleSelect={toggleSelect}
-                    onOpenDir={(name) => {
-                      const next = joinPath(path, name)
-                      setPath(next)
-                    }}
-                  />
-                </>
+                <GridView
+                  path={path}
+                  filtered={filtered}
+                  selected={selected}
+                  setSelected={(s) => setSelected(new Set(s))}
+                  clearSelection={clearSelection}
+                  toggleSelect={toggleSelect}
+                  onOpenDir={(name) => {
+                    setSelected(new Set())
+                    navigate(joinPath(path, name))
+                  }}
+                  onContextMenu={handleContextMenu}
+                />
+              )}
+              {dragSelect && createPortal(
+                 <div
+                   style={{
+                      position: 'fixed',
+                      left: Math.min(dragSelect.startX, dragSelect.curX),
+                      top: Math.min(dragSelect.startY, dragSelect.curY),
+                      width: Math.abs(dragSelect.curX - dragSelect.startX),
+                      height: Math.abs(dragSelect.curY - dragSelect.startY),
+                      border: '1px solid rgba(0, 122, 255, 0.3)',
+                      backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                      pointerEvents: 'none',
+                      zIndex: 9999
+                   }}
+                 />,
+                 document.body
               )}
             </div>
             <FooterCount count={filtered.length} />
           </>
         )}
       </div>
+      {contextMenu && (
+         <ContextMenu
+           x={contextMenu.x}
+           y={contextMenu.y}
+           items={contextMenuItems}
+           onClose={closeContextMenu}
+         />
+      )}
     </div>
   )
 }

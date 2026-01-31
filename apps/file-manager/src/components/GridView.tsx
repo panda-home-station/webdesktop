@@ -5,14 +5,20 @@ export default function GridView({
   path,
   filtered,
   selected,
+  setSelected,
+  clearSelection,
   toggleSelect,
-  onOpenDir
+  onOpenDir,
+  onContextMenu
 }: {
   path: string
   filtered: { name: string; is_dir: boolean }[]
   selected: Set<string>
+  setSelected: (s: Set<string>) => void
+  clearSelection: () => void
   toggleSelect: (name: string) => void
   onOpenDir: (name: string) => void
+  onContextMenu: (e: React.MouseEvent, name: string) => void
 }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 16, padding: 16 }}>
@@ -26,6 +32,7 @@ export default function GridView({
         return (
           <div
             key={`${path}/grid-${e.name}`}
+            data-name={e.name}
             className="grid-item"
             style={{
               display: 'flex',
@@ -39,12 +46,22 @@ export default function GridView({
               background: isSelected ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
               position: 'relative'
             }}
-            onClick={() => toggleSelect(e.name)}
+            onClick={(ev) => {
+               if (ev.metaKey || ev.ctrlKey) {
+                 toggleSelect(e.name)
+               } else if (ev.shiftKey) {
+                 toggleSelect(e.name)
+               } else {
+                 setSelected(new Set([e.name]))
+               }
+               ev.stopPropagation()
+            }}
             onDoubleClick={() => {
               if (e.is_dir) {
                 onOpenDir(e.name)
               }
             }}
+            onContextMenu={(ev) => onContextMenu(ev, e.name)}
           >
             <style>{`
               .grid-item:hover {

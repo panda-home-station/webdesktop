@@ -6,7 +6,13 @@ export default defineConfig({
   server: {
     host: true,
     port: 4200,
-    strictPort: false
+    strictPort: false,
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:9000',
+        changeOrigin: true,
+      }
+    }
   },
   preview: {
     host: true,

@@ -32,7 +32,7 @@ export default function AgentApp() {
     try {
       const resp = await axios.post('/api/agent/chat', {
         messages: [...messages, userMsg],
-        model: 'qwen3:8b' // Default model
+        model: 'qwen2.5:14b' // Default model
       })
       
       const reply = resp.data.reply
