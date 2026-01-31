@@ -24,6 +24,7 @@ import FooterCount from './components/FooterCount'
 import TransfersPane from './components/TransfersPane'
 import TrashPane from './components/TrashPane'
 import ContextMenu, { ContextMenuItem } from './components/ContextMenu'
+import Modal from './components/Modal'
 
 import { api } from '../../../src/api/client'
  
@@ -105,6 +106,24 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   // New State
   const [clipboard, setClipboard] = useState<{ items: string[], action: 'copy' | 'move', sourcePath: string } | null>(null)
   const [dragSelect, setDragSelect] = useState<{ startX: number, startY: number, curX: number, curY: number } | null>(null)
+
+  // Modals state
+  const [showNewFolderModal, setShowNewFolderModal] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [itemsToDelete, setItemsToDelete] = useState<string[]>([])
+  
+  const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false)
+  
+  const [showRenameModal, setShowRenameModal] = useState(false)
+  const [renameTarget, setRenameTarget] = useState('')
+  const [renameNewName, setRenameNewName] = useState('')
+  
+  const [showNewFileModal, setShowNewFileModal] = useState(false)
+  const [newFileName, setNewFileName] = useState('')
+
+  const [showCancelTaskModal, setShowCancelTaskModal] = useState(false)
+  const [taskToCancel, setTaskToCancel] = useState<FileTask | null>(null)
 
   const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
   const abortControllers = useRef<Map<string, AbortController>>(new Map())
@@ -388,48 +407,80 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }
 
-  const handleRename = async (name: string) => {
-    const newName = prompt('重命名', name)
-    if (newName && newName !== name) {
-      await fmApi.fsRename(joinPath(path, name), joinPath(path, newName))
-      await reloadCurrentDir()
+  const handleRename = (name: string) => {
+    setRenameTarget(name)
+    setRenameNewName(name)
+    setShowRenameModal(true)
+  }
+
+  const confirmRename = async () => {
+    if (renameNewName && renameNewName !== renameTarget) {
+      try {
+        await fmApi.fsRename(joinPath(path, renameTarget), joinPath(path, renameNewName))
+        await reloadCurrentDir()
+      } catch (e) {
+        console.error(e)
+        alert('重命名失败')
+      }
+    }
+    setShowRenameModal(false)
+  }
+
+  const handleNewFolder = () => {
+    setNewFolderName('新建文件夹')
+    setShowNewFolderModal(true)
+  }
+
+  const confirmNewFolder = async () => {
+    if (newFolderName) {
+       try {
+         await fmApi.fsMkdir(joinPath(path, newFolderName))
+         await reloadCurrentDir()
+       } catch (e) {
+         console.error(e)
+         alert('创建文件夹失败')
+       }
+       setShowNewFolderModal(false)
     }
   }
 
-  const handleNewFolder = async () => {
-    const name = prompt('新建文件夹名称', '新建文件夹')
-    if (name) {
-       await fmApi.fsMkdir(joinPath(path, name))
-       await reloadCurrentDir()
-    }
+  const handleNewFile = () => {
+    setNewFileName('New File.txt')
+    setShowNewFileModal(true)
   }
 
-  const handleNewFile = async () => {
-    const name = prompt('新建文件名称', 'New File.txt')
-    if (name) {
+  const confirmNewFile = async () => {
+    if (newFileName) {
+      const name = newFileName
       const file = new File([""], name, { type: "text/plain" })
       const id = `new-${name}-${Date.now()}`
       pushFileTask({ id, kind: 'upload', name, dir: path, progress: 0, total: 0, loaded: 0, bps: 0, status: 'running' })
+      setShowNewFileModal(false)
       await startUpload(id, file, path)
     }
   }
   
-  const handleDelete = async (names: string[]) => {
-      if (confirm(`确定要删除 ${names.length} 个项目吗？`)) {
-        for (const n of names) {
-          const p = joinPath(path, n)
-          const id = `del-${n}-${Date.now()}`
-          pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
-          try {
-            await api.fsDelete(p)
-            updateFileTask(id, { status: 'done' })
-          } catch (e) {
-            updateFileTask(id, { status: 'error' })
-          }
+  const handleDelete = (names: string[]) => {
+      setItemsToDelete(names)
+      setShowDeleteModal(true)
+  }
+
+  const confirmDelete = async () => {
+      const names = itemsToDelete
+      for (const n of names) {
+        const p = joinPath(path, n)
+        const id = `del-${n}-${Date.now()}`
+        pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
+        try {
+          await api.fsDelete(p)
+          updateFileTask(id, { status: 'done' })
+        } catch (e) {
+          updateFileTask(id, { status: 'error' })
         }
-        await reloadCurrentDir()
-        clearSelection()
       }
+      await reloadCurrentDir()
+      clearSelection()
+      setShowDeleteModal(false)
   }
 
   const contextMenuItems: ContextMenuItem[] = useMemo(() => {
@@ -604,24 +655,37 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       }
     }
   }
-  const handleRemoveTask = async (t: FileTask) => {
-    uploadFilesMap.current.delete(t.id)
+  const handleRemoveTask = (t: FileTask) => {
     if (t.kind === 'upload' && t.status !== 'done') {
-      if (!window.confirm('确定要取消该任务吗？取消后将删除已上传的部分文件。')) {
-        return
-      }
-      const controller = abortControllers.current.get(t.id)
-      if (controller) {
-        controller.abort()
-      }
-      const fullPath = t.dir === '/' ? `/${t.name}` : `${t.dir}/${t.name}`
-      await fmApi.fsDelete(fullPath)
-      if (path === t.dir) {
-        refresh()
-      }
+      setTaskToCancel(t)
+      setShowCancelTaskModal(true)
+    } else {
+       uploadFilesMap.current.delete(t.id)
+       removeFileTask(t.id)
     }
-    removeFileTask(t.id)
   }
+
+  const confirmCancelTask = async () => {
+    if (taskToCancel) {
+        const t = taskToCancel
+        uploadFilesMap.current.delete(t.id)
+        const controller = abortControllers.current.get(t.id)
+        if (controller) {
+          controller.abort()
+        }
+        const fullPath = t.dir === '/' ? `/${t.name}` : `${t.dir}/${t.name}`
+        try {
+            await fmApi.fsDelete(fullPath)
+        } catch(e) {}
+        if (path === t.dir) {
+          refresh()
+        }
+        removeFileTask(t.id)
+        setTaskToCancel(null)
+        setShowCancelTaskModal(false)
+    }
+  }
+
   const onRestoreSelected = async () => {
     const names = [...selected]
     for (const n of names) {
@@ -634,16 +698,15 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     clearSelection()
   }
   const onDeleteSelected = async () => {
-    const names = [...selected]
-    for (const n of names) {
-      const p = `/Trash/${n}`
-      await fmApi.fsDelete(p)
-    }
-    const rs = await fmApi.fsList(path)
-    setEntries(rs.entries)
-    clearSelection()
+    handleDelete([...selected])
   }
-  const onEmptyTrash = async () => {
+
+  const onEmptyTrash = () => {
+    if (entries.length === 0) return
+    setShowEmptyTrashModal(true)
+  }
+
+  const confirmEmptyTrash = async () => {
     const names = entries.map(e => e.name)
     for (const n of names) {
       const p = `/Trash/${n}`
@@ -652,14 +715,14 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     const rs = await fmApi.fsList(path)
     setEntries(rs.entries)
     clearSelection()
+    setShowEmptyTrashModal(false)
   }
   const onRestoreOne = async (name: string) => {
     await fmApi.fsRename(`/Trash/${name}`, `/${name}`)
     await reloadCurrentDir()
   }
   const onDeleteOne = async (name: string) => {
-    await fmApi.fsDelete(`/Trash/${name}`)
-    await reloadCurrentDir()
+    handleDelete([name])
   }
   
   const sections = useMemo(() => {
@@ -879,6 +942,147 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
            items={contextMenuItems}
            onClose={closeContextMenu}
          />
+      )}
+      
+      {showNewFolderModal && (
+        <Modal
+          title="新建文件夹"
+          onClose={() => setShowNewFolderModal(false)}
+          onConfirm={confirmNewFolder}
+          confirmText="创建"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, color: '#374151' }}>文件夹名称</label>
+            <input
+              autoFocus
+              value={newFolderName}
+              onChange={e => setNewFolderName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') confirmNewFolder()
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                border: '1px solid #d1d5db',
+                fontSize: 14,
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
+              onFocus={e => e.target.select()}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {showDeleteModal && (
+        <Modal
+          title="删除文件"
+          onClose={() => setShowDeleteModal(false)}
+          onConfirm={confirmDelete}
+          confirmText="删除"
+          danger
+        >
+          <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+            确定要删除选中的 {itemsToDelete.length} 个项目吗？
+            <br />
+            <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
+          </p>
+        </Modal>
+      )}
+
+      {showEmptyTrashModal && (
+        <Modal
+          title="清空回收站"
+          onClose={() => setShowEmptyTrashModal(false)}
+          onConfirm={confirmEmptyTrash}
+          confirmText="清空"
+          danger
+        >
+          <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+            确定要永久删除回收站中的所有项目吗？
+            <br />
+            <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
+          </p>
+        </Modal>
+      )}
+
+      {showRenameModal && (
+        <Modal
+          title="重命名"
+          onClose={() => setShowRenameModal(false)}
+          onConfirm={confirmRename}
+          confirmText="确定"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, color: '#374151' }}>新名称</label>
+            <input
+              autoFocus
+              value={renameNewName}
+              onChange={e => setRenameNewName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') confirmRename()
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                border: '1px solid #d1d5db',
+                fontSize: 14,
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
+              onFocus={e => e.target.select()}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {showNewFileModal && (
+        <Modal
+          title="新建文本文件"
+          onClose={() => setShowNewFileModal(false)}
+          onConfirm={confirmNewFile}
+          confirmText="创建"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <label style={{ fontSize: 14, color: '#374151' }}>文件名称</label>
+            <input
+              autoFocus
+              value={newFileName}
+              onChange={e => setNewFileName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') confirmNewFile()
+              }}
+              style={{
+                padding: '8px 12px',
+                borderRadius: 6,
+                border: '1px solid #d1d5db',
+                fontSize: 14,
+                outline: 'none',
+                width: '100%',
+                boxSizing: 'border-box'
+              }}
+              onFocus={e => e.target.select()}
+            />
+          </div>
+        </Modal>
+      )}
+
+      {showCancelTaskModal && (
+        <Modal
+          title="取消任务"
+          onClose={() => setShowCancelTaskModal(false)}
+          onConfirm={confirmCancelTask}
+          confirmText="取消任务"
+          danger
+        >
+          <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+            确定要取消该任务吗？
+            <br />
+            <span style={{ fontSize: 13, color: '#6b7280' }}>取消后将删除已上传的部分文件。</span>
+          </p>
+        </Modal>
       )}
     </div>
   )
