@@ -1,33 +1,28 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
-import Icon from '@mdi/react'
 import {
-  mdiUpload,
-  mdiDownload,
-  mdiFolderOutline,
-  mdiFileDocumentOutline,
-  mdiAccountGroupOutline,
-  mdiCogOutline,
-  mdiInboxArrowDownOutline,
-  mdiShareVariant,
-  mdiLinkVariant,
-  mdiHistory,
-  mdiStarOutline,
-  mdiSwapHorizontal,
-  mdiTrashCanOutline,
-  mdiPlay,
-  mdiPause,
-  mdiClose,
-  mdiCheckCircleOutline
-} from '@mdi/js'
- 
+  Folder,
+  Users,
+  Settings,
+  Inbox,
+  Share2,
+  Link,
+  History,
+  Star,
+  ArrowLeftRight,
+  Trash2,
+  FileText
+} from 'lucide-react'
+
 import { pushFileTask, updateFileTask, getFileTasks, subscribeFileTasks, clearCompletedFileTasks, removeFileTask, FileTask } from '../../../src/sdk/desktop'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Toolbar from './components/Toolbar'
 import ListView from './components/ListView'
 import GridView from './components/GridView'
 import FooterCount from './components/FooterCount'
- 
+import TransfersPane from './components/TransfersPane'
+import TrashPane from './components/TrashPane'
+
 import { api } from '../../../src/api/client'
  
 const fmApi = api
@@ -419,204 +414,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     await reloadCurrentDir()
   }
   
-  const renderTransfers = () => {
-    const uploads = tasks.filter(t => t.kind === 'upload')
-    const downloads = tasks.filter(t => t.kind === 'download')
-    const visible = transferTab === 'upload' ? uploads : downloads
-    const runningUploads = tasks.filter(t => t.kind === 'upload' && t.status === 'running').length
-    const runningDownloads = tasks.filter(t => t.kind === 'download' && t.status === 'running').length
-    const fmtSpeed = (bps?: number) => {
-      const v = typeof bps === 'number' && bps >= 0 ? bps : 0
-      return `${fmtSize(v)}/s`
-    }
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            <button
-              className="panda-button"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                padding: '0 10px',
-                borderRadius: 6,
-                background: transferTab === 'upload' ? '#2563eb' : 'var(--button-bg)',
-                color: transferTab === 'upload' ? '#fff' : '#111827',
-                border: transferTab === 'upload' ? '1px solid #2563eb' : '1px solid var(--button-border)'
-              }}
-              onClick={() => setTransferTab('upload')}
-            >
-              上传
-              {runningUploads > 0 && (
-                <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, background: '#ef4444', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
-                  {runningUploads}
-                </span>
-              )}
-            </button>
-            <button
-              className="panda-button"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                padding: '0 10px',
-                borderRadius: 6,
-                background: transferTab === 'download' ? '#2563eb' : 'var(--button-bg)',
-                color: transferTab === 'download' ? '#fff' : '#111827',
-                border: transferTab === 'download' ? '1px solid #2563eb' : '1px solid var(--button-border)'
-              }}
-              onClick={() => setTransferTab('download')}
-            >
-              下载
-              {runningDownloads > 0 && (
-                <span style={{ position: 'absolute', top: -6, right: -6, minWidth: 18, height: 18, borderRadius: 9, background: '#34d399', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>
-                  {runningDownloads}
-                </span>
-              )}
-            </button>
-          </div>
-          <button
-            className="panda-button pressable"
-            style={{ marginLeft: 'auto' }}
-            onClick={() => clearCompletedFileTasks()}
-          >
-            清除已完成
-          </button>
-        </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: 12, borderTop: '1px solid #e5e7eb' }}>
-          {visible.length === 0 ? null : (
-            <div style={{ display: 'grid', gap: 6 }}>
-              {visible.map(t => (
-                <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '24px 4fr 120px 140px 72px 72px', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--win-border)', borderRadius: 8 }}>
-                  <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {t.kind === 'upload'
-                      ? (t.status === 'done'
-                        ? <Icon path={mdiCheckCircleOutline} size={0.9} color="#10b981" />
-                        : <Icon path={mdiUpload} size={0.9} />)
-                      : <Icon path={mdiDownload} size={0.9} />}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 14, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 60%' }}>{t.name}</span>
-                    <span style={{ marginLeft: 16, fontSize: 12, lineHeight: 1.2, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 40%' }}>存储目录: {t.dir}</span>
-                  </div>
-                  {!(t.kind === 'upload' && t.status === 'done') ? (
-                    <div style={{ height: 8, background: 'rgba(0,0,0,0.08)', borderRadius: 4, overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min(100, Math.max(0, t.progress ?? (t.status === 'done' ? 100 : 0)))}%`, height: '100%', background: '#60a5fa' }} />
-                    </div>
-                  ) : <div />}
-                  <div style={{ fontSize: 13, lineHeight: 1.2, color: 'var(--muted)', textAlign: 'right', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {t.status === 'running' ? (
-                      <>
-                        <span>{fmtSize(t.loaded || 0)} / {fmtSize(t.total || 0)}</span>
-                        <span style={{ marginLeft: 8 }}>{fmtSize(getAvgSpeed(t.id))}/s</span>
-                      </>
-                    ) : null}
-                  </div>
-                  <div style={{ textAlign: 'right', color: t.status === 'error' ? '#ef4444' : '#111827', fontSize: 13, lineHeight: 1.2 }}>
-                    {t.status === 'error'
-                      ? '失败'
-                      : t.status === 'paused'
-                        ? '暂停'
-                        : (t.kind === 'upload' && t.status === 'done')
-                          ? ''
-                          : `${Math.min(100, Math.max(0, t.progress ?? 0))}%`}
-                  </div>
-                  <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
-                    {(t.kind === 'upload' && t.status === 'done') && (
-                      <button
-                        className="panda-icon-button"
-                        style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => navigate(t.dir)}
-                        title="打开文件目录"
-                      >
-                        <Icon path={mdiFolderOutline} size={0.8} color="#2563eb" />
-                      </button>
-                    )}
-                    {t.status !== 'done' && (
-                      <button 
-                        className="panda-icon-button"
-                        style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        onClick={() => handleTogglePause(t)}
-                        title={t.status === 'running' ? '暂停' : '继续'}
-                      >
-                        <Icon path={t.status === 'running' ? mdiPause : mdiPlay} size={0.8} color="#6b7280" />
-                      </button>
-                    )}
-                    <button 
-                      className="panda-icon-button"
-                      style={{ padding: 4, borderRadius: 4, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                      onClick={() => handleRemoveTask(t)}
-                      title="删除任务"
-                    >
-                      <Icon path={mdiClose} size={0.8} color="#6b7280" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-  const renderTrash = () => {
-    return (
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
-          <button
-            className="panda-button pressable"
-            onClick={onRestoreSelected}
-            disabled={selected.size === 0}
-          >
-            还原所选
-          </button>
-          <button
-            className="panda-button pressable"
-            onClick={onDeleteSelected}
-            disabled={selected.size === 0}
-          >
-            删除所选
-          </button>
-          <button
-            className="panda-button pressable"
-            style={{ marginLeft: 'auto' }}
-            onClick={onEmptyTrash}
-          >
-            清空回收站
-          </button>
-        </div>
-        <div style={{ flex: 1, overflow: 'auto', padding: 12, borderTop: '1px solid #e5e7eb' }}>
-          {entries.length === 0 ? null : (
-            <div style={{ display: 'grid', gap: 6 }}>
-              {entries.map(e => {
-                const checked = selected.has(e.name)
-                return (
-                  <div
-                    key={`trash-${e.name}`}
-                    style={{ display: 'grid', gridTemplateColumns: '24px 1fr 120px 120px', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--win-border)', borderRadius: 8, background: checked ? 'rgba(0,0,0,0.06)' : '#fff', cursor: 'pointer' }}
-                    onClick={() => toggleSelect(e.name)}
-                  >
-                    <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {e.is_dir ? <Icon path={mdiFolderOutline} size={0.9} /> : <Icon path={mdiFileDocumentOutline} size={0.9} />}
-                    </div>
-                    <div style={{ display: 'grid', gap: 4 }}>
-                      <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
-                      <div style={{ fontSize: 12, color: 'var(--muted)' }}>大小：{e.is_dir ? '-' : fmtSize(e.size)} · 修改：{fmtTime(e.modified_ts)}</div>
-                    </div>
-                    <button className="panda-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onRestoreOne(e.name) }}>还原</button>
-                    <button className="panda-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onDeleteOne(e.name) }}>删除</button>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
+
+
 
   const sections = useMemo(() => {
     const runningCount = tasks.filter(t => t.status === 'running').length
@@ -624,31 +423,31 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     {
       title: '文件',
       items: [
-        { id: 'home', label: '我的文件', icon: <Icon path={mdiFolderOutline} size={1} /> },
-        { id: 'team', label: '团队文件', icon: <Icon path={mdiAccountGroupOutline} size={1} /> },
-        { id: 'appdata', label: '应用文件', icon: <Icon path={mdiCogOutline} size={1} /> },
+        { id: 'home', label: '我的文件', icon: <Folder size={20} strokeWidth={1.5} /> },
+        { id: 'team', label: '团队文件', icon: <Users size={20} strokeWidth={1.5} /> },
+        { id: 'appdata', label: '应用文件', icon: <Settings size={20} strokeWidth={1.5} /> },
       ]
     },
     {
       title: '共享',
       items: [
-        { id: 'shared-with-me', label: '他人共享', icon: <Icon path={mdiInboxArrowDownOutline} size={1} /> },
-        { id: 'my-shares', label: '我的共享', icon: <Icon path={mdiShareVariant} size={1} /> },
-        { id: 'public-links', label: '外链分享', icon: <Icon path={mdiLinkVariant} size={1} /> },
+        { id: 'shared-with-me', label: '他人共享', icon: <Inbox size={20} strokeWidth={1.5} /> },
+        { id: 'my-shares', label: '我的共享', icon: <Share2 size={20} strokeWidth={1.5} /> },
+        { id: 'public-links', label: '外链分享', icon: <Link size={20} strokeWidth={1.5} /> },
       ]
     },
     {
       title: '快捷',
       items: [
-        { id: 'recent', label: '最近访问', icon: <Icon path={mdiHistory} size={1} /> },
-        { id: 'favorites', label: '我的收藏', icon: <Icon path={mdiStarOutline} size={1} /> },
+        { id: 'recent', label: '最近访问', icon: <History size={20} strokeWidth={1.5} /> },
+        { id: 'favorites', label: '我的收藏', icon: <Star size={20} strokeWidth={1.5} /> },
       ]
     },
     {
       title: '系统',
       items: [
-        { id: 'transfers', label: '传输任务', icon: <Icon path={mdiSwapHorizontal} size={1} />, badge: runningCount > 0 ? runningCount : undefined },
-        { id: 'trash', label: '回收站', icon: <Icon path={mdiTrashCanOutline} size={1} /> },
+        { id: 'transfers', label: '传输任务', icon: <ArrowLeftRight size={20} strokeWidth={1.5} />, badge: runningCount > 0 ? runningCount : undefined },
+        { id: 'trash', label: '回收站', icon: <Trash2 size={20} strokeWidth={1.5} /> },
       ]
     }
   ]
@@ -697,11 +496,32 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
           goto(to, id)
         }}
       />
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', gap: 8, minWidth: 0 }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', minWidth: 0 }}>
         {path === '/Transfers' ? (
-          renderTransfers()
+          <TransfersPane
+            tasks={tasks}
+            transferTab={transferTab}
+            setTransferTab={setTransferTab}
+            fmtSize={fmtSize}
+            getAvgSpeed={getAvgSpeed}
+            onTogglePause={handleTogglePause}
+            onRemoveTask={handleRemoveTask}
+            onClearCompleted={clearCompletedFileTasks}
+            navigate={navigate}
+          />
         ) : path === '/Trash' ? (
-          renderTrash()
+          <TrashPane
+            entries={entries}
+            selected={selected}
+            toggleSelect={toggleSelect}
+            fmtTime={fmtTime}
+            fmtSize={fmtSize}
+            onRestoreSelected={onRestoreSelected}
+            onDeleteSelected={onDeleteSelected}
+            onEmptyTrash={onEmptyTrash}
+            onRestoreOne={onRestoreOne}
+            onDeleteOne={onDeleteOne}
+          />
         ) : (
           <>
             <Toolbar

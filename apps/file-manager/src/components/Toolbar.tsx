@@ -1,21 +1,20 @@
 import React, { useRef, useEffect, useState } from 'react'
-import Icon from '@mdi/react'
 import {
-  mdiArrowLeft,
-  mdiArrowRight,
-  mdiRefresh,
-  mdiHome,
-  mdiSort,
-  mdiCheckBold,
-  mdiViewList,
-  mdiViewGridOutline,
-  mdiUploadOutline,
-  mdiFolderPlusOutline,
-  mdiDownloadOutline,
-  mdiTrashCanOutline,
-  mdiDotsHorizontal,
-  mdiMagnify
-} from '@mdi/js'
+  ChevronLeft,
+  ChevronRight,
+  RotateCw,
+  Home,
+  ArrowUpDown,
+  Check,
+  List,
+  LayoutGrid,
+  Upload,
+  FolderPlus,
+  Download,
+  Trash2,
+  Search,
+  LucideIcon
+} from 'lucide-react'
 
 function usePress() {
   const [pressed, setPressed] = useState(false)
@@ -27,7 +26,7 @@ function usePress() {
   }
 }
 
-function IconButton({ onClick, icon, title, disabled, active }: { onClick: () => void; icon: string; title: string; disabled?: boolean; active?: boolean }) {
+function IconButton({ onClick, icon: Icon, title, disabled, active }: { onClick: () => void; icon: LucideIcon; title: string; disabled?: boolean; active?: boolean }) {
   const { pressed, onMouseDown, onMouseUp, onMouseLeave } = usePress()
   return (
     <button
@@ -52,7 +51,7 @@ function IconButton({ onClick, icon, title, disabled, active }: { onClick: () =>
       disabled={disabled}
       title={title}
     >
-      <Icon path={icon} size={0.9} />
+      <Icon size={18} strokeWidth={1.5} />
     </button>
   )
 }
@@ -115,9 +114,9 @@ export default function Toolbar({
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: '1px solid #f2f2f7', background: '#fff', height: 48, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <IconButton onClick={back} icon={mdiArrowLeft} title="后退" disabled={navIndex === 0} />
-        <IconButton onClick={forward} icon={mdiArrowRight} title="前进" disabled={navIndex >= navHist.length - 1} />
-        <IconButton onClick={refresh} icon={mdiRefresh} title="刷新" />
+        <IconButton onClick={back} icon={ChevronLeft} title="后退" disabled={navIndex === 0} />
+        <IconButton onClick={forward} icon={ChevronRight} title="前进" disabled={navIndex >= navHist.length - 1} />
+        <IconButton onClick={refresh} icon={RotateCw} title="刷新" />
       </div>
 
       <div style={{ width: 1, height: 20, background: '#e5e5ea', margin: '0 4px' }} />
@@ -125,7 +124,7 @@ export default function Toolbar({
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', background: '#f2f2f7', borderRadius: 8, padding: '2px 8px', height: 32, maxWidth: '100%', overflow: 'hidden' }}>
            <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/')}>
-             <Icon path={mdiHome} size={0.8} color="#6b7280" />
+             <Home size={16} color="#6b7280" strokeWidth={1.5} />
            </button>
            {crumbs.slice(1).map((c, i) => (
               <React.Fragment key={`crumb-${i}-${c.to}`}>
@@ -144,15 +143,15 @@ export default function Toolbar({
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={(e) => { const files = e.target.files; if (files && files.length) onUploadFiles(files); if (fileInputRef.current) fileInputRef.current.value = '' }} />
         
-        <IconButton onClick={() => fileInputRef.current?.click()} icon={mdiUploadOutline} title="上传" />
-        <IconButton onClick={onCreateFolder} icon={mdiFolderPlusOutline} title="新建文件夹" />
-        <IconButton onClick={onDownloadSelected} icon={mdiDownloadOutline} title="下载" />
-        <IconButton onClick={onDeleteSelected} icon={mdiTrashCanOutline} title="删除" />
+        <IconButton onClick={() => fileInputRef.current?.click()} icon={Upload} title="上传" />
+        <IconButton onClick={onCreateFolder} icon={FolderPlus} title="新建文件夹" />
+        <IconButton onClick={onDownloadSelected} icon={Download} title="下载" />
+        <IconButton onClick={onDeleteSelected} icon={Trash2} title="删除" />
         
         <div style={{ width: 1, height: 20, background: '#e5e5ea', margin: '0 4px' }} />
         
         <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-          <Icon path={mdiMagnify} size={0.8} color="#9ca3af" style={{ position: 'absolute', left: 8, pointerEvents: 'none' }} />
+          <Search size={16} color="#9ca3af" strokeWidth={1.5} style={{ position: 'absolute', left: 8, pointerEvents: 'none' }} />
           <input 
             value={q} 
             onChange={e => setQ(e.target.value)} 
@@ -194,7 +193,7 @@ export default function Toolbar({
             onClick={() => setShowSortMenu(!showSortMenu)}
             title="排序"
           >
-            <Icon path={mdiSort} size={0.9} />
+            <ArrowUpDown size={18} strokeWidth={1.5} />
           </button>
           {showSortMenu && (
             <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: '#fff', border: '1px solid #e5e5ea', borderRadius: 12, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 140, padding: 4 }}>
@@ -215,7 +214,7 @@ export default function Toolbar({
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <span>{opt.label}</span>
-                  {sortKey === opt.k && <Icon path={mdiCheckBold} size={0.7} />}
+                  {sortKey === opt.k && <Check size={14} strokeWidth={1.5} />}
                 </button>
               ))}
               <div style={{ height: 1, background: '#e5e5ea', margin: '4px 0' }} />
@@ -235,7 +234,7 @@ export default function Toolbar({
                   onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                 >
                   <span>{opt.label}</span>
-                  {sortOrder === opt.k && <Icon path={mdiCheckBold} size={0.7} />}
+                  {sortOrder === opt.k && <Check size={14} strokeWidth={1.5} />}
                 </button>
               ))}
             </div>
@@ -245,13 +244,13 @@ export default function Toolbar({
         <div style={{ display: 'flex', background: '#f2f2f7', borderRadius: 8, padding: 2 }}>
           <IconButton 
             onClick={() => setView('list')} 
-            icon={mdiViewList} 
+            icon={List} 
             title="列表视图" 
             active={view === 'list'}
           />
           <IconButton 
             onClick={() => setView('grid')} 
-            icon={mdiViewGridOutline} 
+            icon={LayoutGrid} 
             title="网格视图" 
             active={view === 'grid'}
           />

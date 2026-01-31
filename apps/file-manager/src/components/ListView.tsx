@@ -1,6 +1,5 @@
 import React from 'react'
-import Icon from '@mdi/react'
-import { mdiCogOutline, mdiFolderOutline, mdiFileDocumentOutline } from '@mdi/js'
+import { Folder, FileText } from 'lucide-react'
 
 export default function ListView({
   path,
@@ -121,7 +120,7 @@ export default function ListView({
                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, overflow: 'hidden' }}>
                    {/* Reusing checkbox logic implicitly via row click, but if needed we can add explicit checkbox or rely on highlight */}
                    <div style={{ minWidth: 24, width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                     {e.is_dir ? <Icon path={mdiFolderOutline} size={1} color="#007AFF" /> : <Icon path={mdiFileDocumentOutline} size={1} color="#8E8E93" />}
+                     {e.is_dir ? <Folder size={20} color="#007AFF" strokeWidth={1.5} /> : <FileText size={20} color="#8E8E93" strokeWidth={1.5} />}
                    </div>
                    <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</span>
                  </div>

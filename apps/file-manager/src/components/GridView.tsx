@@ -1,6 +1,5 @@
 import React from 'react'
-import Icon from '@mdi/react'
-import { mdiFolderOutline, mdiFileDocumentOutline } from '@mdi/js'
+import { Folder, FileText } from 'lucide-react'
 
 export default function GridView({
   path,
@@ -65,9 +64,9 @@ export default function GridView({
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.05))'
             }}>
               {e.is_dir ? (
-                <Icon path={mdiFolderOutline} size={2.8} color="#007AFF" />
+                <Folder size={64} color="#007AFF" strokeWidth={1} />
               ) : (
-                <Icon path={mdiFileDocumentOutline} size={2.8} color="#8E8E93" />
+                <FileText size={64} color="#8E8E93" strokeWidth={1} />
               )}
             </div>
             <div

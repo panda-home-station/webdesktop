@@ -1,6 +1,5 @@
 import React from 'react'
-import Icon from '@mdi/react'
-import { mdiFolderOutline, mdiFileDocumentOutline } from '@mdi/js'
+import { Folder, FileText } from 'lucide-react'
 
 type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
 
@@ -66,7 +65,7 @@ export default function TrashPane({
                   onClick={() => toggleSelect(e.name)}
                 >
                   <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {e.is_dir ? <Icon path={mdiFolderOutline} size={0.9} /> : <Icon path={mdiFileDocumentOutline} size={0.9} />}
+                    {e.is_dir ? <Folder size={20} strokeWidth={1.5} /> : <FileText size={20} strokeWidth={1.5} />}
                   </div>
                   <div style={{ display: 'grid', gap: 4 }}>
                     <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>

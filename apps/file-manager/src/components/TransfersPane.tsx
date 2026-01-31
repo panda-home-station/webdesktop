@@ -1,6 +1,5 @@
 import React from 'react'
-import Icon from '@mdi/react'
-import { mdiUpload, mdiDownload, mdiFolderOutline, mdiCheckCircleOutline, mdiPause, mdiPlay, mdiClose } from '@mdi/js'
+import { Upload, Download, Folder, CheckCircle, Pause, Play, X } from 'lucide-react'
 import type { FileTask } from '../../../src/sdk/desktop'
 
 type Props = {
@@ -100,9 +99,9 @@ export default function TransfersPane({
                 <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {t.kind === 'upload'
                     ? (t.status === 'done'
-                      ? <Icon path={mdiCheckCircleOutline} size={0.9} color="#10b981" />
-                      : <Icon path={mdiUpload} size={0.9} />)
-                    : <Icon path={mdiDownload} size={0.9} />}
+                      ? <CheckCircle size={18} color="#10b981" strokeWidth={1.5} />
+                      : <Upload size={18} strokeWidth={1.5} />)
+                    : <Download size={18} strokeWidth={1.5} />}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                   <span style={{ fontSize: 14, lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 60%' }}>{t.name}</span>
@@ -138,7 +137,7 @@ export default function TransfersPane({
                       onClick={() => navigate(t.dir)}
                       title="打开文件目录"
                     >
-                      <Icon path={mdiFolderOutline} size={0.8} color="#2563eb" />
+                      <Folder size={16} color="#2563eb" strokeWidth={1.5} />
                     </button>
                   )}
                   {t.status !== 'done' && (
@@ -148,7 +147,7 @@ export default function TransfersPane({
                       onClick={() => onTogglePause(t)}
                       title={t.status === 'running' ? '暂停' : '继续'}
                     >
-                      <Icon path={t.status === 'running' ? mdiPause : mdiPlay} size={0.8} color="#6b7280" />
+                      {t.status === 'running' ? <Pause size={16} color="#6b7280" strokeWidth={1.5} /> : <Play size={16} color="#6b7280" strokeWidth={1.5} />}
                     </button>
                   )}
                   <button 
@@ -157,7 +156,7 @@ export default function TransfersPane({
                     onClick={() => onRemoveTask(t)}
                     title="删除任务"
                   >
-                    <Icon path={mdiClose} size={0.8} color="#6b7280" />
+                    <X size={16} color="#6b7280" strokeWidth={1.5} />
                   </button>
                 </div>
               </div>
