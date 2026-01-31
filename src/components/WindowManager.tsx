@@ -310,12 +310,11 @@ export default function WindowManager() {
 
   return (
     <div style={{ position: 'relative', flex: 1 }}>
-      {showLauncher && (
-        <Launcher
-          onOpen={(id, title, Comp, iconUrl) => open({ id: `${id}-${Date.now()}`, title, content: <Comp />, appId: id, iconUrl })}
-          onClose={() => setShowLauncher(false)}
-        />
-      )}
+      <Launcher
+        isOpen={showLauncher}
+        onOpen={(id, title, Comp, iconUrl) => open({ id: `${id}-${Date.now()}`, title, content: <Comp />, appId: id, iconUrl })}
+        onClose={() => setShowLauncher(false)}
+      />
       <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
         {wins.map(w => {
           if (w.minimized) return null
@@ -354,7 +353,9 @@ export default function WindowManager() {
         wins={wins.map(w => ({ id: w.id, title: w.title, minimized: w.minimized, iconUrl: w.iconUrl, appId: w.appId }))}
         onFocus={bringToFront}
         onRestore={restore}
-        onOpenLauncher={() => setShowLauncher(v => !v)}
+        onOpenLauncher={() => {
+            setShowLauncher(v => !v)
+        }}
         onOpenApp={openById}
         isLauncherOpen={showLauncher}
         onCloseLauncher={() => setShowLauncher(false)}

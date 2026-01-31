@@ -7,107 +7,155 @@ type Props = {
   onClose: () => void
 }
 
-export default function Launcher({ onOpen, onClose }: Props) {
+export default function Launcher({ isOpen, onOpen, onClose }: Props & { isOpen: boolean }) {
   const [q, setQ] = useState('')
-  const [enter, setEnter] = useState(false)
-  const [leaving, setLeaving] = useState(false)
   const apps = listApps()
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase()
     return s ? apps.filter(a => (a.title || '').toLowerCase().includes(s) || a.id.toLowerCase().includes(s)) : apps
   }, [q, apps])
+
+  // Reset search on open
+  const inputRef = React.useRef<HTMLInputElement>(null)
   useEffect(() => {
-    const t = setTimeout(() => setEnter(true), 0)
-    return () => clearTimeout(t)
-  }, [])
-  const closeWithAnim = () => {
-    setLeaving(true)
-    setTimeout(() => onClose(), 180)
-  }
+    if (isOpen) {
+        setQ('')
+        // Focus input when opened
+        requestAnimationFrame(() => {
+          inputRef.current?.focus()
+        })
+    }
+  }, [isOpen])
 
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         inset: 0,
-        background: 'rgba(0,0,0,0.2)',
         zIndex: 9000,
-        opacity: enter && !leaving ? 1 : 0,
-        transition: 'opacity 160ms ease'
+        background: 'rgba(220, 220, 220, 0.6)',
+        backdropFilter: 'blur(30px)',
+        // Use CSS transitions for visibility
+        opacity: isOpen ? 1 : 0,
+        visibility: isOpen ? 'visible' : 'hidden',
+        transition: isOpen 
+           ? 'opacity 0.1s ease' 
+           : 'opacity 0.1s ease, visibility 0s linear 0.1s',
+        pointerEvents: isOpen ? 'auto' : 'none',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        paddingTop: '10vh'
       }}
       onClick={(e) => {
-        if (e.currentTarget === e.target) closeWithAnim()
+        if (e.currentTarget === e.target) onClose()
       }}
     >
       <div
         style={{
-          position: 'absolute',
-          inset: 0,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 16,
-          padding: 16,
-          borderRadius: 0,
-          background: 'rgba(255,255,255,0.72)',
-          backdropFilter: 'blur(10px)',
-          transform: enter && !leaving ? 'scale(1)' : 'scale(0.96)',
-          opacity: enter && !leaving ? 1 : 0,
-          transition: 'opacity 160ms ease, transform 200ms ease',
-          willChange: 'opacity, transform'
+          width: '100%',
+          maxWidth: 600,
+          marginBottom: 48,
+          padding: '0 20px',
+          // Re-trigger animation when opening
+          animation: isOpen ? 'launcher-zoom-in 0.15s cubic-bezier(0.2, 0.8, 0.2, 1) forwards' : 'none',
         }}
-        onClick={closeWithAnim}
       >
-        <div
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}
-        >
-          <input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="搜索应用"
-            onMouseDown={(e) => e.stopPropagation()}
-            onClick={(e) => e.stopPropagation()}
-            style={{ width: '33vw', maxWidth: 600, minWidth: 280, padding: '10px 12px', borderRadius: 12, border: '1px solid var(--button-border)', background: 'var(--button-bg)', color: 'var(--text)' }}
-          />
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 14, alignContent: 'start', overflow: 'auto', marginLeft: '8vw', pointerEvents: 'auto' }}>
-          {filtered.map(a => (
-            <button
-              key={a.id}
-              title={a.title}
-              onClick={async () => {
-                const caps = (a as any).capabilities as string[] | undefined
-                if (Array.isArray(caps)) {
-                  for (const cap of caps) {
-                    const ok = requestPermission(a.id, cap)
-                    if (!ok) return
-                  }
+        <input
+          ref={inputRef}
+          value={q}
+          onChange={e => setQ(e.target.value)}
+          placeholder="搜索"
+          // autoFocus logic needs to be handled carefully or just keep it
+          // If hidden, it loses focus?
+          // autoFocus={isOpen} 
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          style={{ 
+            width: '100%', 
+            padding: '12px 16px', 
+            borderRadius: 12, 
+            border: 'none', 
+            background: 'rgba(255,255,255,0.6)', 
+            boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+            fontSize: 16,
+            color: '#333',
+            textAlign: 'center',
+            outline: 'none'
+          }}
+        />
+      </div>
+
+      <div 
+        className="hide-scrollbar"
+        style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
+            gap: 0, 
+            width: '100%',
+            maxWidth: 1200,
+            padding: '0 40px',
+            justifyContent: 'center',
+            overflow: 'auto',
+            animation: isOpen ? 'launcher-zoom-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards' : 'launcher-zoom-out 0.1s ease forwards',
+            // Delay for stagger effect on open
+            animationDelay: isOpen ? '0.02s' : '0s',
+            opacity: 0 // handled by animation
+        }}
+      >
+        {filtered.map(a => (
+          <button
+            key={a.id}
+            title={a.title}
+            onClick={async () => {
+              const caps = (a as any).capabilities as string[] | undefined
+              if (Array.isArray(caps)) {
+                for (const cap of caps) {
+                  const ok = requestPermission(a.id, cap)
+                  if (!ok) return
                 }
-                const Comp = await loadApp(a.id)
-                onOpen(a.id, a.title, Comp, a.iconUrl)
-                closeWithAnim()
-              }}
-              style={{
+              }
+              const Comp = await loadApp(a.id)
+              onOpen(a.id, a.title, Comp, a.iconUrl)
+              onClose()
+            }}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 16,
+              height: 156,
+              width: '100%',
+              border: 'none',
+              borderRadius: 20,
+              background: 'transparent',
+              color: '#333',
+              cursor: 'pointer',
+              transition: 'none',
+            }}
+            onMouseEnter={e => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.12)'}
+            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+          >
+            <div style={{ 
+                width: 88, 
+                height: 88, 
+                borderRadius: 18, 
+                background: 'transparent',
                 display: 'flex',
-                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: 10,
-                padding: 14,
-                borderRadius: 14,
-                border: '1px solid var(--button-border)',
-                background: 'var(--button-bg)',
-                color: 'var(--text)',
-              }}
-            >
-              {a.iconUrl ? (
-                <img src={a.iconUrl} alt="" width={64} height={64} style={{ borderRadius: 8 }} />
-              ) : (
-                <div style={{ width: 64, height: 64, borderRadius: 8, background: '#1f2937' }} />
-              )}
-              <div>{a.title}</div>
-            </button>
-          ))}
-        </div>
+                overflow: 'hidden'
+            }}>
+                {a.iconUrl ? (
+                  <img src={a.iconUrl} alt="" width={88} height={88} style={{ objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%)' }} />
+                )}
+            </div>
+            <div style={{ fontSize: 14, fontWeight: 500, color: '#222' }}>{a.title}</div>
+          </button>
+        ))}
       </div>
     </div>
   )

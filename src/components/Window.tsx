@@ -51,6 +51,7 @@ export default function Window({
 }: WinProps) {
   if (minimized) return null
 
+  const winRef = useRef<HTMLDivElement>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
 
@@ -66,21 +67,41 @@ export default function Window({
     const initX = x
     const initY = y
 
+    // Use transform for performance to avoid React re-renders during drag
+    let lastDx = 0
+    let lastDy = 0
+
     const move = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
       const dy = ev.clientY - startY
-      const pad = 0
-      const W = window.innerWidth
-      const H = window.innerHeight
-      // Simple boundary check
-      const nx = Math.max(pad, Math.min(initX + dx, W - w - pad))
-      const ny = Math.max(0, Math.min(initY + dy, H - h - pad))
-      onMove(id, nx, ny)
+      lastDx = dx
+      lastDy = dy
+      
+      if (winRef.current) {
+        winRef.current.style.transform = `translate(${dx}px, ${dy}px)`
+        // Temporarily disable transition during drag for instant response
+        winRef.current.style.transition = 'none'
+      }
     }
 
     const up = () => {
       document.removeEventListener('mousemove', move)
       document.removeEventListener('mouseup', up)
+
+      const pad = 0
+      const W = window.innerWidth
+      const H = window.innerHeight
+      // Simple boundary check
+      const nx = Math.max(pad, Math.min(initX + lastDx, W - w - pad))
+      const ny = Math.max(0, Math.min(initY + lastDy, H - h - pad))
+      
+      // Reset transform and transition
+      if (winRef.current) {
+        winRef.current.style.transform = ''
+        winRef.current.style.transition = ''
+      }
+      
+      onMove(id, nx, ny)
     }
     document.addEventListener('mousemove', move)
     document.addEventListener('mouseup', up)
@@ -149,6 +170,7 @@ export default function Window({
 
   return (
     <div
+      ref={winRef}
       style={{
         position: 'absolute',
         top: y,
