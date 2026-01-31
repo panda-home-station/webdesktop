@@ -292,53 +292,53 @@ export default function Window({
           </div>
         )}
 
-        {/* Resize Handles */}
-        {!maximized && (
-          <>
-            {/* SE */}
-            <div
-              style={{ position: 'absolute', right: 0, bottom: 0, width: 14, height: 14, cursor: 'nwse-resize', background: 'transparent', zIndex: 5 }}
-              onMouseDown={createResizeHandler('se')}
-            />
-            {/* SW */}
-            <div
-              style={{ position: 'absolute', left: 0, bottom: 0, width: 14, height: 14, cursor: 'nesw-resize' }}
-              onMouseDown={createResizeHandler('sw')}
-            />
-            {/* NW */}
-            <div
-              style={{ position: 'absolute', left: 0, top: 0, width: 14, height: 14, cursor: 'nwse-resize' }}
-              onMouseDown={createResizeHandler('nw')}
-            />
-            {/* NE */}
-            <div
-              style={{ position: 'absolute', right: 0, top: 0, width: 14, height: 14, cursor: 'nesw-resize' }}
-              onMouseDown={createResizeHandler('ne')}
-            />
-            {/* W */}
-            <div
-              style={{ position: 'absolute', left: 0, top: 0, width: 10, height: '100%', cursor: 'ew-resize' }}
-              onMouseDown={createResizeHandler('w')}
-            />
-            {/* E */}
-            <div
-              style={{ position: 'absolute', right: 0, top: 0, width: 10, height: '100%', cursor: 'ew-resize' }}
-              onMouseDown={createResizeHandler('e')}
-            />
-            {/* S */}
-            <div
-              style={{ position: 'absolute', bottom: 0, left: 0, width: '100%', height: 8, cursor: 'ns-resize' }}
-              onMouseDown={createResizeHandler('s')}
-            />
-             {/* N - typically harder because of titlebar, but if we allow resizing from top border */}
-             {/* We usually don't have a top resize handle over the titlebar unless it's very thin pixel at the top. 
-                 The original code didn't seem to have a clear 'n' resize handle separate from corners? 
-                 Wait, I missed 'n' in the original code? 
-                 Let's check the original code again.
-             */}
-          </>
-        )}
       </div>
+
+      {/* Resize Handles - moved outside content to avoid scrollbar overlap */}
+      {!maximized && (
+        <>
+          {/* SE */}
+          <div
+            style={{ position: 'absolute', right: -6, bottom: -6, width: 16, height: 16, cursor: 'nwse-resize', background: 'transparent', zIndex: 10 }}
+            onMouseDown={createResizeHandler('se')}
+          />
+          {/* SW */}
+          <div
+            style={{ position: 'absolute', left: -6, bottom: -6, width: 16, height: 16, cursor: 'nesw-resize', zIndex: 10 }}
+            onMouseDown={createResizeHandler('sw')}
+          />
+          {/* NW */}
+          <div
+            style={{ position: 'absolute', left: -6, top: -6, width: 16, height: 16, cursor: 'nwse-resize', zIndex: 10 }}
+            onMouseDown={createResizeHandler('nw')}
+          />
+          {/* NE */}
+          <div
+            style={{ position: 'absolute', right: -6, top: -6, width: 16, height: 16, cursor: 'nesw-resize', zIndex: 10 }}
+            onMouseDown={createResizeHandler('ne')}
+          />
+          {/* W */}
+          <div
+            style={{ position: 'absolute', left: -5, top: 0, width: 10, height: '100%', cursor: 'ew-resize', zIndex: 9 }}
+            onMouseDown={createResizeHandler('w')}
+          />
+          {/* E */}
+          <div
+            style={{ position: 'absolute', right: -5, top: 0, width: 10, height: '100%', cursor: 'ew-resize', zIndex: 9 }}
+            onMouseDown={createResizeHandler('e')}
+          />
+          {/* S */}
+          <div
+            style={{ position: 'absolute', bottom: -5, left: 0, width: '100%', height: 10, cursor: 'ns-resize', zIndex: 9 }}
+            onMouseDown={createResizeHandler('s')}
+          />
+          {/* N */}
+          <div
+            style={{ position: 'absolute', top: -5, left: 0, width: '100%', height: 10, cursor: 'ns-resize', zIndex: 9 }}
+            onMouseDown={createResizeHandler('n')}
+          />
+        </>
+      )}
     </div>
   )
 }
