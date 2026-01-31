@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Folder, FileText } from 'lucide-react'
 
 export default function ListView({
@@ -33,6 +33,16 @@ export default function ListView({
   onContextMenu: (e: React.MouseEvent, name: string) => void
 }) {
   const totalWidth = Object.values(colWidths).reduce((a, b) => a + b, 0)
+  
+  const isAllSelected = filtered.length > 0 && filtered.every(f => selected.has(f.name))
+  const isIndeterminate = !isAllSelected && filtered.some(f => selected.has(f.name))
+
+  useEffect(() => {
+    if (headerCheckboxRef.current) {
+      headerCheckboxRef.current.indeterminate = isIndeterminate
+    }
+  }, [isIndeterminate, headerCheckboxRef])
+
   return (
     <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
       <thead>
@@ -43,6 +53,7 @@ export default function ListView({
                 <input
                   ref={headerCheckboxRef}
                   type="checkbox"
+                  checked={isAllSelected}
                   style={{
                     appearance: 'none',
                     width: 16,
@@ -51,14 +62,22 @@ export default function ListView({
                     borderRadius: 4,
                     display: 'grid',
                     placeContent: 'center',
-                    margin: 0
+                    margin: 0,
+                    backgroundColor: isAllSelected ? '#007aff' : 'transparent',
+                    borderColor: isAllSelected ? '#007aff' : '#c7c7cc'
                   }}
                   onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelected(new Set(filtered.map(f => f.name)))
-                    } else {
+                    // Prevent default checkbox behavior to fully control state
+                    // e.preventDefault() 
+                    // Note: onChange is late, onClick is better for prevention but we use logic here
+                    if (isAllSelected) {
                       clearSelection()
+                    } else {
+                      setSelected(new Set(filtered.map(f => f.name)))
                     }
+                  }}
+                  onClick={(e) => {
+                      e.stopPropagation()
                   }}
                 />
                 名称

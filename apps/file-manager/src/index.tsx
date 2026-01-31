@@ -493,6 +493,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       return [
         { 
           label: '打开', 
+          disabled: selected.size > 1,
           onClick: () => {
             const entry = entries.find(e => e.name === name)
             if (entry?.is_dir) {
@@ -516,7 +517,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         { label: '复制', onClick: () => handleCopy(getTargetItems(name)) },
         { label: '粘贴', disabled: !clipboard, onClick: handlePaste },
         { divider: true },
-        { label: '重命名', onClick: () => handleRename(name) },
+        { label: '重命名', disabled: selected.size > 1, onClick: () => handleRename(name) },
         { label: '删除', color: '#ff3b30', onClick: () => handleDelete(getTargetItems(name)) }
       ]
     } else {
