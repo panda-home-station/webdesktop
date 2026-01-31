@@ -66,19 +66,18 @@ export default function ListView({
                     backgroundColor: isAllSelected ? '#007aff' : 'transparent',
                     borderColor: isAllSelected ? '#007aff' : '#c7c7cc'
                   }}
-                  onChange={(e) => {
-                    // Prevent default checkbox behavior to fully control state
-                    // e.preventDefault() 
-                    // Note: onChange is late, onClick is better for prevention but we use logic here
+                  onChange={() => {
+                    // Handled by onClick to ensure correct toggle logic based on current state
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation()
                     if (isAllSelected) {
                       clearSelection()
                     } else {
                       setSelected(new Set(filtered.map(f => f.name)))
                     }
                   }}
-                  onClick={(e) => {
-                      e.stopPropagation()
-                  }}
+                  onMouseDown={(e) => e.stopPropagation()}
                 />
                 名称
               </label>
