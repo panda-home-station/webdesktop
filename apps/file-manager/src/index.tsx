@@ -106,6 +106,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   // New State
   const [clipboard, setClipboard] = useState<{ items: string[], action: 'copy' | 'move', sourcePath: string } | null>(null)
   const [dragSelect, setDragSelect] = useState<{ startX: number, startY: number, curX: number, curY: number } | null>(null)
+  const [resizingKey, setResizingKey] = useState<string | null>(null)
+  const listContainerRef = useRef<HTMLDivElement>(null)
 
   // Modals state
   const [showNewFolderModal, setShowNewFolderModal] = useState(false)
@@ -620,17 +622,43 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       headerCheckboxRef.current.checked = total > 0 && sel === total
     }
   }, [selected, filtered])
-  const startResize = (key: keyof typeof colWidths, e: React.MouseEvent) => {
+
+  const startResize = (key: keyof typeof colWidths, nextKey: keyof typeof colWidths | null, e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    setResizingKey(key as string)
     const startX = e.clientX
     const startW = colWidths[key]
+    const startNextW = nextKey ? colWidths[nextKey] : 0
+    
     const onMove = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
-      const next = Math.max(100, startW + dx)
-      setColWidths((cw) => ({ ...cw, [key]: next }))
+      
+      if (nextKey) {
+        // Adjust both columns to keep total width constant
+        // Current column cannot be smaller than 60
+        // Next column cannot be smaller than 60
+        
+        let validDx = dx
+        if (startW + dx < 60) {
+          validDx = 60 - startW
+        } else if (startNextW - dx < 60) {
+          validDx = startNextW - 60
+        }
+        
+        setColWidths((cw) => ({ 
+          ...cw, 
+          [key]: startW + validDx,
+          [nextKey]: startNextW - validDx
+        }))
+      } else {
+        // Fallback for single column resize (should not happen for inner columns)
+        const next = Math.max(60, startW + dx)
+        setColWidths((cw) => ({ ...cw, [key]: next }))
+      }
     }
     const onUp = () => {
+      setResizingKey(null)
       window.removeEventListener('mousemove', onMove)
       window.removeEventListener('mouseup', onUp)
     }
@@ -874,6 +902,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             `}</style>
             <div 
                id="fm-list-container" 
+               ref={listContainerRef}
                style={{ flex: 1, overflow: 'auto', padding: 0, color: '#1c1c1e', fontSize: 14, background: '#ffffff', position: 'relative' }}
                onContextMenu={(e) => handleContextMenu(e, '')}
                onMouseDown={handleContainerMouseDown}
@@ -892,6 +921,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                     toggleSelect={toggleSelect}
                     fmtTime={fmtTime}
                     fmtSize={fmtSize}
+                    resizingKey={resizingKey}
                     onOpenDir={(name) => {
                       setSelected(new Set())
                       navigate(joinPath(path, name))
