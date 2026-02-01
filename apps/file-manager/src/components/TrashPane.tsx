@@ -1,11 +1,15 @@
-import React from 'react'
-import { Folder, FileText } from 'lucide-react'
+import React, { useRef, useEffect } from 'react'
+import { Folder, FileText, Trash2, RotateCcw, Ban, CheckSquare } from 'lucide-react'
+import ListView from './ListView'
 
 type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
 
 type Props = {
   entries: Entry[]
+  filtered: Entry[]
   selected: Set<string>
+  setSelected: (s: Set<string>) => void
+  clearSelection: () => void
   toggleSelect: (name: string) => void
   fmtTime: (ts: number) => string
   fmtSize: (n: number) => string
@@ -14,11 +18,22 @@ type Props = {
   onEmptyTrash: () => Promise<void>
   onRestoreOne: (name: string) => Promise<void>
   onDeleteOne: (name: string) => Promise<void>
+  
+  // ListView props
+  colWidths: Record<string, number>
+  startResize: (key: string, nextKey: string | null, e: React.MouseEvent) => void
+  headerCheckboxRef: React.RefObject<HTMLInputElement>
+  resizingKey: string | null
+  onContextMenu: (e: React.MouseEvent, name: string) => void
+  onOpenDir: (name: string) => void
 }
 
 export default function TrashPane({
   entries,
+  filtered,
   selected,
+  setSelected,
+  clearSelection,
   toggleSelect,
   fmtTime,
   fmtSize,
@@ -26,59 +41,142 @@ export default function TrashPane({
   onDeleteSelected,
   onEmptyTrash,
   onRestoreOne,
-  onDeleteOne
+  onDeleteOne,
+  colWidths,
+  startResize,
+  headerCheckboxRef,
+  resizingKey,
+  onContextMenu,
+  onOpenDir
 }: Props) {
+  
+  if (entries.length === 0) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        height: '100%', 
+        alignItems: 'center', 
+        justifyContent: 'center',
+        color: '#9ca3af',
+        gap: 16
+      }}>
+        <div style={{ 
+          width: 80, 
+          height: 80, 
+          borderRadius: '50%', 
+          background: '#f3f4f6', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center' 
+        }}>
+          <Trash2 size={40} strokeWidth={1.5} color="#d1d5db" />
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 500 }}>回收站是空的</div>
+        <div style={{ fontSize: 13 }}>删除的文件会显示在这里</div>
+      </div>
+    )
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 12 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#fff' }}>
+      {/* Toolbar */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: 12, 
+        padding: '0 12px', 
+        height: 48,
+        boxSizing: 'border-box',
+        borderBottom: '1px solid #f2f2f7' 
+      }}>
         <button
-          className="panda-button pressable"
+          className="trash-action-btn primary"
           onClick={onRestoreSelected}
           disabled={selected.size === 0}
         >
+          <RotateCcw size={16} />
           还原所选
         </button>
         <button
-          className="panda-button pressable"
+          className="trash-action-btn danger"
           onClick={onDeleteSelected}
           disabled={selected.size === 0}
         >
-          删除所选
+          <Ban size={16} />
+          彻底删除
         </button>
+        
+        <div style={{ flex: 1 }} />
+        
         <button
-          className="panda-button pressable"
-          style={{ marginLeft: 'auto' }}
+          className="trash-action-btn danger-outline"
           onClick={onEmptyTrash}
         >
+          <Trash2 size={16} />
           清空回收站
         </button>
       </div>
-      <div style={{ flex: 1, overflow: 'auto', padding: 12, borderTop: '1px solid #e5e7eb' }}>
-        {entries.length === 0 ? null : (
-          <div style={{ display: 'grid', gap: 6 }}>
-            {entries.map(e => {
-              const checked = selected.has(e.name)
-              return (
-                <div
-                  key={`trash-${e.name}`}
-                  style={{ display: 'grid', gridTemplateColumns: '24px 1fr 120px 120px', alignItems: 'center', gap: 8, padding: '6px 10px', border: '1px solid var(--win-border)', borderRadius: 8, background: checked ? 'rgba(0,0,0,0.06)' : '#fff', cursor: 'pointer' }}
-                  onClick={() => toggleSelect(e.name)}
-                >
-                  <div style={{ width: 24, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {e.is_dir ? <Folder size={20} strokeWidth={1.5} /> : <FileText size={20} strokeWidth={1.5} />}
-                  </div>
-                  <div style={{ display: 'grid', gap: 4 }}>
-                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--muted)' }}>大小：{e.is_dir ? '-' : fmtSize(e.size)} · 修改：{fmtTime(e.modified_ts)}</div>
-                  </div>
-                  <button className="panda-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onRestoreOne(e.name) }}>还原</button>
-                  <button className="panda-button" style={{ height: 28 }} onClick={async (ev) => { ev.stopPropagation(); await onDeleteOne(e.name) }}>删除</button>
-                </div>
-              )
-            })}
-          </div>
-        )}
+
+      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+        <ListView
+          path="/Trash"
+          filtered={filtered}
+          selected={selected}
+          setSelected={setSelected}
+          clearSelection={clearSelection}
+          colWidths={colWidths}
+          startResize={startResize}
+          headerCheckboxRef={headerCheckboxRef}
+          toggleSelect={toggleSelect}
+          fmtTime={fmtTime}
+          fmtSize={fmtSize}
+          resizingKey={resizingKey}
+          onOpenDir={onOpenDir}
+          onContextMenu={onContextMenu}
+        />
       </div>
+
+      <style>{`
+        .trash-action-btn {
+          display: flex;
+          alignItems: center;
+          gap: 6px;
+          padding: 6px 12px;
+          border-radius: 6px;
+          border: 1px solid transparent;
+          background: transparent;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+        .trash-action-btn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+        .trash-action-btn.primary {
+          background: #ebf5ff;
+          color: #007aff;
+        }
+        .trash-action-btn.primary:hover:not(:disabled) {
+          background: #dbeafe;
+        }
+        .trash-action-btn.danger {
+          background: #fee2e2;
+          color: #ef4444;
+        }
+        .trash-action-btn.danger:hover:not(:disabled) {
+          background: #fecaca;
+        }
+        .trash-action-btn.danger-outline {
+          border: 1px solid #fee2e2;
+          color: #ef4444;
+        }
+        .trash-action-btn.danger-outline:hover {
+          background: #fee2e2;
+        }
+      `}</style>
     </div>
   )
 }

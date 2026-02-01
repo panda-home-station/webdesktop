@@ -593,9 +593,64 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }
 
+  const onRestoreSelected = async () => {
+    const names = [...selected]
+    for (const n of names) {
+      const from = `/Trash/${n}`
+      const to = `/${n}`
+      await fmApi.fsRename(from, to)
+    }
+      const rs = await fmApi.fsList(path)
+    setEntries(rs.entries)
+    clearSelection()
+  }
+  const onDeleteSelected = async () => {
+    handleDelete([...selected])
+  }
+  
+  const onEmptyTrash = () => {
+    if (entries.length === 0) return
+    setShowEmptyTrashModal(true)
+  }
+
+  const confirmEmptyTrash = async () => {
+    const names = entries.map(e => e.name)
+    for (const n of names) {
+      const p = `/Trash/${n}`
+      await fmApi.fsDelete(p)
+    }
+    const rs = await fmApi.fsList(path)
+    setEntries(rs.entries)
+    clearSelection()
+    setShowEmptyTrashModal(false)
+  }
+  const onRestoreOne = async (name: string) => {
+    await fmApi.fsRename(`/Trash/${name}`, `/${name}`)
+    await reloadCurrentDir()
+  }
+  const onDeleteOne = async (name: string) => {
+    handleDelete([name])
+  }
+
   const contextMenuItems: ContextMenuItem[] = useMemo(() => {
     if (!contextMenu) return []
     const { name } = contextMenu
+
+    if (path === '/Trash') {
+      if (name) {
+         return [
+            { label: '还原', onClick: () => onRestoreOne(name) },
+            { label: '彻底删除', color: '#ff3b30', onClick: () => onDeleteOne(name) }
+         ]
+      } else {
+         return [
+            { label: '清空回收站', color: '#ff3b30', onClick: onEmptyTrash },
+            { divider: true },
+            { label: '刷新', onClick: reloadCurrentDir }
+         ]
+      }
+   }
+
     if (name) {
       // File Context
       return [
@@ -824,45 +879,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }
 
-  const onRestoreSelected = async () => {
-    const names = [...selected]
-    for (const n of names) {
-      const from = `/Trash/${n}`
-      const to = `/${n}`
-      await fmApi.fsRename(from, to)
-    }
-      const rs = await fmApi.fsList(path)
-    setEntries(rs.entries)
-    clearSelection()
-  }
-  const onDeleteSelected = async () => {
-    handleDelete([...selected])
-  }
-
-  const onEmptyTrash = () => {
-    if (entries.length === 0) return
-    setShowEmptyTrashModal(true)
-  }
-
-  const confirmEmptyTrash = async () => {
-    const names = entries.map(e => e.name)
-    for (const n of names) {
-      const p = `/Trash/${n}`
-      await fmApi.fsDelete(p)
-    }
-    const rs = await fmApi.fsList(path)
-    setEntries(rs.entries)
-    clearSelection()
-    setShowEmptyTrashModal(false)
-  }
-  const onRestoreOne = async (name: string) => {
-    await fmApi.fsRename(`/Trash/${name}`, `/${name}`)
-    await reloadCurrentDir()
-  }
-  const onDeleteOne = async (name: string) => {
-    handleDelete([name])
-  }
-  
   const sections = useMemo(() => {
     const runningCount = tasks.filter(t => t.status === 'running').length
     return [
@@ -958,7 +974,10 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         ) : path === '/Trash' ? (
           <TrashPane
             entries={entries}
+            filtered={filtered}
             selected={selected}
+            setSelected={setSelected}
+            clearSelection={clearSelection}
             toggleSelect={toggleSelect}
             fmtTime={fmtTime}
             fmtSize={fmtSize}
@@ -967,6 +986,12 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             onEmptyTrash={onEmptyTrash}
             onRestoreOne={onRestoreOne}
             onDeleteOne={onDeleteOne}
+            colWidths={colWidths}
+            startResize={startResize}
+            headerCheckboxRef={headerCheckboxRef}
+            resizingKey={resizingKey}
+            onContextMenu={handleContextMenu}
+            onOpenDir={() => {}}
           />
         ) : (
           <>
