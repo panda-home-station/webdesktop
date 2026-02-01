@@ -32,8 +32,8 @@ export default function TransfersPane({
   const uploads = tasks.filter(t => t.kind === 'upload')
   const downloads = tasks.filter(t => t.kind === 'download')
   const visible = transferTab === 'upload' ? uploads : downloads
-  const runningUploads = tasks.filter(t => t.kind === 'upload' && t.status === 'running').length
-  const runningDownloads = tasks.filter(t => t.kind === 'download' && t.status === 'running').length
+  const runningUploads = tasks.filter(t => t.kind === 'upload' && (t.status === 'running' || t.status === 'pending')).length
+  const runningDownloads = tasks.filter(t => t.kind === 'download' && (t.status === 'running' || t.status === 'pending')).length
   const fmtSpeed = (bps?: number) => {
     const v = typeof bps === 'number' && bps >= 0 ? bps : 0
     return `${fmtSize(v)}/s`
@@ -213,10 +213,10 @@ export default function TransfersPane({
                       </span>
                       <span style={{ 
                         fontSize: 12, fontWeight: 500,
-                        color: t.status === 'error' ? '#ff3b30' : t.status === 'done' ? '#34c759' : '#007aff',
+                        color: t.status === 'error' ? '#ff3b30' : t.status === 'done' ? '#34c759' : t.status === 'pending' ? '#8e8e93' : '#007aff',
                         whiteSpace: 'nowrap'
                       }}>
-                        {t.status === 'error' ? '失败' : t.status === 'paused' ? '暂停' : t.status === 'done' ? '完成' : '进行中'}
+                        {t.status === 'error' ? '失败' : t.status === 'paused' ? '暂停' : t.status === 'done' ? '完成' : t.status === 'pending' ? '等待中' : '进行中'}
                       </span>
                     </div>
                   </div>

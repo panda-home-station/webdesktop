@@ -26,7 +26,7 @@ export type FileTask = {
   total?: number
   loaded?: number
   bps?: number
-  status: 'running' | 'done' | 'error' | 'paused'
+  status: 'running' | 'done' | 'error' | 'paused' | 'pending'
 }
 let fileTasks: FileTask[] = []
 

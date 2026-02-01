@@ -623,11 +623,19 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
 
   const handleUploadFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return
-    for (const f of Array.from(files)) {
-      const id = `${f.name}-${Date.now()}`
-      pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, loaded: 0, bps: 0, status: 'running' })
+    const fileList = Array.from(files)
+    const tasksToRun: { id: string, file: File }[] = []
+
+    for (const f of fileList) {
+      const id = `${f.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+      pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, loaded: 0, bps: 0, status: 'pending' })
       uploadFilesMap.current.set(id, f)
-      await startUpload(id, f, path)
+      tasksToRun.push({ id, file: f })
+    }
+
+    for (const { id, file } of tasksToRun) {
+      if (!uploadFilesMap.current.has(id)) continue
+      await startUpload(id, file, path)
     }
   }
 
@@ -953,7 +961,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   }
 
   const sections = useMemo(() => {
-    const runningCount = tasks.filter(t => t.status === 'running').length
+    const runningCount = tasks.filter(t => t.status === 'running' || t.status === 'pending').length
     return [
     {
       title: '文件',
