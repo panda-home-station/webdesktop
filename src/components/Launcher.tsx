@@ -138,17 +138,20 @@ export default function Launcher({ isOpen, onOpen, onClose }: Props & { isOpen: 
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <div style={{ 
-                width: 88, 
-                height: 88, 
+                width: 76, 
+                height: 76, 
                 borderRadius: 18, 
-                background: 'transparent',
+                background: 'rgba(255, 255, 255, 0.75)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                overflow: 'hidden'
+                overflow: 'hidden',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.02), inset 0 1px 1px rgba(255,255,255,0.6)',
+                border: '1px solid rgba(255,255,255,0.3)',
+                backdropFilter: 'blur(20px)',
             }}>
                 {a.iconUrl ? (
-                  <img src={a.iconUrl} alt="" width={88} height={88} style={{ objectFit: 'cover' }} />
+                  <img src={a.iconUrl} alt="" style={{ width: '65%', height: '65%', objectFit: 'contain', filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.08))' }} />
                 ) : (
                   <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg, #e0e0e0 0%, #f5f5f5 100%)' }} />
                 )}
