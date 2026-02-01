@@ -101,6 +101,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     size: 85,
     created: 105,
     owner: 120,
+    originalPath: 200,
   })
   
   // New State
@@ -114,6 +115,30 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [newFolderName, setNewFolderName] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemsToDelete, setItemsToDelete] = useState<string[]>([])
+  const [trashMetadata, setTrashMetadata] = useState<Record<string, { originalPath: string, deletionTime: number }>>({})
+
+  const loadTrashMetadata = async () => {
+    try {
+      const blob = await api.fsDownloadBlob('/Trash/.trashinfo')
+      const text = await blob.text()
+      const data = JSON.parse(text)
+      setTrashMetadata(data)
+      return data
+    } catch (e) {
+      setTrashMetadata({})
+      return {}
+    }
+  }
+  
+  const saveTrashMetadata = async (data: Record<string, { originalPath: string, deletionTime: number }>) => {
+    try {
+      const file = new File([JSON.stringify(data)], '.trashinfo', { type: 'application/json' })
+      await api.fsUpload('/Trash', file)
+      setTrashMetadata(data)
+    } catch (e) {
+      console.error("Failed to save trash metadata", e)
+    }
+  }
   
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false)
   
@@ -518,6 +543,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       const names = itemsToDelete
       
       let trashEntries: Set<string> = new Set()
+      let currentMetadata: Record<string, { originalPath: string, deletionTime: number }> = {}
       
       if (path !== '/Trash') {
          try {
@@ -533,9 +559,12 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
              if (res && res.entries) {
                 trashEntries = new Set(res.entries.map(e => e.name))
              }
+             currentMetadata = await loadTrashMetadata()
          } catch (e) {
              console.error("Failed to list Trash", e)
          }
+      } else {
+         currentMetadata = { ...trashMetadata }
       }
 
       for (const n of names) {
@@ -546,6 +575,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
              // Permanent delete
              const p = joinPath(path, n)
              await api.fsDelete(p)
+             if (currentMetadata[n]) delete currentMetadata[n]
           } else {
              // Move to Trash
              const from = joinPath(path, n)
@@ -571,6 +601,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
              const to = `/Trash/${targetName}`
              await api.fsRename(from, to)
              trashEntries.add(targetName)
+             
+             currentMetadata[targetName] = {
+                 originalPath: from,
+                 deletionTime: Date.now()
+             }
           }
           updateFileTask(id, { status: 'done' })
       } catch (e) {
@@ -578,6 +613,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
           updateFileTask(id, { status: 'error' })
         }
       }
+      
+      await saveTrashMetadata(currentMetadata)
+      
       await reloadCurrentDir()
       clearSelection()
       setShowDeleteModal(false)
@@ -595,13 +633,30 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
 
   const onRestoreSelected = async () => {
     const names = [...selected]
+    const currentMetadata = { ...trashMetadata }
     for (const n of names) {
       const from = `/Trash/${n}`
-      const to = `/${n}`
-      await fmApi.fsRename(from, to)
+      let to = `/${n}`
+      if (currentMetadata[n]?.originalPath) {
+          to = currentMetadata[n].originalPath
+      }
+      try {
+        await fmApi.fsRename(from, to)
+        if (currentMetadata[n]) delete currentMetadata[n]
+      } catch (e) {
+         try {
+            await fmApi.fsRename(from, `/${n}`)
+            if (currentMetadata[n]) delete currentMetadata[n]
+         } catch (e2) {}
+      }
     }
-      const rs = await fmApi.fsList(path)
-    setEntries(rs.entries)
+    await saveTrashMetadata(currentMetadata)
+    const rs = await fmApi.fsList(path)
+    let entries = rs.entries
+    if (path === '/Trash') {
+       entries = entries.filter(e => e.name !== '.trashinfo')
+    }
+    setEntries(entries)
     clearSelection()
   }
   const onDeleteSelected = async () => {
@@ -619,13 +674,31 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       const p = `/Trash/${n}`
       await fmApi.fsDelete(p)
     }
+    try {
+        await api.fsDelete('/Trash/.trashinfo')
+    } catch {}
+    setTrashMetadata({})
+    
     const rs = await fmApi.fsList(path)
-    setEntries(rs.entries)
+    setEntries([]) // Trash is empty
     clearSelection()
     setShowEmptyTrashModal(false)
   }
   const onRestoreOne = async (name: string) => {
-    await fmApi.fsRename(`/Trash/${name}`, `/${name}`)
+    const from = `/Trash/${name}`
+    let to = `/${name}`
+    const currentMetadata = { ...trashMetadata }
+    if (currentMetadata[name]?.originalPath) {
+        to = currentMetadata[name].originalPath
+    }
+    try {
+        await fmApi.fsRename(from, to)
+        if (currentMetadata[name]) delete currentMetadata[name]
+    } catch {
+        await fmApi.fsRename(from, `/${name}`)
+        if (currentMetadata[name]) delete currentMetadata[name]
+    }
+    await saveTrashMetadata(currentMetadata)
     await reloadCurrentDir()
   }
   const onDeleteOne = async (name: string) => {
@@ -992,6 +1065,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             resizingKey={resizingKey}
             onContextMenu={handleContextMenu}
             onOpenDir={() => {}}
+            trashMetadata={trashMetadata}
           />
         ) : (
           <>

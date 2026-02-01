@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { Folder, FileText, Trash2, RotateCcw, Ban, CheckSquare } from 'lucide-react'
-import ListView from './ListView'
+import TrashListView from './TrashListView'
 
 type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
 
@@ -26,6 +26,7 @@ type Props = {
   resizingKey: string | null
   onContextMenu: (e: React.MouseEvent, name: string) => void
   onOpenDir: (name: string) => void
+  trashMetadata: Record<string, { originalPath: string, deletionTime: number }>
 }
 
 export default function TrashPane({
@@ -47,7 +48,8 @@ export default function TrashPane({
   headerCheckboxRef,
   resizingKey,
   onContextMenu,
-  onOpenDir
+  onOpenDir,
+  trashMetadata
 }: Props) {
   
   if (entries.length === 0) {
@@ -119,21 +121,21 @@ export default function TrashPane({
       </div>
 
       <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-        <ListView
-          path="/Trash"
+        <TrashListView
           filtered={filtered}
           selected={selected}
           setSelected={setSelected}
           clearSelection={clearSelection}
-          colWidths={colWidths}
-          startResize={startResize}
-          headerCheckboxRef={headerCheckboxRef}
           toggleSelect={toggleSelect}
           fmtTime={fmtTime}
           fmtSize={fmtSize}
-          resizingKey={resizingKey}
           onOpenDir={onOpenDir}
           onContextMenu={onContextMenu}
+          trashMetadata={trashMetadata}
+          colWidths={colWidths}
+          startResize={startResize}
+          headerCheckboxRef={headerCheckboxRef}
+          resizingKey={resizingKey}
         />
       </div>
 
