@@ -428,13 +428,44 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     setShowRenameModal(false)
   }
 
+  const getUniqueName = (baseName: string, isFile: boolean = false) => {
+    const names = new Set(entries.map(e => e.name))
+    if (!names.has(baseName)) return baseName
+
+    let name = baseName
+    let ext = ''
+    if (isFile) {
+      const parts = baseName.split('.')
+      if (parts.length > 1) {
+        ext = '.' + parts.pop()
+        name = parts.join('.')
+      }
+    }
+
+    let i = 1
+    while (true) {
+      const candidate = `${name} (${i})${ext}`
+      if (!names.has(candidate)) return candidate
+      i++
+    }
+  }
+
+  const [newFolderError, setNewFolderError] = useState('')
+  const [newFileError, setNewFileError] = useState('')
+
   const handleNewFolder = () => {
-    setNewFolderName('新建文件夹')
+    setNewFolderName(getUniqueName('新建文件夹'))
+    setNewFolderError('')
     setShowNewFolderModal(true)
   }
 
   const confirmNewFolder = async () => {
     if (newFolderName) {
+      if (entries.some(e => e.name === newFolderName)) {
+        setNewFolderError('该文件夹名称已存在，请使用其他名称')
+        return
+      }
+
        try {
          await fmApi.fsMkdir(joinPath(path, newFolderName))
          await reloadCurrentDir()
@@ -447,12 +478,17 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   }
 
   const handleNewFile = () => {
-    setNewFileName('New File.txt')
+    setNewFileName(getUniqueName('新建文本文件.txt', true))
+    setNewFileError('')
     setShowNewFileModal(true)
   }
 
   const confirmNewFile = async () => {
     if (newFileName) {
+      if (entries.some(e => e.name === newFileName)) {
+        setNewFileError('该文件名称已存在，请使用其他名称')
+        return
+      }
       const name = newFileName
       const file = new File([""], name, { type: "text/plain" })
       const id = `new-${name}-${Date.now()}`
@@ -483,6 +519,16 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       await reloadCurrentDir()
       clearSelection()
       setShowDeleteModal(false)
+  }
+
+  const handleUploadFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return
+    for (const f of Array.from(files)) {
+      const id = `${f.name}-${Date.now()}`
+      pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, loaded: 0, bps: 0, status: 'running' })
+      uploadFilesMap.current.set(id, f)
+      await startUpload(id, f, path)
+    }
   }
 
   const contextMenuItems: ContextMenuItem[] = useMemo(() => {
@@ -523,6 +569,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     } else {
       // Background Context
       return [
+        { label: '上传文件', onClick: () => fileInputRef.current?.click() },
         { label: '新建文件夹', onClick: handleNewFolder },
         { label: '新建文本文件', onClick: handleNewFile },
         { divider: true },
@@ -871,14 +918,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
               crumbs={crumbs}
               q={q}
               setQ={(v) => setQ(v)}
-              onUploadFiles={async (files) => {
-                for (const f of Array.from(files)) {
-                  const id = `${f.name}-${Date.now()}`
-                  pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, loaded: 0, bps: 0, status: 'running' })
-                  uploadFilesMap.current.set(id, f)
-                  await startUpload(id, f, path)
-                }
-              }}
+              onUploadFiles={handleUploadFiles}
               onCreateFolder={handleNewFolder}
               onDownloadSelected={async () => {
                 const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
@@ -975,6 +1015,17 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
          />
       )}
       
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          handleUploadFiles(e.target.files)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+        }}
+      />
+
       {showNewFolderModal && (
         <Modal
           title="新建文件夹"
@@ -987,14 +1038,17 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             <input
               autoFocus
               value={newFolderName}
-              onChange={e => setNewFolderName(e.target.value)}
+              onChange={e => {
+                setNewFolderName(e.target.value)
+                setNewFolderError('')
+              }}
               onKeyDown={e => {
                 if (e.key === 'Enter') confirmNewFolder()
               }}
               style={{
                 padding: '8px 12px',
                 borderRadius: 6,
-                border: '1px solid #d1d5db',
+                border: `1px solid ${newFolderError ? '#ef4444' : '#d1d5db'}`,
                 fontSize: 14,
                 outline: 'none',
                 width: '100%',
@@ -1002,6 +1056,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
               }}
               onFocus={e => e.target.select()}
             />
+            {newFolderError && (
+              <div style={{ fontSize: 12, color: '#ef4444' }}>{newFolderError}</div>
+            )}
           </div>
         </Modal>
       )}
@@ -1081,14 +1138,17 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             <input
               autoFocus
               value={newFileName}
-              onChange={e => setNewFileName(e.target.value)}
+              onChange={e => {
+                setNewFileName(e.target.value)
+                setNewFileError('')
+              }}
               onKeyDown={e => {
                 if (e.key === 'Enter') confirmNewFile()
               }}
               style={{
                 padding: '8px 12px',
                 borderRadius: 6,
-                border: '1px solid #d1d5db',
+                border: `1px solid ${newFileError ? '#ef4444' : '#d1d5db'}`,
                 fontSize: 14,
                 outline: 'none',
                 width: '100%',
@@ -1096,6 +1156,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
               }}
               onFocus={e => e.target.select()}
             />
+            {newFileError && (
+              <div style={{ fontSize: 12, color: '#ef4444' }}>{newFileError}</div>
+            )}
           </div>
         </Modal>
       )}
