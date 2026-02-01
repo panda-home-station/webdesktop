@@ -136,7 +136,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const joinPath = (dir: string, name: string) => (dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`)
   const reloadCurrentDir = async () => {
     const rs = await fmApi.fsList(path)
-    setEntries(rs.entries)
+    let entries = rs.entries
+    if (path === '/') {
+       entries = entries.filter(e => e.name !== 'Trash')
+    }
+    setEntries(entries)
   }
 
   const startUpload = async (id: string, file: File, dir: string, offset: number = 0) => {
@@ -210,7 +214,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         console.time('fm:first-page')
         const r = await fmApi.fsList(path)
         if (!mounted) return
-        setEntries(r.entries)
+        let entries = r.entries
+        if (path === '/') {
+           entries = entries.filter(e => e.name !== 'Trash')
+        }
+        setEntries(entries)
         console.timeEnd('fm:first-page')
         if (r.has_more && r.next_offset != null) {
           console.time('fm:all-pages')
@@ -222,7 +230,10 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             if (rr.entries && rr.entries.length > 0) {
               setEntries(prev => {
                 const seen = new Set(prev.map(e => e.name))
-                const appended = rr.entries.filter(e => !seen.has(e.name))
+                let appended = rr.entries.filter(e => !seen.has(e.name))
+                if (path === '/') {
+                   appended = appended.filter(e => e.name !== 'Trash')
+                }
                 return appended.length > 0 ? [...prev, ...appended] : prev
               })
             }
@@ -505,14 +516,65 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
 
   const confirmDelete = async () => {
       const names = itemsToDelete
+      
+      let trashEntries: Set<string> = new Set()
+      
+      if (path !== '/Trash') {
+         try {
+             // Ensure Trash exists
+             await api.fsMkdir('/Trash')
+         } catch (e) {
+             // Ignore if exists
+         }
+         
+         try {
+             // Get existing items to avoid collision
+             const res = await api.fsList('/Trash')
+             if (res && res.entries) {
+                trashEntries = new Set(res.entries.map(e => e.name))
+             }
+         } catch (e) {
+             console.error("Failed to list Trash", e)
+         }
+      }
+
       for (const n of names) {
-        const p = joinPath(path, n)
         const id = `del-${n}-${Date.now()}`
         pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
         try {
-          await api.fsDelete(p)
+          if (path === '/Trash') {
+             // Permanent delete
+             const p = joinPath(path, n)
+             await api.fsDelete(p)
+          } else {
+             // Move to Trash
+             const from = joinPath(path, n)
+             
+             // Calculate unique name in Trash
+             let targetName = n
+             if (trashEntries.has(targetName)) {
+                 let i = 1
+                 const parts = n.split('.')
+                 let ext = ''
+                 let base = n
+                 if (parts.length > 1) {
+                    ext = '.' + parts.pop()
+                    base = parts.join('.')
+                 }
+                 
+                 while (trashEntries.has(`${base} (${i})${ext}`)) {
+                     i++
+                 }
+                 targetName = `${base} (${i})${ext}`
+             }
+             
+             const to = `/Trash/${targetName}`
+             await api.fsRename(from, to)
+             trashEntries.add(targetName)
+          }
           updateFileTask(id, { status: 'done' })
-        } catch (e) {
+      } catch (e) {
+          console.error('Delete operation failed for:', n, e)
           updateFileTask(id, { status: 'error' })
         }
       }
@@ -1072,9 +1134,19 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
           danger
         >
           <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
-            确定要删除选中的 {itemsToDelete.length} 个项目吗？
-            <br />
-            <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
+            {path === '/Trash' ? (
+              <>
+                确定要删除选中的 {itemsToDelete.length} 个项目吗？
+                <br />
+                <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
+              </>
+            ) : (
+              <>
+                确定要将选中的 {itemsToDelete.length} 个项目放入回收站吗？
+                <br />
+                <span style={{ fontSize: 13, color: '#6b7280' }}>回收站中的项目将在 30 天后自动删除。</span>
+              </>
+            )}
           </p>
         </Modal>
       )}

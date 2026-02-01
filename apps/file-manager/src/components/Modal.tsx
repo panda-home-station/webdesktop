@@ -22,7 +22,7 @@ export default function Modal({
 }: Props) {
   return (
     <div style={{
-      position: 'absolute',
+      position: 'fixed',
       top: 0,
       left: 0,
       right: 0,
@@ -32,7 +32,7 @@ export default function Modal({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      zIndex: 100
+      zIndex: 9999
     }} onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose()
     }}>
