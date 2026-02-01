@@ -81,7 +81,7 @@ export default function GridView({
               filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.05))'
             }}>
               {e.is_dir ? (
-                <Folder size={64} color="#007AFF" strokeWidth={1} />
+                <Folder size={64} color="#F59E0B" fill="#FFC107" strokeWidth={1} />
               ) : (
                 <FileText size={64} color="#8E8E93" strokeWidth={1} />
               )}

@@ -188,7 +188,7 @@ export default function ListView({
                 />
                 <div style={{ display: 'flex', flexShrink: 0 }}>
                   {e.is_dir ? (
-                    <Folder size={20} fill="#007aff" stroke="none" />
+                    <Folder size={20} fill="#FFC107" stroke="none" />
                   ) : (
                     <FileText size={20} color="#8e8e93" strokeWidth={1.5} />
                   )}
