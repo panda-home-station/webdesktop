@@ -961,7 +961,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   }
 
   const sections = useMemo(() => {
-    const runningCount = tasks.filter(t => t.status === 'running' || t.status === 'pending').length
+    const runningCount = tasks.filter(t => (t.kind === 'upload' || t.kind === 'download') && (t.status === 'running' || t.status === 'pending')).length
     return [
     {
       title: '文件',
