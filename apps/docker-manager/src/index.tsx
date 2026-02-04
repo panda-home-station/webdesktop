@@ -1,43 +1,37 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import axios from 'axios'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Icon from '@mdi/react'
-import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiCogOutline, mdiMagnify, mdiOpenInNew } from '@mdi/js'
-
-type Container = {
-  id: string
-  names: string[]
-  image: string
-  state: string
-  status?: string
-  created: number
-  ports: [number, number | null, string | null][]
-}
-
-type Image = {
-  id: string
-  repo_tags: string[]
-  size: number
-  created: number
-  exposed_ports?: number[]
-}
+import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiHarddisk, mdiNetwork } from '@mdi/js'
+import { podmanApi } from './api'
+import { Container, Image, Volume, Network, Mirror } from './types'
+import { Overview } from './components/Overview'
+import { ContainerList } from './components/ContainerList'
+import { ImageList } from './components/ImageList'
+import { RegistryView } from './components/RegistryView'
+import { VolumeList } from './components/VolumeList'
+import { NetworkList } from './components/NetworkList'
+import { CreateContainerModal } from './components/CreateContainerModal'
+import { fmtImageName } from './utils'
 
 const TABS = [
   { id: 'overview', label: '概览', icon: <Icon path={mdiViewGridOutline} size={1} /> },
   { id: 'containers', label: '容器', icon: <Icon path={mdiCubeOutline} size={1} /> },
-  { id: 'compose', label: 'compose', icon: <Icon path={mdiTableColumn} size={1} /> },
-  { id: 'local-images', label: '本地镜像', icon: <Icon path={mdiImageFilterNone} size={1} /> },
-  { id: 'registry', label: '镜像仓库', icon: <Icon path={mdiDatabase} size={1} /> }
+  { id: 'images', label: '镜像', icon: <Icon path={mdiImageFilterNone} size={1} /> },
+  { id: 'volumes', label: '存储卷', icon: <Icon path={mdiHarddisk} size={1} /> },
+  { id: 'networks', label: '网络', icon: <Icon path={mdiNetwork} size={1} /> },
+  { id: 'registry', label: '仓库', icon: <Icon path={mdiDatabase} size={1} /> },
+  { id: 'compose', label: '编排', icon: <Icon path={mdiTableColumn} size={1} /> },
 ]
 
 export default function DockerManager() {
   const [active, setActive] = useState('overview')
   const [containers, setContainers] = useState<Container[]>([])
   const [images, setImages] = useState<Image[]>([])
+  const [volumesList, setVolumesList] = useState<Volume[]>([])
+  const [networksList, setNetworksList] = useState<Network[]>([])
   const [loading, setLoading] = useState(false)
-  const [pulling, setPulling] = useState(false)
-  const [pullName, setPullName] = useState('')
-  const [pullTag, setPullTag] = useState('latest')
+  
+  // Registry State
   const [registryQ, setRegistryQ] = useState('')
   const [registryItems, setRegistryItems] = useState<any[]>([])
   const [registryLoading, setRegistryLoading] = useState(false)
@@ -46,22 +40,20 @@ export default function DockerManager() {
   const [page, setPage] = useState(1)
   const [hasNext, setHasNext] = useState(false)
   const [hasPrev, setHasPrev] = useState(false)
+  const [pulling, setPulling] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [mirrors, setMirrors] = useState<{ id: string; name: string; host: string; enabled: boolean }[]>([])
-  const [newName, setNewName] = useState('')
-  const [newHost, setNewHost] = useState('')
-  const [settingsLoading, setSettingsLoading] = useState(false)
+  const [mirrors, setMirrors] = useState<Mirror[]>([])
   const [settingsSaving, setSettingsSaving] = useState(false)
+
+  // Create Container State
   const [createContainerOpen, setCreateContainerOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<Image | null>(null)
+  const [createStep, setCreateStep] = useState(1)
   const [containerName, setContainerName] = useState('')
   const [enableResourceLimit, setEnableResourceLimit] = useState(false)
   const [cpuLimit, setCpuLimit] = useState(2)
   const [memoryLimit, setMemoryLimit] = useState(4)
   const [autoStart, setAutoStart] = useState(true)
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [imageToDelete, setImageToDelete] = useState<Image | null>(null)
-  const [createStep, setCreateStep] = useState(1)
   const [ports, setPorts] = useState<{ host: string, container: string }[]>([])
   const [newHostPort, setNewHostPort] = useState('')
   const [newContainerPort, setNewContainerPort] = useState('')
@@ -72,77 +64,19 @@ export default function DockerManager() {
   const [newEnvKey, setNewEnvKey] = useState('')
   const [newEnvValue, setNewEnvValue] = useState('')
 
-  const podmanApi = {
-    async listContainers() {
-      const token = localStorage.getItem('authToken') || ''
-      const r = await axios.get('/api/podman/containers', { params: token ? { token } : {} })
-      return r.data as Container[]
-    },
-    async listImages() {
-      const token = localStorage.getItem('authToken') || ''
-      const r = await axios.get('/api/podman/images', { params: token ? { token } : {} })
-      return r.data as Image[]
-    },
-    async start(id: string) {
-      const token = localStorage.getItem('authToken') || ''
-      await axios.post('/api/podman/container/start', { id }, { params: token ? { token } : {} })
-    },
-    async stop(id: string) {
-      const token = localStorage.getItem('authToken') || ''
-      await axios.post('/api/podman/container/stop', { id }, { params: token ? { token } : {} })
-    },
-    async restart(id: string) {
-      const token = localStorage.getItem('authToken') || ''
-      await axios.post('/api/podman/container/restart', { id }, { params: token ? { token } : {} })
-    },
-    async remove(id: string) {
-      const token = localStorage.getItem('authToken') || ''
-      await axios.post('/api/podman/container/remove', { id }, { params: token ? { token } : {} })
-    },
-    async pull(image: string, tag?: string) {
-      const token = localStorage.getItem('authToken') || ''
-      await axios.post('/api/podman/image/pull', { image, tag }, { params: token ? { token } : {} })
-    },
-    async mirrorsGet() {
-      const token = localStorage.getItem('authToken') || ''
-      const r = await axios.get('/api/podman/mirrors', { params: token ? { token } : {} })
-      return (Array.isArray(r.data) ? r.data : []) as { id: string; name: string; host: string; enabled: boolean }[]
-    },
-    async mirrorsSet(items: { id: string; name: string; host: string; enabled: boolean }[]) {
-      const token = localStorage.getItem('authToken') || ''
-      await axios.post('/api/podman/mirrors', items, { params: token ? { token } : {} })
-    },
-    async registrySearch(q: string, page = 1, pageSize = 24) {
-      const token = localStorage.getItem('authToken') || ''
-      const r = await axios.get('/api/podman/registry/search', { params: { q, page, page_size: pageSize, ...(token ? { token } : {}) } })
-      const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
-      return {
-        items: Array.isArray(data.results) ? data.results : [],
-        hasNext: !!data.next,
-        hasPrev: !!data.prev
-      }
-    },
-    async registryHot(page = 1, pageSize = 24) {
-      const token = localStorage.getItem('authToken') || ''
-      const r = await axios.get('/api/podman/registry/hot', { params: { page, page_size: pageSize, ...(token ? { token } : {}) } })
-      const data = r.data as { results: any[]; next?: boolean; prev?: boolean }
-      return {
-        items: Array.isArray(data.results) ? data.results : [],
-        hasNext: !!data.next,
-        hasPrev: !!data.prev
-      }
-    }
-  }
-
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [cs, ims] = await Promise.all([
+      const [cs, ims, vs, ns] = await Promise.all([
         podmanApi.listContainers(),
-        podmanApi.listImages()
+        podmanApi.listImages(),
+        podmanApi.listVolumes(),
+        podmanApi.listNetworks()
       ])
       setContainers(cs)
       setImages(ims)
+      setVolumesList(vs)
+      setNetworksList(ns)
     } finally {
       setLoading(false)
     }
@@ -151,6 +85,8 @@ export default function DockerManager() {
   useEffect(() => {
     loadAll().catch(console.error)
   }, [])
+
+  // Registry Logic
   const onSearchRegistry = async () => {
     const q = registryQ.trim()
     if (!q) {
@@ -164,78 +100,40 @@ export default function DockerManager() {
     setRegistryLoading(true)
     try {
       const { items, hasNext, hasPrev } = await podmanApi.registrySearch(q, 1)
-      setRegistryItems(items as any[])
+      setRegistryItems(items)
       setHasNext(hasNext)
       setHasPrev(hasPrev)
     } finally {
       setRegistryLoading(false)
     }
   }
+
   useEffect(() => {
     if (active === 'registry') {
       setDidSearch(false)
       setPage(1)
-    }
-  }, [active])
-  useEffect(() => {
-    if (active === 'registry' && !didSearch) {
       setRegistryLoading(true)
-      podmanApi.registryHot(page)
+      podmanApi.registryHot(1)
         .then(({ items, hasNext, hasPrev }) => {
-          setHotItems(items as any[])
+          setHotItems(items)
           setHasNext(hasNext)
           setHasPrev(hasPrev)
         })
         .finally(() => setRegistryLoading(false))
     }
-  }, [active, didSearch, page])
-  const openSettings = async () => {
-    setSettingsOpen(true)
-    setSettingsLoading(true)
-    try {
-      const items = await podmanApi.mirrorsGet()
-      setMirrors(Array.isArray(items) ? items : [])
-    } catch {
-      setMirrors([])
-    } finally {
-      setSettingsLoading(false)
-    }
-  }
-  const saveSettings = async () => {
-    setSettingsSaving(true)
-    try {
-      await podmanApi.mirrorsSet(mirrors)
-      setSettingsOpen(false)
-    } finally {
-      setSettingsSaving(false)
-    }
-  }
-  const onAddMirror = () => {
-    const id = Math.random().toString(36).slice(2)
-    setMirrors(prev => [...prev, { id, name: '', host: '', enabled: true }])
-  }
-  const onRemoveMirror = (id: string) => {
-    setMirrors(prev => prev.filter(m => m.id !== id))
-  }
-  const onToggleMirror = (id: string) => {
-    setMirrors(prev => prev.map(m => m.id === id ? { ...m, enabled: !m.enabled } : m))
-  }
-  const onUpdateMirror = (id: string, patch: Partial<{ name: string; host: string }>) => {
-    setMirrors(prev => prev.map(m => m.id === id ? { ...m, ...patch } : m))
-  }
-  const onPagePrev = async () => {
-    if (page <= 1 || registryLoading) return
-    const newPage = page - 1
+  }, [active])
+
+  const onPageChange = async (newPage: number) => {
     setRegistryLoading(true)
     try {
       if (didSearch) {
         const { items, hasNext, hasPrev } = await podmanApi.registrySearch(registryQ.trim(), newPage)
-        setRegistryItems(items as any[])
+        setRegistryItems(items)
         setHasNext(hasNext)
         setHasPrev(hasPrev)
       } else {
         const { items, hasNext, hasPrev } = await podmanApi.registryHot(newPage)
-        setHotItems(items as any[])
+        setHotItems(items)
         setHasNext(hasNext)
         setHasPrev(hasPrev)
       }
@@ -244,103 +142,20 @@ export default function DockerManager() {
       setRegistryLoading(false)
     }
   }
-  const onPageNext = async () => {
-    if (!hasNext || registryLoading) return
-    const newPage = page + 1
-    setRegistryLoading(true)
-    try {
-      if (didSearch) {
-        const { items, hasNext, hasPrev } = await podmanApi.registrySearch(registryQ.trim(), newPage)
-        setRegistryItems(items as any[])
-        setHasNext(hasNext)
-        setHasPrev(hasPrev)
-      } else {
-        const { items, hasNext, hasPrev } = await podmanApi.registryHot(newPage)
-        setHotItems(items as any[])
-        setHasNext(hasNext)
-        setHasPrev(hasPrev)
-      }
-      setPage(newPage)
-    } finally {
-      setRegistryLoading(false)
-    }
-  }
+
   const pullFromRegistry = async (ref: string) => {
     if (!ref) return
     setPulling(true)
     try {
       await podmanApi.pull(ref)
       await loadAll()
-      setActive('local-images')
+      setActive('images')
     } finally {
       setPulling(false)
     }
   }
 
-  const fmtSize = (n: number) => {
-    if (n < 1000) return `${n} B`
-    const units = ['B', 'KB', 'MB', 'GB', 'TB']
-    let v = n
-    let i = 0
-    while (v >= 1000 && i < units.length - 1) {
-      v /= 1000
-      i++
-    }
-    return `${v.toFixed(2)} ${units[i]}`
-  }
-
-  const fmtImageName = (repoTag: string) => {
-    if (!repoTag) return ''
-    const parts = repoTag.split('/')
-    const lastPart = parts[parts.length - 1]
-    return lastPart
-  }
-
-  const onStart = async (id: string) => {
-    await podmanApi.start(id)
-    await loadAll()
-  }
-  const onStop = async (id: string) => {
-    await podmanApi.stop(id)
-    await loadAll()
-  }
-  const onRestart = async (id: string) => {
-    await podmanApi.restart(id)
-    await loadAll()
-  }
-  const onRemove = async (id: string) => {
-    if (!confirm('确认删除该容器？这将强制删除。')) return
-    await podmanApi.remove(id)
-    await loadAll()
-  }
-  const onPull = async () => {
-    if (!pullName) return
-    setPulling(true)
-    try {
-      await podmanApi.pull(pullName, pullTag || undefined)
-      await loadAll()
-      setPullName('')
-      setPullTag('latest')
-    } finally {
-      setPulling(false)
-    }
-  }
-  const onDeleteImage = (img: Image) => {
-    setImageToDelete(img)
-    setDeleteConfirmOpen(true)
-  }
-  const onConfirmDelete = async () => {
-    if (!imageToDelete) return
-    const token = localStorage.getItem('authToken') || ''
-    await axios.post('/api/podman/image/remove', { id: imageToDelete.id }, { params: token ? { token } : {} })
-    setDeleteConfirmOpen(false)
-    setImageToDelete(null)
-    await loadAll()
-  }
-  const onCancelDelete = () => {
-    setDeleteConfirmOpen(false)
-    setImageToDelete(null)
-  }
+  // Create Container Logic
   const onOpenCreateContainer = (img: Image) => {
     setSelectedImage(img)
     const imageName = (img.repo_tags && img.repo_tags[0]) ? fmtImageName(img.repo_tags[0]) : img.id.slice(0, 12)
@@ -350,29 +165,19 @@ export default function DockerManager() {
     setMemoryLimit(4)
     setAutoStart(true)
     setCreateContainerOpen(true)
+    setCreateStep(1)
+    setPorts([])
+    setVolumes([])
+    setEnvVars([])
   }
+
   const onCloseCreateContainer = () => {
     setCreateContainerOpen(false)
     setSelectedImage(null)
-    setContainerName('')
-    setEnableResourceLimit(false)
-    setCpuLimit(2)
-    setMemoryLimit(4)
-    setAutoStart(true)
-    setCreateStep(1)
-    setPorts([])
-    setNewHostPort('')
-    setNewContainerPort('')
-    setVolumes([])
-    setNewHostPath('')
-    setNewContainerPath('')
-    setEnvVars([])
-    setNewEnvKey('')
-    setNewEnvValue('')
   }
+
   const onCreateContainer = async () => {
     if (!selectedImage) return
-    const token = localStorage.getItem('authToken') || ''
     const payload: any = {
       image_id: selectedImage.id,
       name: containerName || undefined,
@@ -383,517 +188,119 @@ export default function DockerManager() {
       volumes: volumes.length > 0 ? volumes.map(v => `${v.host}:${v.container}`) : undefined,
       env: envVars.length > 0 ? envVars.map(v => `${v.key}=${v.value}`) : undefined,
     }
-    await axios.post('/api/podman/container/create', payload, { params: token ? { token } : {} })
+    await podmanApi.createContainer(payload)
     onCloseCreateContainer()
     await loadAll()
-  }
-  const onNextStep = () => {
-    setCreateStep(createStep + 1)
-  }
-  const onPrevStep = () => {
-    setCreateStep(createStep - 1)
-  }
-  const onAddPort = () => {
-    console.log('onAddPort called', { newHostPort, newContainerPort, ports })
-    if (newHostPort && newContainerPort) {
-      const newPorts = [...ports, { host: newHostPort, container: newContainerPort }]
-      console.log('Setting ports to:', newPorts)
-      setPorts(newPorts)
-      setNewHostPort('')
-      setNewContainerPort('')
-    }
-  }
-  const onRemovePort = (index: number) => {
-    console.log('onRemovePort called', index)
-    setPorts(ports.filter((_, i) => i !== index))
-  }
-  const onAddVolume = () => {
-    console.log('onAddVolume called', { newHostPath, newContainerPath, volumes })
-    if (newHostPath && newContainerPath) {
-      const newVolumes = [...volumes, { host: newHostPath, container: newContainerPath }]
-      console.log('Setting volumes to:', newVolumes)
-      setVolumes(newVolumes)
-      setNewHostPath('')
-      setNewContainerPath('')
-    }
-  }
-  const onRemoveVolume = (index: number) => {
-    console.log('onRemoveVolume called', index)
-    setVolumes(volumes.filter((_, i) => i !== index))
-  }
-  const onAddEnvVar = () => {
-    if (newEnvKey) {
-      setEnvVars([...envVars, { key: newEnvKey, value: newEnvValue }])
-      setNewEnvKey('')
-      setNewEnvValue('')
-    }
-  }
-  const onRemoveEnvVar = (index: number) => {
-    setEnvVars(envVars.filter((_, i) => i !== index))
+    setActive('containers')
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', fontFamily: 'system-ui, sans-serif', color: '#1f2937' }} className="noselect">
+    <div style={{ display: 'flex', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', color: '#1f2937', background: '#f2f2f7' }} className="noselect">
       <Sidebar
         width={220}
         items={TABS}
         activeId={active}
         onSelect={setActive}
       />
-      <div style={{ flex: 1, background: '#fff', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '20px 20px 0 20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-          {active === 'overview' ? (
-            <>
-              <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>概览</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, background: '#f9fafb' }}>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>运行中的容器</div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{containers.filter(c => c.state === 'running').length}</div>
-                </div>
-                <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, background: '#f9fafb' }}>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>容器总数</div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{containers.length}</div>
-                </div>
-                <div style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, background: '#f9fafb' }}>
-                  <div style={{ fontSize: 12, color: '#6b7280' }}>本地镜像</div>
-                  <div style={{ fontSize: 24, fontWeight: 700 }}>{images.length}</div>
-                </div>
-              </div>
-              {loading && <div style={{ marginTop: 12, color: '#6b7280' }}>加载中…</div>}
-            </>
-          ) : active === 'containers' ? (
-            <>
-              <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>容器</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-                {containers.map(c => (
-                  <div key={c.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, background: '#f9fafb' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{(c.names && c.names[0]) || c.id.slice(0, 12)}</div>
-                        <div style={{ color: '#6b7280', fontSize: 13 }}>{c.image}</div>
-                      </div>
-                      <div style={{ fontSize: 12, color: c.state === 'running' ? '#10b981' : '#ef4444' }}>
-                        {c.state}{c.status ? ` · ${c.status}` : ''}
-                      </div>
-                    </div>
-                    <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      <button className="panda-button" onClick={() => onStart(c.id)} disabled={c.state === 'running'}>启动</button>
-                      <button className="panda-button" onClick={() => onStop(c.id)} disabled={c.state !== 'running'}>停止</button>
-                      <button className="panda-button" onClick={() => onRestart(c.id)} disabled={c.state !== 'running'}>重启</button>
-                      <button className="panda-button danger" onClick={() => onRemove(c.id)}>删除</button>
-                    </div>
-                    {c.ports?.length ? (
-                      <div style={{ marginTop: 8, fontSize: 12, color: '#6b7280' }}>
-                        端口：{c.ports.map(([priv, pub, typ], i) => (
-                          <span key={i} style={{ marginRight: 8 }}>{typ || 'tcp'} {pub ? `${pub}→${priv}` : `${priv}`}</span>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-              {containers.length === 0 && (
-                <div style={{ color: '#6b7280' }}>没有容器</div>
-              )}
-            </>
-          ) : active === 'compose' ? (
-            <>
-              <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>compose</h2>
-              <div style={{ color: '#6b7280' }}>这里用于管理 Podman Compose 项目（后续功能）。</div>
-            </>
-          ) : active === 'local-images' ? (
-            <>
-              <h2 style={{ margin: '0 0 16px 0', fontSize: 20, fontWeight: 600 }}>本地镜像</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-                {images.map(img => (
-                  <div key={img.id} style={{ border: '1px solid #e5e7eb', borderRadius: 12, padding: 12, background: '#f9fafb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: 13 }}>{(img.repo_tags && img.repo_tags[0]) ? fmtImageName(img.repo_tags[0]) : img.id.slice(0, 12)}</div>
-                      <div style={{ color: '#6b7280', fontSize: 13 }}>
-                        大小 {fmtSize(img.size)}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <button className="panda-button" onClick={() => onOpenCreateContainer(img)} style={{ padding: '4px 12px', height: 28 }}>启动</button>
-                      <button className="panda-button danger" onClick={() => onDeleteImage(img)} style={{ padding: '4px 12px', height: 28 }}>删除</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {images.length === 0 && (
-                <div style={{ color: '#6b7280' }}>没有本地镜像</div>
-              )}
-            </>
-          ) : (
-            <>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 0 16px 0' }}>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 600 }}>镜像仓库</h2>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  <input
-                    placeholder="搜索镜像"
-                    value={registryQ}
-                    onChange={e => setRegistryQ(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') onSearchRegistry()
-                    }}
-                    className="panda-input"
-                    style={{ width: 220, height: 30, padding: '0 8px', boxSizing: 'border-box' }}
-                  />
-                  <button className="panda-button" title="搜索" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={onSearchRegistry} disabled={registryLoading}>
-                    <Icon path={mdiMagnify} size={0.9} />
-                  </button>
-                  <button className="panda-button" title="设置" style={{ width: 36, height: 30, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }} onClick={openSettings}>
-                    <Icon path={mdiCogOutline} size={0.9} />
-                  </button>
-                </span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                <div style={{ flex: 1, overflow: 'auto' }}>
-                  {registryLoading && <div style={{ color: '#6b7280' }}>加载中…</div>}
-                  {!registryLoading && (didSearch ? registryItems.length > 0 : hotItems.length > 0) && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
-                      {(didSearch ? registryItems : hotItems).map((it: any, idx: number) => {
-                        const name = it?.name || ''
-                        const ns = it?.namespace || ''
-                        const stars = typeof it?.star_count === 'number' ? it.star_count : 0
-                        const pulls = typeof it?.pull_count === 'number' ? it.pull_count : 0
-                        const official = !!it?.is_official
-                        const ref = official ? name : (ns && name ? `${ns}/${name}` : name)
-                        return (
-                          <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: 10, padding: '8px 10px', background: '#f9fafb', display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
-                              <span style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 280 }}>{ref}</span>
-                              {official && <span style={{ fontSize: 12, color: '#10b981' }}>官方</span>}
-                              <span style={{ fontSize: 12, color: '#6b7280', whiteSpace: 'nowrap' }}>⭐ {stars} · ⬇️ {pulls}</span>
-                            </div>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
-                              <button className="panda-button" onClick={() => pullFromRegistry(ref)} disabled={pulling} style={{ padding: '4px 10px', height: 28 }}>下载</button>
-                              <button
-                                className="panda-button"
-                                title="打开镜像页面"
-                                onClick={() => {
-                                  const href = official
-                                    ? `https://hub.docker.com/_/${name}`
-                                    : (ns ? `https://hub.docker.com/r/${ns}/${name}` : `https://hub.docker.com/_/${name}`)
-                                  window.open(href, '_blank')
-                                }}
-                                style={{ padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                              >
-                                <Icon path={mdiOpenInNew} size={0.8} />
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
-                  {!registryLoading && (didSearch ? registryItems.length === 0 : hotItems.length === 0) && (
-                    <div style={{ color: '#6b7280', textAlign: 'center', marginTop: 40 }}>
-                      {'镜像加载失败或连接超时'}
-                    </div>
-                  )}
-                </div>
-              </div>
-              {settingsOpen && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div style={{ width: 460, border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', boxShadow: '0 6px 20px rgba(0,0,0,0.1)' }}>
-                    <div style={{ padding: '12px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: 600 }}>镜像仓库设置</div>
-                    <div style={{ padding: 14 }}>
-                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 8 }}>镜像加速源</div>
-                      <div style={{ marginBottom: 8 }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 80px', gap: 8, alignItems: 'center', fontSize: 13, color: '#6b7280' }}>
-                          <div style={{ fontWeight: 600, color: '#374151' }}>名称</div>
-                          <div style={{ fontWeight: 600, color: '#374151' }}>镜像域名</div>
-                          <div></div>
-                        </div>
-                        {mirrors.map(m => (
-                          <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 80px', gap: 8, alignItems: 'center', marginTop: 6 }}>
-                            <input className="panda-input" value={m.name} onChange={e => onUpdateMirror(m.id, { name: e.target.value })} placeholder="名称（可选）" style={{ height: 28, padding: '0 8px' }} />
-                            <input className="panda-input" value={m.host} onChange={e => onUpdateMirror(m.id, { host: e.target.value })} placeholder="镜像域名，如 mirror.example.com" style={{ height: 28, padding: '0 8px' }} />
-                            <button className="panda-button danger" onClick={() => onRemoveMirror(m.id)} style={{ height: 28 }}>删除</button>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <button className="panda-button" onClick={onAddMirror} style={{ height: 30 }}>添加</button>
-                      </div>
-                    </div>
-                    <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                      <button className="panda-button" onClick={() => setSettingsOpen(false)} disabled={settingsSaving}>取消</button>
-                      <button className="panda-button" onClick={saveSettings} disabled={settingsSaving}>保存</button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {active === 'overview' && (
+            <Overview 
+              containers={containers} 
+              images={images} 
+              volumes={volumesList} 
+              networks={networksList} 
+              loading={loading} 
+            />
           )}
-          {deleteConfirmOpen && imageToDelete && (
-            <div style={{ position: 'absolute', inset: 0, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-              <div style={{ width: 380, border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', boxShadow: '0 6px 20px rgba(0,0,0,0.1)' }}>
-                <div style={{ padding: '12px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: 600 }}>确认删除</div>
-                <div style={{ padding: 14 }}>
-                  <div style={{ fontSize: 13, color: '#374151' }}>
-                    确认删除镜像 <span style={{ fontWeight: 600 }}>{( (imageToDelete.repo_tags && imageToDelete.repo_tags[0]) ? fmtImageName(imageToDelete.repo_tags[0]) : imageToDelete.id.slice(0, 12) )}</span>？
-                  </div>
-                </div>
-                <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                  <button className="panda-button" onClick={onCancelDelete}>取消</button>
-                  <button className="panda-button danger" onClick={onConfirmDelete}>删除</button>
-                </div>
-              </div>
-            </div>
+          {active === 'containers' && (
+            <ContainerList
+              containers={containers}
+              onStart={async (id) => { await podmanApi.start(id); loadAll() }}
+              onStop={async (id) => { await podmanApi.stop(id); loadAll() }}
+              onRestart={async (id) => { await podmanApi.restart(id); loadAll() }}
+              onRemove={async (id) => { if(confirm('确认删除?')) { await podmanApi.remove(id); loadAll() } }}
+            />
           )}
-          {createContainerOpen && selectedImage && (
-            <div style={{ position: 'absolute', inset: 0, top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-              <div style={{ width: 500, border: '1px solid #e5e7eb', borderRadius: 10, background: '#fff', boxShadow: '0 6px 20px rgba(0,0,0,0.1)' }}>
-                <div style={{ padding: '12px 14px', borderBottom: '1px solid #e5e7eb', fontWeight: 600 }}>创建容器 - 步骤 {createStep}/3</div>
-                {createStep === 1 && (
-                  <div style={{ padding: 14 }}>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>镜像名称</div>
-                      <div style={{ fontSize: 13, color: '#6b7280', padding: '6px 8px', background: '#f3f4f6', borderRadius: 6 }}>
-                        {(selectedImage.repo_tags && selectedImage.repo_tags[0]) ? fmtImageName(selectedImage.repo_tags[0]) : selectedImage.id.slice(0, 12)}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>容器名称</div>
-                      <input
-                        className="panda-input"
-                        value={containerName}
-                        onChange={e => setContainerName(e.target.value)}
-                        placeholder="容器名称"
-                        style={{ width: 'calc(100% - 28px)', height: 28, padding: '0 8px', boxSizing: 'border-box' }}
-                      />
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>资源限制</div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', marginBottom: 8 }}>
-                        <input
-                          type="checkbox"
-                          checked={enableResourceLimit}
-                          onChange={e => setEnableResourceLimit(e.target.checked)}
-                          style={{ width: 16, height: 16 }}
-                        />
-                        <span style={{ fontSize: 13, color: '#374151' }}>启用资源限制</span>
-                      </label>
-                      {enableResourceLimit && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>CPU 核数: {cpuLimit}</div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="16"
-                              step="1"
-                              value={cpuLimit}
-                              onChange={e => setCpuLimit(Number(e.target.value))}
-                              style={{ width: '100%', height: 24 }}
-                            />
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>内存: {memoryLimit} GB</div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="32"
-                              step="1"
-                              value={memoryLimit}
-                              onChange={e => setMemoryLimit(Number(e.target.value))}
-                              style={{ width: '100%', height: 24 }}
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={autoStart}
-                          onChange={e => setAutoStart(e.target.checked)}
-                          style={{ width: 16, height: 16 }}
-                        />
-                        <span style={{ fontSize: 13, color: '#374151' }}>开机自启动</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-                {createStep === 2 && (
-                  <div style={{ padding: 14 }}>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>端口映射</div>
-                      {selectedImage.exposed_ports && selectedImage.exposed_ports.length > 0 && (
-                        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
-                          镜像暴露的端口: {selectedImage.exposed_ports.join(', ')}
-                        </div>
-                      )}
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                        <input
-                          className="panda-input"
-                          value={newHostPort}
-                          onChange={e => setNewHostPort(e.target.value)}
-                          placeholder="主机端口"
-                          style={{ width: '100px', height: 28, padding: '0 8px' }}
-                        />
-                        <input
-                          className="panda-input"
-                          value={newContainerPort}
-                          onChange={e => setNewContainerPort(e.target.value)}
-                          placeholder="容器端口"
-                          style={{ width: '100px', height: 28, padding: '0 8px' }}
-                        />
-                        <button className="panda-button" onClick={onAddPort}>添加</button>
-                      </div>
-                      {ports.map((p, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
-                          <span>{p.host} → {p.container}</span>
-                          <button className="panda-button danger" onClick={() => onRemovePort(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>存储位置</div>
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                        <input
-                          className="panda-input"
-                          value={newHostPath}
-                          onChange={e => setNewHostPath(e.target.value)}
-                          placeholder="主机路径"
-                          style={{ width: '150px', height: 28, padding: '0 8px' }}
-                        />
-                        <input
-                          className="panda-input"
-                          value={newContainerPath}
-                          onChange={e => setNewContainerPath(e.target.value)}
-                          placeholder="容器路径"
-                          style={{ width: '150px', height: 28, padding: '0 8px' }}
-                        />
-                        <button className="panda-button" onClick={onAddVolume}>添加</button>
-                      </div>
-                      {volumes.map((v, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
-                          <span>{v.host} → {v.container}</span>
-                          <button className="panda-button danger" onClick={() => onRemoveVolume(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 6 }}>环境变量</div>
-                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                        <input
-                          className="panda-input"
-                          value={newEnvKey}
-                          onChange={e => setNewEnvKey(e.target.value)}
-                          placeholder="键"
-                          style={{ width: '120px', height: 28, padding: '0 8px' }}
-                        />
-                        <input
-                          className="panda-input"
-                          value={newEnvValue}
-                          onChange={e => setNewEnvValue(e.target.value)}
-                          placeholder="值"
-                          style={{ width: '120px', height: 28, padding: '0 8px' }}
-                        />
-                        <button className="panda-button" onClick={onAddEnvVar}>添加</button>
-                      </div>
-                      {envVars.map((v, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, fontSize: 13 }}>
-                          <span>{v.key} = {v.value}</span>
-                          <button className="panda-button danger" onClick={() => onRemoveEnvVar(i)} style={{ padding: '2px 8px', height: 20 }}>删除</button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {createStep === 3 && (
-                  <div style={{ padding: 14 }}>
-                    <div style={{ fontSize: 13, color: '#374151', fontWeight: 600, marginBottom: 12 }}>设置预览</div>
-                    {console.log('Preview - ports:', ports, 'volumes:', volumes, 'envVars:', envVars)}
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>镜像</div>
-                      <div style={{ fontSize: 13, color: '#374151' }}>
-                        {(selectedImage.repo_tags && selectedImage.repo_tags[0]) ? fmtImageName(selectedImage.repo_tags[0]) : selectedImage.id.slice(0, 12)}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>容器名称</div>
-                      <div style={{ fontSize: 13, color: '#374151' }}>{containerName || '未设置'}</div>
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>资源限制</div>
-                      <div style={{ fontSize: 13, color: '#374151' }}>
-                        {enableResourceLimit ? `CPU: ${cpuLimit} 核, 内存: ${memoryLimit} GB` : '未启用'}
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>开机自启动</div>
-                      <div style={{ fontSize: 13, color: '#374151' }}>{autoStart ? '是' : '否'}</div>
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>端口映射</div>
-                      {ports.length > 0 ? (
-                        ports.map((p, i) => (
-                          <div key={i} style={{ fontSize: 13, color: '#374151', marginBottom: 2 }}>
-                            {p.host} → {p.container}
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ fontSize: 13, color: '#374151' }}>无</div>
-                      )}
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>存储位置</div>
-                      {volumes.length > 0 ? (
-                        volumes.map((v, i) => (
-                          <div key={i} style={{ fontSize: 13, color: '#374151', marginBottom: 2 }}>
-                            {v.host} → {v.container}
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ fontSize: 13, color: '#374151' }}>无</div>
-                      )}
-                    </div>
-                    <div style={{ marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>环境变量</div>
-                      {envVars.length > 0 ? (
-                        envVars.map((v, i) => (
-                          <div key={i} style={{ fontSize: 13, color: '#374151', marginBottom: 2 }}>
-                            {v.key} = {v.value}
-                          </div>
-                        ))
-                      ) : (
-                        <div style={{ fontSize: 13, color: '#374151' }}>无</div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                <div style={{ padding: 12, borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-                  {createStep > 1 && (
-                    <button className="panda-button" onClick={onPrevStep}>上一步</button>
-                  )}
-                  {createStep === 1 && <div />}
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <button className="panda-button" onClick={onCloseCreateContainer}>取消</button>
-                    {createStep < 3 && (
-                      <button className="panda-button" onClick={onNextStep}>下一步</button>
-                    )}
-                    {createStep === 3 && (
-                      <button className="panda-button" onClick={onCreateContainer}>创建</button>
-                    )}
-                  </div>
-                </div>
-              </div>
+          {active === 'images' && (
+            <ImageList
+              images={images}
+              onRun={onOpenCreateContainer}
+              onDelete={async (img) => { if(confirm('确认删除镜像?')) { await podmanApi.removeImage(img.id); loadAll() } }}
+            />
+          )}
+          {active === 'volumes' && <VolumeList volumes={volumesList} />}
+          {active === 'networks' && <NetworkList networks={networksList} />}
+          {active === 'registry' && (
+            <RegistryView
+              query={registryQ}
+              setQuery={setRegistryQ}
+              onSearch={onSearchRegistry}
+              loading={registryLoading}
+              items={registryItems}
+              hotItems={hotItems}
+              didSearch={didSearch}
+              pulling={pulling}
+              onPull={pullFromRegistry}
+              page={page}
+              hasNext={hasNext}
+              hasPrev={hasPrev}
+              onNextPage={() => onPageChange(page + 1)}
+              onPrevPage={() => onPageChange(page - 1)}
+              onOpenSettings={() => setSettingsOpen(true)}
+            />
+          )}
+          {active === 'compose' && (
+            <div style={{ padding: 40, textAlign: 'center', color: '#8e8e93' }}>
+              <Icon path={mdiTableColumn} size={2} color="#d1d1d6" />
+              <div style={{ marginTop: 16, fontSize: 16, fontWeight: 500 }}>Compose 管理即将上线</div>
             </div>
           )}
         </div>
-      {active === 'registry' && (
-        <div style={{ height: 36, display: 'flex', alignItems: 'center', borderTop: '1px solid #e5e7eb' }}>
-          <span style={{ marginLeft: 'auto', color: '#6b7280', fontSize: 14 }}>第 {page} 页</span>
-          <button className="panda-button" onClick={onPagePrev} disabled={!hasPrev || page <= 1 || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>上一页</button>
-          <button className="panda-button" onClick={onPageNext} disabled={!hasNext || registryLoading} style={{ marginLeft: 8, padding: '4px 10px', height: 28, display: 'inline-flex', alignItems: 'center' }}>下一页</button>
-        </div>
-      )}
       </div>
+
+      <CreateContainerModal
+        open={createContainerOpen}
+        onClose={onCloseCreateContainer}
+        image={selectedImage}
+        step={createStep}
+        setStep={setCreateStep}
+        containerName={containerName}
+        setContainerName={setContainerName}
+        enableResourceLimit={enableResourceLimit}
+        setEnableResourceLimit={setEnableResourceLimit}
+        cpuLimit={cpuLimit}
+        setCpuLimit={setCpuLimit}
+        memoryLimit={memoryLimit}
+        setMemoryLimit={setMemoryLimit}
+        autoStart={autoStart}
+        setAutoStart={setAutoStart}
+        ports={ports}
+        setPorts={setPorts}
+        newHostPort={newHostPort}
+        setNewHostPort={setNewHostPort}
+        newContainerPort={newContainerPort}
+        setNewContainerPort={setNewContainerPort}
+        onAddPort={() => { if(newHostPort && newContainerPort) { setPorts([...ports, {host: newHostPort, container: newContainerPort}]); setNewHostPort(''); setNewContainerPort('') } }}
+        onRemovePort={(i) => setPorts(ports.filter((_, idx) => idx !== i))}
+        volumes={volumes}
+        setVolumes={setVolumes}
+        newHostPath={newHostPath}
+        setNewHostPath={setNewHostPath}
+        newContainerPath={newContainerPath}
+        setNewContainerPath={setNewContainerPath}
+        onAddVolume={() => { if(newHostPath && newContainerPath) { setVolumes([...volumes, {host: newHostPath, container: newContainerPath}]); setNewHostPath(''); setNewContainerPath('') } }}
+        onRemoveVolume={(i) => setVolumes(volumes.filter((_, idx) => idx !== i))}
+        envVars={envVars}
+        setEnvVars={setEnvVars}
+        newEnvKey={newEnvKey}
+        setNewEnvKey={setNewEnvKey}
+        newEnvValue={newEnvValue}
+        setNewEnvValue={setNewEnvValue}
+        onAddEnvVar={() => { if(newEnvKey) { setEnvVars([...envVars, {key: newEnvKey, value: newEnvValue}]); setNewEnvKey(''); setNewEnvValue('') } }}
+        onRemoveEnvVar={(i) => setEnvVars(envVars.filter((_, idx) => idx !== i))}
+        onCreate={onCreateContainer}
+      />
     </div>
   )
 }
