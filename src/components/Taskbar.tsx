@@ -165,6 +165,16 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
               onMouseEnter={(e) => showTip(title, e.currentTarget)}
               onMouseLeave={() => setTip(null)}
             >
+              {isAppActive && (
+                <div style={{
+                  position: 'absolute',
+                  left: 6,
+                  width: 4,
+                  height: 4,
+                  borderRadius: '50%',
+                  background: '#334155'
+                }} />
+              )}
               {iconUrl ? <img src={iconUrl} alt="" width={22} height={22} style={{ borderRadius: 6 }} /> : <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(0,0,0,0.06)' }} />}
             </button>
           )
