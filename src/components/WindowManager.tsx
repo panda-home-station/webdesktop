@@ -145,6 +145,14 @@ export default function WindowManager() {
     }))
   }, [])
 
+  const handleDragFromMaximized = useCallback((id: string, x: number, y: number, w: number, h: number) => {
+    setWins(ws => ws.map(win => {
+      if (win.id !== id) return win
+      return { ...win, maximized: false, prev: undefined, x, y, w, h }
+    }))
+    bringToFront(id)
+  }, [bringToFront])
+
   const toggleMaximize = useCallback((id: string) => {
     setWins(ws =>
       ws.map(w => {
@@ -191,6 +199,25 @@ export default function WindowManager() {
     const Comp = await loadApp(a.id)
     open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp />, appId: a.id, iconUrl: a.iconUrl })
   }, [apps, open])
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      setWins(ws => ws.map(w => {
+        if (!w.maximized) return w
+        const dockLeft = 6
+        const dockWidth = 60
+        const dockGap = 0
+        const statusH = 0
+        const W = window.innerWidth
+        const H = window.innerHeight - statusH
+        const x = dockLeft + dockWidth + dockGap
+        const wmax = Math.max(300, W - x)
+        return { ...w, w: wmax, h: H, x, y: 0 }
+      }))
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   React.useEffect(() => {
     const pw = getPersistWins()
@@ -343,6 +370,8 @@ export default function WindowManager() {
               onMaximize={toggleMaximize}
               onMove={setPos}
               onResize={handleResize}
+              onDragFromMaximized={handleDragFromMaximized}
+              restoreRect={w.prev}
               minW={minW}
               minH={minH}
             />

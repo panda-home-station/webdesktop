@@ -23,6 +23,8 @@ export interface WinProps {
   onMaximize: (id: string) => void
   onMove: (id: string, x: number, y: number) => void
   onResize: (id: string, w: number, h: number, x?: number, y?: number) => void
+  onDragFromMaximized?: (id: string, x: number, y: number, w: number, h: number) => void
+  restoreRect?: { x: number; y: number; w: number; h: number }
   minW?: number
   minH?: number
 }
@@ -46,6 +48,8 @@ export default function Window({
   onMaximize,
   onMove,
   onResize,
+  onDragFromMaximized,
+  restoreRect,
   minW = 300,
   minH = 200
 }: WinProps) {
@@ -61,25 +65,67 @@ export default function Window({
 
   const handleTitleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault()
-    if (maximized) return
-    const startX = e.clientX
-    const startY = e.clientY
-    const initX = x
-    const initY = y
+    
+    let dragStartX = e.clientX
+    let dragStartY = e.clientY
+    let dragInitX = x
+    let dragInitY = y
+    let isDraggingMaximized = maximized
+    let hasRestored = false
 
     // Use transform for performance to avoid React re-renders during drag
     let lastDx = 0
     let lastDy = 0
 
     const move = (ev: MouseEvent) => {
-      const dx = ev.clientX - startX
-      const dy = ev.clientY - startY
+      const dx = ev.clientX - dragStartX
+      const dy = ev.clientY - dragStartY
+      
+      if (isDraggingMaximized && !hasRestored) {
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
+           const rect = restoreRect || { w: 800, h: 600, x: 100, y: 100 }
+           const currentW = w
+           const offsetX = dragStartX - dragInitX
+           const percent = offsetX / currentW
+           const newW = rect.w
+           const newH = rect.h
+           const newX = ev.clientX - (newW * percent)
+           const newY = ev.clientY - (dragStartY - dragInitY)
+
+           if (onDragFromMaximized) {
+             onDragFromMaximized(id, newX, newY, newW, newH)
+           }
+           
+           hasRestored = true
+           isDraggingMaximized = false
+           
+           // Reset drag base
+           dragStartX = ev.clientX
+           dragStartY = ev.clientY
+           dragInitX = newX
+           dragInitY = newY
+           lastDx = 0
+           lastDy = 0
+           
+           if (winRef.current) {
+             // Force update styles to match restored state immediately
+             winRef.current.style.width = `${newW}px`
+             winRef.current.style.height = `${newH}px`
+             winRef.current.style.left = `${newX}px`
+             winRef.current.style.top = `${newY}px`
+             winRef.current.style.transform = 'none'
+             winRef.current.style.transition = 'none'
+             winRef.current.style.borderTop = '1px solid var(--win-border)'
+           }
+        }
+        return
+      }
+
       lastDx = dx
       lastDy = dy
       
       if (winRef.current) {
         winRef.current.style.transform = `translate(${dx}px, ${dy}px)`
-        // Temporarily disable transition during drag for instant response
         winRef.current.style.transition = 'none'
       }
     }
@@ -88,12 +134,18 @@ export default function Window({
       document.removeEventListener('mousemove', move)
       document.removeEventListener('mouseup', up)
 
+      if (isDraggingMaximized && !hasRestored) return
+
       const pad = 0
       const W = window.innerWidth
       const H = window.innerHeight
+      
+      const currentW = hasRestored ? (restoreRect?.w || 800) : w
+      const currentH = hasRestored ? (restoreRect?.h || 600) : h
+
       // Simple boundary check
-      const nx = Math.max(pad, Math.min(initX + lastDx, W - w - pad))
-      const ny = Math.max(0, Math.min(initY + lastDy, H - h - pad))
+      const nx = Math.max(pad, Math.min(dragInitX + lastDx, W - currentW - pad))
+      const ny = Math.max(0, Math.min(dragInitY + lastDy, H - currentH - pad))
       
       // Reset transform and transition
       if (winRef.current) {
