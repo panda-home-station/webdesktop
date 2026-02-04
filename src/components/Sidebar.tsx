@@ -68,13 +68,14 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 200, styl
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: 20,
+                        width: 24,
+                        height: 24,
                         opacity: isActive ? 1 : 0.7
                       }}>
                         {item.icon}
                       </span>
                     )}
-                    <span>{item.label}</span>
+                    <span style={{ height: 24, display: 'flex', alignItems: 'center' }}>{item.label}</span>
                     {item.badge ? (
                       <span style={{
                         marginLeft: 'auto',
@@ -125,13 +126,14 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 200, styl
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: 20,
+                    width: 24,
+                    height: 24,
                     opacity: isActive ? 1 : 0.7
                   }}>
                     {item.icon}
                   </span>
                 )}
-                <span>{item.label}</span>
+                <span style={{ height: 24, display: 'flex', alignItems: 'center' }}>{item.label}</span>
                     {item.badge ? (
                       <span style={{
                         marginLeft: 'auto',

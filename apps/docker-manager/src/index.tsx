@@ -14,13 +14,13 @@ import { CreateContainerModal } from './components/CreateContainerModal'
 import { fmtImageName } from './utils'
 
 const TABS = [
-  { id: 'overview', label: '概览', icon: <Icon path={mdiViewGridOutline} size={1} /> },
-  { id: 'containers', label: '容器', icon: <Icon path={mdiCubeOutline} size={1} /> },
-  { id: 'images', label: '镜像', icon: <Icon path={mdiImageFilterNone} size={1} /> },
-  { id: 'volumes', label: '存储卷', icon: <Icon path={mdiHarddisk} size={1} /> },
-  { id: 'networks', label: '网络', icon: <Icon path={mdiNetwork} size={1} /> },
-  { id: 'registry', label: '仓库', icon: <Icon path={mdiDatabase} size={1} /> },
-  { id: 'compose', label: '编排', icon: <Icon path={mdiTableColumn} size={1} /> },
+  { id: 'overview', label: '概览', icon: <Icon path={mdiViewGridOutline} size="20px" /> },
+  { id: 'containers', label: '容器', icon: <Icon path={mdiCubeOutline} size="20px" /> },
+  { id: 'images', label: '镜像', icon: <Icon path={mdiImageFilterNone} size="20px" /> },
+  { id: 'volumes', label: '存储卷', icon: <Icon path={mdiHarddisk} size="20px" /> },
+  { id: 'networks', label: '网络', icon: <Icon path={mdiNetwork} size="20px" /> },
+  { id: 'registry', label: '仓库', icon: <Icon path={mdiDatabase} size="20px" /> },
+  { id: 'compose', label: '编排', icon: <Icon path={mdiTableColumn} size="20px" /> },
 ]
 
 export default function DockerManager() {
