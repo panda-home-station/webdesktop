@@ -4,6 +4,7 @@ import { openApp, showDesktop } from '../sdk/desktop'
 import { getAppContextMenu } from '../sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
+import { Monitor, LayoutGrid } from 'lucide-react'
 
 type WinItem = {
   id: string
@@ -22,6 +23,28 @@ type Props = {
   isLauncherOpen?: boolean
   onCloseLauncher?: () => void
 }
+
+const GlassTile = ({ children, color, active, activeColor = '#2563eb' }: { children: React.ReactNode; color?: string; active?: boolean; activeColor?: string }) => (
+  <div
+    style={{
+      width: 36,
+      height: 36,
+      borderRadius: 10,
+      background: active ? activeColor : 'rgba(255,255,255,0.75)',
+      backdropFilter: 'blur(12px)',
+      boxShadow: active
+        ? `0 4px 12px ${activeColor}4d`
+        : '0 2px 5px rgba(0,0,0,0.1), inset 0 0 0 1px rgba(255,255,255,0.4)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      color: active ? '#fff' : (color || '#334155'),
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+    }}
+  >
+    {children}
+  </div>
+)
 
 export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher }: Props) {
   const apps = listApps()
@@ -96,10 +119,9 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           onMouseEnter={(e) => showTip('显示桌面', e.currentTarget)}
           onMouseLeave={() => setTip(null)}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <rect x="4" y="6" width="16" height="12" rx="2" fill="#64748b" />
-            <path d="M4 18h16" stroke="#94a3b8" strokeWidth="2" />
-          </svg>
+          <GlassTile>
+            <Monitor size={20} color="#334155" strokeWidth={1.5} />
+          </GlassTile>
         </button>
         <button
           className="dock-item"
@@ -109,13 +131,9 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           onMouseEnter={(e) => showTip('全部应用', e.currentTarget)}
           onMouseLeave={() => setTip(null)}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <rect x="4" y="4" width="6" height="6" rx="2" fill="#60a5fa" />
-            <rect x="14" y="4" width="6" height="6" rx="2" fill="#34d399" />
-            <rect x="4" y="14" width="6" height="6" rx="2" fill="#f59e0b" />
-            <rect x="14" y="14" width="6" height="6" rx="2" fill="#ef4444" />
-          </svg>
-          {isLauncherOpen && <span className="dock-dot dock-dot-active" />}
+          <GlassTile active={isLauncherOpen} activeColor="#2563eb">
+            <LayoutGrid size={20} color={isLauncherOpen ? '#fff' : '#2563eb'} strokeWidth={1.5} />
+          </GlassTile>
         </button>
       </div>
       <div style={{ width: '100%', height: 1, background: 'var(--win-border)', margin: '10px 0', opacity: 0.6 }} />
@@ -127,6 +145,9 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           const iconUrl = a?.iconUrl
           const anyMin = arr.find(x => x.minimized)
           const anyWin = arr.find(x => !x.minimized) || arr[0]
+          // If any window of this app is not minimized, the app is considered "active" (showing on desktop)
+          const isAppActive = arr.some(w => !w.minimized)
+
           return (
             <button
               key={`tb-${id}`}
@@ -145,16 +166,28 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
               onMouseLeave={() => setTip(null)}
             >
               {iconUrl ? <img src={iconUrl} alt="" width={22} height={22} style={{ borderRadius: 6 }} /> : <div style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(0,0,0,0.06)' }} />}
-              <span className="dock-dot dock-dot-active" />
             </button>
           )
         })}
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 2,
+        padding: '8px 0',
+        background: 'rgba(203, 213, 225, 0.8)',
+         borderRadius: 999,
+         width: 40,
+        marginTop: 10,
+        backdropFilter: 'blur(12px)',
+        border: '1px solid rgba(255,255,255,0.3)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.05)'
+      }}>
         <button
           className="dock-item"
           title="AI助手"
-          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             openApp('agent-chat')
@@ -162,12 +195,12 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           onMouseEnter={(e) => showTip('AI助手', e.currentTarget)}
           onMouseLeave={() => setTip(null)}
         >
-          <Icon path={mdiRobot} size={0.9} color="#60a5fa" />
+          <Icon path={mdiRobot} size={0.9} color="#3b82f6" />
         </button>
         <button
           className="dock-item"
           title="通知"
-          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             onOpenApp('notifications')
@@ -176,14 +209,14 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
-            <path d="M12 3a6 6 0 0 1 6 6v4l2 2H4l2-2V9a6 6 0 0 1 6-6z" fill="#60a5fa" />
+            <path d="M12 3a6 6 0 0 1 6 6v4l2 2H4l2-2V9a6 6 0 0 1 6-6z" fill="#3b82f6" />
             <circle cx="12" cy="20" r="2" fill="#93c5fd" />
           </svg>
         </button>
         <button
           className="dock-item"
           title="账号"
-          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             focusOrOpen('user-center')
@@ -192,14 +225,14 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           onMouseLeave={() => setTip(null)}
         >
           <svg width="22" height="22" viewBox="0 0 24 24">
-            <circle cx="12" cy="8" r="4" fill="#64748b" />
+            <circle cx="12" cy="8" r="4" fill="#475569" />
             <path d="M4 20a8 8 0 0 1 16 0" fill="#94a3b8" />
           </svg>
         </button>
         <button
           className="dock-item"
           title="设置"
-          style={{ width: 44, height: 44, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             onOpenApp('system-settings')
@@ -207,7 +240,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           onMouseEnter={(e) => showTip('设置', e.currentTarget)}
           onMouseLeave={() => setTip(null)}
         >
-          <Icon path={mdiCogOutline} size="22px" color="#9ca3af" />
+          <Icon path={mdiCogOutline} size="22px" color="#475569" />
         </button>
       </div>
       {tip && (
