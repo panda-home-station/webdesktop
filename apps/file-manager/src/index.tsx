@@ -869,7 +869,16 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }, [selected, filtered])
 
-  const startResize = (key: keyof typeof colWidths, nextKey: keyof typeof colWidths | null, e: React.MouseEvent) => {
+  const startResize = (
+    key: keyof typeof colWidths, 
+    nextKey: keyof typeof colWidths | null, 
+    e: React.MouseEvent,
+    options: {
+      containerRef?: React.RefObject<HTMLDivElement> | null,
+      fixedCols?: string[],
+      minFluidWidth?: number
+    } = {}
+  ) => {
     e.preventDefault()
     e.stopPropagation()
     setResizingKey(key as string)
@@ -899,7 +908,24 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         }))
       } else {
         // Fallback for single column resize (should not happen for inner columns)
-        const next = Math.max(60, startW + dx)
+        let next = Math.max(60, startW + dx)
+
+        // Constraint to window boundary
+        const container = options.containerRef?.current || listContainerRef.current
+        if (container) {
+          const containerWidth = container.clientWidth
+          // Default to ListView fixed cols if not provided
+          const fixedCols = options.fixedCols || ['name', 'modified', 'type']
+          const otherFixedCols = fixedCols.filter(k => k !== key)
+          const usedByOthers = otherFixedCols.reduce((acc, k) => acc + (colWidths[k] || 0), 0)
+          const minFluidWidth = options.minFluidWidth || 80 // Reserved for fluid column
+          const maxAvailable = containerWidth - usedByOthers - minFluidWidth
+          
+          if (next > maxAvailable) {
+            next = Math.max(60, maxAvailable)
+          }
+        }
+
         setColWidths((cw) => ({ ...cw, [key]: next }))
       }
     }

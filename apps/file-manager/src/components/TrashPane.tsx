@@ -80,6 +80,15 @@ export default function TrashPane({
     )
   }
 
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const handleResize = (key: string, nextKey: string | null, e: React.MouseEvent) => {
+    startResize(key, nextKey, e, {
+      containerRef,
+      fixedCols: ['name', 'originalPath', 'size']
+    })
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#fff' }}>
       {/* Toolbar */}
@@ -120,7 +129,7 @@ export default function TrashPane({
         </button>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
+      <div ref={containerRef} style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
         <TrashListView
           filtered={filtered}
           selected={selected}
@@ -133,7 +142,7 @@ export default function TrashPane({
           onContextMenu={onContextMenu}
           trashMetadata={trashMetadata}
           colWidths={colWidths}
-          startResize={startResize}
+          startResize={handleResize}
           headerCheckboxRef={headerCheckboxRef}
           resizingKey={resizingKey}
         />

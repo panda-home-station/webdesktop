@@ -140,7 +140,7 @@ export default function TrashListView({
               }}></div>
             </div>
           </th>
-          <th style={{ textAlign: 'left', paddingRight: 20, borderBottom: '1px solid #e5e5ea', paddingLeft: 8 }}>
+          <th style={{ textAlign: 'left', paddingRight: 20, borderBottom: '1px solid #e5e5ea', paddingLeft: 8, whiteSpace: 'nowrap' }}>
             删除时间
           </th>
         </tr>
@@ -213,11 +213,9 @@ export default function TrashListView({
               <td style={{ fontSize: 13, color: '#8e8e93', borderBottom: '1px solid #f2f2f7', paddingLeft: 8 }}>
                 {fmtSize(e.size)}
               </td>
-              <td style={{ fontSize: 13, color: '#8e8e93', borderBottom: '1px solid #f2f2f7', paddingLeft: 8 }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                   <span>{meta.deletionTime ? new Date(meta.deletionTime).toLocaleString() : '-'}</span>
-                   {meta.deletionTime && <span style={{ fontSize: 11, color: '#ff3b30' }}>剩 {getRemainingTime(meta.deletionTime)}</span>}
-                </div>
+              <td style={{ fontSize: 13, color: '#8e8e93', borderBottom: '1px solid #f2f2f7', paddingLeft: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 20 }}>
+                <span>{meta.deletionTime ? new Date(meta.deletionTime).toLocaleString() : '-'}</span>
+                {meta.deletionTime && <span style={{ fontSize: 12, color: '#ff3b30', marginLeft: 8 }}>剩 {getRemainingTime(meta.deletionTime)}</span>}
               </td>
             </tr>
           )
