@@ -373,42 +373,42 @@ export default function Window({
         <>
           {/* SE */}
           <div
-            style={{ position: 'absolute', right: -6, bottom: -6, width: 16, height: 16, cursor: 'nwse-resize', background: 'transparent', zIndex: 10 }}
+            style={{ position: 'absolute', right: -6, bottom: -6, width: 16, height: 16, cursor: 'nwse-resize', background: 'transparent', zIndex: 101 }}
             onMouseDown={createResizeHandler('se')}
           />
           {/* SW */}
           <div
-            style={{ position: 'absolute', left: -6, bottom: -6, width: 16, height: 16, cursor: 'nesw-resize', zIndex: 10 }}
+            style={{ position: 'absolute', left: -6, bottom: -6, width: 16, height: 16, cursor: 'nesw-resize', zIndex: 101 }}
             onMouseDown={createResizeHandler('sw')}
           />
           {/* NW */}
           <div
-            style={{ position: 'absolute', left: -6, top: -6, width: 16, height: 16, cursor: 'nwse-resize', zIndex: 10 }}
+            style={{ position: 'absolute', left: -6, top: -6, width: 16, height: 16, cursor: 'nwse-resize', zIndex: 101 }}
             onMouseDown={createResizeHandler('nw')}
           />
           {/* NE */}
           <div
-            style={{ position: 'absolute', right: -6, top: -6, width: 16, height: 16, cursor: 'nesw-resize', zIndex: 10 }}
+            style={{ position: 'absolute', right: -6, top: -6, width: 16, height: 16, cursor: 'nesw-resize', zIndex: 101 }}
             onMouseDown={createResizeHandler('ne')}
           />
           {/* W */}
           <div
-            style={{ position: 'absolute', left: -5, top: 0, width: 10, height: '100%', cursor: 'ew-resize', zIndex: 9 }}
+            style={{ position: 'absolute', left: -5, top: 0, width: 10, height: '100%', cursor: 'ew-resize', zIndex: 100 }}
             onMouseDown={createResizeHandler('w')}
           />
           {/* E */}
           <div
-            style={{ position: 'absolute', right: -5, top: 0, width: 10, height: '100%', cursor: 'ew-resize', zIndex: 9 }}
+            style={{ position: 'absolute', right: -5, top: 0, width: 10, height: '100%', cursor: 'ew-resize', zIndex: 100 }}
             onMouseDown={createResizeHandler('e')}
           />
           {/* S */}
           <div
-            style={{ position: 'absolute', bottom: -5, left: 0, width: '100%', height: 10, cursor: 'ns-resize', zIndex: 9 }}
+            style={{ position: 'absolute', bottom: -5, left: 0, width: '100%', height: 10, cursor: 'ns-resize', zIndex: 100 }}
             onMouseDown={createResizeHandler('s')}
           />
           {/* N */}
           <div
-            style={{ position: 'absolute', top: -5, left: 0, width: '100%', height: 10, cursor: 'ns-resize', zIndex: 9 }}
+            style={{ position: 'absolute', top: -5, left: 0, width: '100%', height: 10, cursor: 'ns-resize', zIndex: 100 }}
             onMouseDown={createResizeHandler('n')}
           />
         </>
