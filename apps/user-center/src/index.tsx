@@ -93,12 +93,11 @@ export default function UserCenter() {
   return (
     <div style={{ display: 'flex', width: '100%', height: '100%', background: 'transparent' }} className="noselect">
       <Sidebar
-        width={220}
         activeId={active}
         onSelect={(id) => setActive(id as Item)}
         items={[
-          { id: 'profile', label: '账户信息', icon: <Icon path={mdiAccountCircleOutline} size={1} /> },
-          { id: 'wallpapers', label: '主题与壁纸', icon: <Icon path={mdiImageOutline} size={1} /> }
+          { id: 'profile', label: '账户信息', icon: <Icon path={mdiAccountCircleOutline} size="20px" /> },
+          { id: 'wallpapers', label: '主题与壁纸', icon: <Icon path={mdiImageOutline} size="20px" /> }
         ]}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 12, gap: 12 }}>

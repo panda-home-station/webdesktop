@@ -335,11 +335,11 @@ export default function Downloader() {
     {
       title: '任务状态',
       items: [
-        { id: 'all', label: '所有任务', icon: <Icon path={mdiAllInclusive} size={0.8} /> },
-        { id: 'downloading', label: '下载中', icon: <Icon path={mdiDownload} size={0.8} /> },
-        { id: 'paused', label: '已暂停', icon: <Icon path={mdiPause} size={0.8} /> },
-        { id: 'done', label: '已完成', icon: <Icon path={mdiCheckCircle} size={0.8} /> },
-        { id: 'error', label: '错误', icon: <Icon path={mdiAlertCircle} size={0.8} /> },
+        { id: 'all', label: '所有任务', icon: <Icon path={mdiAllInclusive} size="20px" /> },
+        { id: 'downloading', label: '下载中', icon: <Icon path={mdiDownload} size="20px" /> },
+        { id: 'paused', label: '已暂停', icon: <Icon path={mdiPause} size="20px" /> },
+        { id: 'done', label: '已完成', icon: <Icon path={mdiCheckCircle} size="20px" /> },
+        { id: 'error', label: '错误', icon: <Icon path={mdiAlertCircle} size="20px" /> },
       ]
     }
   ]
@@ -347,7 +347,6 @@ export default function Downloader() {
   return (
     <div style={{ height: '100%', display: 'flex', background: '#f5f5f5', color: '#333', userSelect: 'none', position: 'relative' }}>
       <Sidebar
-        width={200}
         sections={sidebarSections}
         activeId={activeFilter}
         onSelect={setActiveFilter}

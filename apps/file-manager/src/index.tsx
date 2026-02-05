@@ -992,31 +992,31 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     {
       title: '文件',
       items: [
-        { id: 'home', label: '我的文件', icon: <Folder size={24} strokeWidth={1.5} /> },
-        { id: 'team', label: '团队文件', icon: <Users size={24} strokeWidth={1.5} /> },
-        { id: 'appdata', label: '应用文件', icon: <Settings size={24} strokeWidth={1.5} /> },
+        { id: 'home', label: '我的文件', icon: <Folder size={20} strokeWidth={1.5} /> },
+        { id: 'team', label: '团队文件', icon: <Users size={20} strokeWidth={1.5} /> },
+        { id: 'appdata', label: '应用文件', icon: <Settings size={20} strokeWidth={1.5} /> },
       ]
     },
     {
       title: '共享',
       items: [
-        { id: 'shared-with-me', label: '他人共享', icon: <Inbox size={24} strokeWidth={1.5} /> },
-        { id: 'my-shares', label: '我的共享', icon: <Share2 size={24} strokeWidth={1.5} /> },
-        { id: 'public-links', label: '外链分享', icon: <Link size={24} strokeWidth={1.5} /> },
+        { id: 'shared-with-me', label: '他人共享', icon: <Inbox size={20} strokeWidth={1.5} /> },
+        { id: 'my-shares', label: '我的共享', icon: <Share2 size={20} strokeWidth={1.5} /> },
+        { id: 'public-links', label: '外链分享', icon: <Link size={20} strokeWidth={1.5} /> },
       ]
     },
     {
       title: '快捷',
       items: [
-        { id: 'recent', label: '最近访问', icon: <History size={24} strokeWidth={1.5} /> },
-        { id: 'favorites', label: '我的收藏', icon: <Star size={24} strokeWidth={1.5} /> },
+        { id: 'recent', label: '最近访问', icon: <History size={20} strokeWidth={1.5} /> },
+        { id: 'favorites', label: '我的收藏', icon: <Star size={20} strokeWidth={1.5} /> },
       ]
     },
     {
       title: '系统',
       items: [
-        { id: 'transfers', label: '传输任务', icon: <ArrowLeftRight size={24} strokeWidth={1.5} />, badge: runningCount > 0 ? runningCount : undefined },
-        { id: 'trash', label: '回收站', icon: <Trash2 size={24} strokeWidth={1.5} /> },
+        { id: 'transfers', label: '传输任务', icon: <ArrowLeftRight size={20} strokeWidth={1.5} />, badge: runningCount > 0 ? runningCount : undefined },
+        { id: 'trash', label: '回收站', icon: <Trash2 size={20} strokeWidth={1.5} /> },
       ]
     }
   ]
@@ -1045,7 +1045,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         }
       `}</style>
       <Sidebar
-        width={220}
         sections={sections}
         activeId={active}
         onSelect={(id) => {

@@ -18,7 +18,7 @@ interface SidebarProps {
   style?: React.CSSProperties
 }
 
-export function Sidebar({ items, sections, activeId, onSelect, width = 200, style, className }: SidebarProps) {
+export function Sidebar({ items, sections, activeId, onSelect, width = 220, style, className }: SidebarProps) {
   return (
     <div
       className={className}
@@ -64,7 +64,7 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 200, styl
                   >
                     {item.icon && (
                       <span style={{
-                        fontSize: 16,
+                        fontSize: 20,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
