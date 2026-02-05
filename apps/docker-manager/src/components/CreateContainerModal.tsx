@@ -69,7 +69,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
 
   return (
     <div style={{
-      position: 'fixed', inset: 0, zIndex: 1000,
+      position: 'absolute', inset: 0, zIndex: 1000,
       background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center'
     }}>

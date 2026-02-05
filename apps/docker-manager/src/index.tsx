@@ -195,7 +195,7 @@ export default function DockerManager() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', color: '#1f2937', background: '#f2f2f7' }} className="noselect">
+    <div style={{ display: 'flex', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', color: '#1f2937', background: '#f2f2f7', position: 'relative' }} className="noselect">
       <Sidebar
         items={TABS}
         activeId={active}
