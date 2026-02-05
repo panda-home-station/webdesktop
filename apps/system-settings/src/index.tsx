@@ -12,7 +12,11 @@ import {
   ChevronRight,
   Wifi,
   Activity,
-  Cpu
+  Cpu,
+  Copy,
+  Thermometer,
+  Microchip,
+  MemoryStick
 } from 'lucide-react'
 
 const TABS = [
@@ -37,7 +41,7 @@ export default function SystemSettings() {
 
   useEffect(() => {
     const fetchInfo = () => {
-      axios.get('/api/system/info').then(r => {
+      axios.get('/api/system/device').then(r => {
         const data = r.data
         setDeviceInfo(data)
         try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch {}
@@ -219,6 +223,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (c: boolean
 
 function DeviceInfo({ info }: { info: any }) {
   const [displayTime, setDisplayTime] = useState('')
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (!info) return
@@ -226,7 +231,7 @@ function DeviceInfo({ info }: { info: any }) {
     const format = (ms: number) => {
       const d = new Date(ms)
       const pad = (n: number) => n < 10 ? '0' + n : n
-      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+      return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
     }
     setDisplayTime(format(ts))
     const timer = setInterval(() => {
@@ -236,39 +241,175 @@ function DeviceInfo({ info }: { info: any }) {
     return () => clearInterval(timer)
   }, [info])
 
-  if (!info) return <div>加载中...</div>
+  const copyId = () => {
+    if (info?.device_id) {
+      navigator.clipboard.writeText(info.device_id)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  if (!info) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: 20 }}>
+         <div style={{ height: 100, background: '#f3f4f6', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
+         <div style={{ height: 200, background: '#f3f4f6', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
+         <style>{`@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }`}</style>
+      </div>
+    )
+  }
 
   return (
-    <div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 40 }}>
+    <div style={{ paddingBottom: 40 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32, gap: 20 }}>
         <div style={{ 
-          width: 80, 
-          height: 80, 
-          background: '#e5e5ea', 
-          borderRadius: 20, 
+          width: 64, 
+          height: 64, 
+          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
+          borderRadius: 16, 
           display: 'flex', 
           alignItems: 'center', 
           justifyContent: 'center',
-          marginBottom: 16,
-          color: '#8e8e93'
+          color: '#fff',
+          boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1)'
         }}>
-          <Monitor size={48} />
+          <Server size={32} />
         </div>
-        <h3 style={{ margin: 0, fontSize: 24, fontWeight: 600 }}>{info.device_name}</h3>
-        <p style={{ margin: '4px 0 0 0', color: '#8e8e93', fontSize: 15 }}>{info.device_id}</p>
+        <div>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#111827' }}>{info.device_name}</h1>
+          <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
+             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+               <Cpu size={14} /> {info.hardware.cpu.split(' ')[0]}
+             </span>
+             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+               <MemoryStick size={14} /> {info.hardware.memory.split(' ')[0]} {info.hardware.memory.split(' ')[1]}
+             </span>
+          </div>
+        </div>
       </div>
 
-      <Section title="概览">
-        <Row label="系统版本" value={info.system_version} />
-        <Row label="运行时间" value={info.uptime} />
-        <Row label="系统时间" value={displayTime || info.system_time} border={false} />
-      </Section>
+      <SpecGroup title="硬件规格">
+        <SpecRow label="处理器" value={info.hardware.cpu} />
+        <SpecRow label="显卡" value={info.hardware.gpu || 'N/A'} />
+        <SpecRow label="内存" value={info.hardware.memory} />
+        <SpecRow label="硬盘" value={
+          info.phy_disks && info.phy_disks.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
+              {info.phy_disks.map((disk: any, i: number) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', fontSize: 13, lineHeight: 1.5 }}>
+                  <span style={{ fontWeight: 600, color: '#374151' }}>{disk.name}</span>
+                  <span style={{ margin: '0 6px', color: '#9ca3af' }}>-</span>
+                  <span style={{ color: '#111827', marginRight: 8 }}>
+                    {disk.vendor ? `${disk.vendor} ` : ''}{disk.model}
+                  </span>
+                  <span style={{ color: '#6b7280' }}>
+                    {disk.is_rotational ? 'HDD' : 'SSD'} 
+                    <span style={{ margin: '0 4px', color: '#e5e7eb' }}>|</span> 
+                    {disk.size} 
+                    <span style={{ margin: '0 4px', color: '#e5e7eb' }}>|</span> 
+                    SN: {disk.serial || 'N/A'}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : '未检测到磁盘'
+        } />
+        <SpecRow label="设备 ID" value={info.device_id} action={
+          <button 
+            onClick={copyId}
+            style={{ 
+              border: 'none', 
+              background: 'transparent', 
+              color: copied ? '#059669' : '#6b7280', 
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontSize: 12,
+              padding: '4px 8px',
+              borderRadius: 4,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => !copied && (e.currentTarget.style.color = '#374151')}
+            onMouseLeave={e => !copied && (e.currentTarget.style.color = '#6b7280')}
+          >
+            {copied ? '已复制' : '复制'}
+            {!copied && <Copy size={14} />}
+          </button>
+        } />
+      </SpecGroup>
 
-      <Section title="硬件">
-        <Row label="处理器" value={info.hardware.cpu} />
-        <Row label="内存" value={info.hardware.memory} />
-        <Row label="温度" value={info.hardware.temperature} border={false} />
-      </Section>
+      <SpecGroup title="系统规格">
+        <SpecRow label="版本" value="PandaNAS OS" />
+        <SpecRow label="系统版本号" value={info.system_version} />
+        <SpecRow label="本次运行时间" value={info.uptime} />
+        <SpecRow label="系统时间" value={displayTime || info.system_time} />
+      </SpecGroup>
+
+      <SpecGroup title="网络连接">
+        <SpecRow label="IP 地址" value={info.network.ip} />
+        <SpecRow label="连接状态" value={
+          <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
+            ● 已连接
+          </span>
+        } />
+        <SpecRow label="传输数据" value={
+          <div style={{ display: 'flex', gap: 16 }}>
+             <span>{info.network.transfer.split(' ')[0]} {info.network.transfer.split(' ')[1]}</span>
+             <span style={{ color: '#e5e7eb' }}>|</span>
+             <span>{info.network.transfer.split(' ')[2]} {info.network.transfer.split(' ')[3]}</span>
+          </div>
+        } />
+      </SpecGroup>
+
+      <SpecGroup title="存储空间">
+        <DiskRow name="系统盘 (System)" data={info.system_disk} />
+        <DiskRow name="数据盘 (Data)" data={info.data_disk} isLast />
+      </SpecGroup>
+    </div>
+  )
+}
+
+function SpecGroup({ title, children }: { title: string, children: React.ReactNode }) {
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <h3 style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 2 }}>{title}</h3>
+      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function SpecRow({ label, value, action }: { label: string, value: React.ReactNode, action?: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', padding: '14px 20px', borderBottom: '1px solid #f3f4f6', minHeight: 24 }}>
+      <div style={{ width: 140, fontSize: 13, color: '#6b7280', flexShrink: 0 }}>{label}</div>
+      <div style={{ fontSize: 13, color: '#111827', fontWeight: 500, flex: 1, userSelect: 'text', lineHeight: 1.5 }}>{value}</div>
+      {action && <div style={{ marginLeft: 12 }}>{action}</div>}
+    </div>
+  )
+}
+
+function DiskRow({ name, data, isLast }: { name: string, data: any, isLast?: boolean }) {
+  return (
+    <div style={{ padding: '16px 20px', borderBottom: isLast ? 'none' : '1px solid #f3f4f6' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{name}</div>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>
+          {data.used.split(' ')[0]} / {data.total}
+        </div>
+      </div>
+      <div style={{ height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{ 
+          width: `${data.percent}%`, 
+          height: '100%', 
+          background: data.percent > 90 ? '#ef4444' : '#3b82f6',
+          borderRadius: 4,
+          transition: 'width 0.5s ease-out'
+        }} />
+      </div>
     </div>
   )
 }
