@@ -168,9 +168,9 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
               {isAppActive && (
                 <div style={{
                   position: 'absolute',
-                  left: 6,
-                  width: 4,
-                  height: 4,
+                  left: 3,
+                  width: 5,
+                  height: 5,
                   borderRadius: '50%',
                   background: '#334155'
                 }} />

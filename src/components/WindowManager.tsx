@@ -47,7 +47,7 @@ export default function WindowManager() {
     const minH = (a as any)?.minH ?? 200
     const defW = Math.max(600, minW)
     const defH = Math.max(400, minH)
-    const dockLeft = 6
+    const dockLeft = 12
     const dockWidth = 60
     const openGap = 24
     const screenW = window.innerWidth
@@ -159,7 +159,7 @@ export default function WindowManager() {
         if (w.id !== id) return w
         if (!w.maximized) {
           const prev = { x: w.x ?? 0, y: w.y ?? 0, w: w.w ?? 600, h: w.h ?? 400 }
-          const dockLeft = 6
+          const dockLeft = 12
           const dockWidth = 60
           const dockGap = 0
           const statusH = 0
@@ -204,7 +204,7 @@ export default function WindowManager() {
     const handleResize = () => {
       setWins(ws => ws.map(w => {
         if (!w.maximized) return w
-        const dockLeft = 6
+        const dockLeft = 12
         const dockWidth = 60
         const dockGap = 0
         const statusH = 0
