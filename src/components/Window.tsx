@@ -121,11 +121,34 @@ export default function Window({
         return
       }
 
-      lastDx = dx
-      lastDy = dy
+      // Calculate boundaries
+      const W = window.innerWidth
+      const H = window.innerHeight
+      const currentW = hasRestored ? (restoreRect?.w || 800) : w
+      
+      const rawX = dragInitX + dx
+      const rawY = dragInitY + dy
+      
+      // Allow dragging out of bounds but with limits
+      // Left/Right: keep 30px visible
+      // Top: >= 0
+      // Bottom: Keep title bar visible (y <= H - 30)
+      const minX = 30 - currentW
+      const maxX = W - 30
+      const minY = 0
+      const maxY = H - 30
+      
+      const clampedX = Math.max(minX, Math.min(rawX, maxX))
+      const clampedY = Math.max(minY, Math.min(rawY, maxY))
+      
+      const newDx = clampedX - dragInitX
+      const newDy = clampedY - dragInitY
+
+      lastDx = newDx
+      lastDy = newDy
       
       if (winRef.current) {
-        winRef.current.style.transform = `translate(${dx}px, ${dy}px)`
+        winRef.current.style.transform = `translate(${newDx}px, ${newDy}px)`
         winRef.current.style.transition = 'none'
       }
     }
@@ -136,16 +159,20 @@ export default function Window({
 
       if (isDraggingMaximized && !hasRestored) return
 
-      const pad = 0
       const W = window.innerWidth
       const H = window.innerHeight
-      
       const currentW = hasRestored ? (restoreRect?.w || 800) : w
-      const currentH = hasRestored ? (restoreRect?.h || 600) : h
 
-      // Simple boundary check
-      const nx = Math.max(pad, Math.min(dragInitX + lastDx, W - currentW - pad))
-      const ny = Math.max(0, Math.min(dragInitY + lastDy, H - currentH - pad))
+      const rawX = dragInitX + lastDx
+      const rawY = dragInitY + lastDy
+      
+      const minX = 30 - currentW
+      const maxX = W - 30
+      const minY = 0
+      const maxY = H - 30
+      
+      const nx = Math.max(minX, Math.min(rawX, maxX))
+      const ny = Math.max(minY, Math.min(rawY, maxY))
       
       // Reset transform and transition
       if (winRef.current) {

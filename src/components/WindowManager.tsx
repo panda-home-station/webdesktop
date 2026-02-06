@@ -203,16 +203,40 @@ export default function WindowManager() {
   React.useEffect(() => {
     const handleResize = () => {
       setWins(ws => ws.map(w => {
-        if (!w.maximized) return w
         const dockLeft = 12
         const dockWidth = 60
         const dockGap = 0
         const statusH = 0
         const W = window.innerWidth
         const H = window.innerHeight - statusH
-        const x = dockLeft + dockWidth + dockGap
-        const wmax = Math.max(300, W - x)
-        return { ...w, w: wmax, h: H, x, y: 0 }
+
+        if (w.maximized) {
+          const x = dockLeft + dockWidth + dockGap
+          const wmax = Math.max(300, W - x)
+          return { ...w, w: wmax, h: H, x, y: 0 }
+        }
+
+        // Keep non-maximized windows visible
+        const currentW = w.w ?? 600
+        const currentX = w.x ?? 60
+        const currentY = w.y ?? 60
+
+        // Allow dragging out of bounds but with limits
+        // Left/Right: keep 30px visible
+        // Top: >= 0
+        // Bottom: Keep title bar visible (y <= H - 30)
+        const minX = 30 - currentW
+        const maxX = W - 30
+        const minY = 0
+        const maxY = H - 30
+
+        const nx = Math.max(minX, Math.min(currentX, maxX))
+        const ny = Math.max(minY, Math.min(currentY, maxY))
+
+        if (nx !== currentX || ny !== currentY) {
+          return { ...w, x: nx, y: ny }
+        }
+        return w
       }))
     }
     window.addEventListener('resize', handleResize)
