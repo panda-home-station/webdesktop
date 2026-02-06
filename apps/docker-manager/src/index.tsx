@@ -188,10 +188,16 @@ export default function DockerManager() {
       volumes: volumes.length > 0 ? volumes.map(v => `${v.host}:${v.container}`) : undefined,
       env: envVars.length > 0 ? envVars.map(v => `${v.key}=${v.value}`) : undefined,
     }
-    await podmanApi.createContainer(payload)
-    onCloseCreateContainer()
-    await loadAll()
-    setActive('containers')
+    try {
+      await podmanApi.createContainer(payload)
+      onCloseCreateContainer()
+      await loadAll()
+      setActive('containers')
+    } catch (e: any) {
+      console.error(e)
+      const msg = e.response?.data || e.message || 'Unknown error'
+      alert(`Failed to create container: ${typeof msg === 'object' ? JSON.stringify(msg) : msg}`)
+    }
   }
 
   return (
@@ -215,10 +221,44 @@ export default function DockerManager() {
           {active === 'containers' && (
             <ContainerList
               containers={containers}
-              onStart={async (id) => { await podmanApi.start(id); loadAll() }}
-              onStop={async (id) => { await podmanApi.stop(id); loadAll() }}
-              onRestart={async (id) => { await podmanApi.restart(id); loadAll() }}
-              onRemove={async (id) => { if(confirm('确认删除?')) { await podmanApi.remove(id); loadAll() } }}
+              onStart={async (id) => { 
+                try {
+                  await podmanApi.start(id); 
+                  loadAll();
+                } catch (e: any) {
+                  const msg = e.response?.data?.message || e.message || 'Unknown error';
+                  alert(`Start failed: ${msg}`);
+                }
+              }}
+              onStop={async (id) => { 
+                try {
+                  await podmanApi.stop(id); 
+                  loadAll();
+                } catch (e: any) {
+                  const msg = e.response?.data?.message || e.message || 'Unknown error';
+                  alert(`Stop failed: ${msg}`);
+                }
+              }}
+              onRestart={async (id) => { 
+                try {
+                  await podmanApi.restart(id); 
+                  loadAll();
+                } catch (e: any) {
+                  const msg = e.response?.data?.message || e.message || 'Unknown error';
+                  alert(`Restart failed: ${msg}`);
+                }
+              }}
+              onRemove={async (id) => { 
+                if(confirm('确认删除?')) { 
+                  try {
+                    await podmanApi.remove(id); 
+                    loadAll();
+                  } catch (e: any) {
+                    const msg = e.response?.data?.message || e.message || 'Unknown error';
+                    alert(`Remove failed: ${msg}`);
+                  }
+                } 
+              }}
             />
           )}
           {active === 'images' && (
@@ -280,7 +320,7 @@ export default function DockerManager() {
         setNewHostPort={setNewHostPort}
         newContainerPort={newContainerPort}
         setNewContainerPort={setNewContainerPort}
-        onAddPort={() => { if(newHostPort && newContainerPort) { setPorts([...ports, {host: newHostPort, container: newContainerPort}]); setNewHostPort(''); setNewContainerPort('') } }}
+        onAddPort={() => { if(newHostPort.trim() && newContainerPort.trim()) { setPorts([...ports, {host: newHostPort.trim(), container: newContainerPort.trim()}]); setNewHostPort(''); setNewContainerPort('') } }}
         onRemovePort={(i) => setPorts(ports.filter((_, idx) => idx !== i))}
         volumes={volumes}
         setVolumes={setVolumes}
@@ -288,7 +328,7 @@ export default function DockerManager() {
         setNewHostPath={setNewHostPath}
         newContainerPath={newContainerPath}
         setNewContainerPath={setNewContainerPath}
-        onAddVolume={() => { if(newHostPath && newContainerPath) { setVolumes([...volumes, {host: newHostPath, container: newContainerPath}]); setNewHostPath(''); setNewContainerPath('') } }}
+        onAddVolume={() => { if(newHostPath.trim() && newContainerPath.trim()) { setVolumes([...volumes, {host: newHostPath.trim(), container: newContainerPath.trim()}]); setNewHostPath(''); setNewContainerPath('') } }}
         onRemoveVolume={(i) => setVolumes(volumes.filter((_, idx) => idx !== i))}
         envVars={envVars}
         setEnvVars={setEnvVars}
@@ -296,7 +336,7 @@ export default function DockerManager() {
         setNewEnvKey={setNewEnvKey}
         newEnvValue={newEnvValue}
         setNewEnvValue={setNewEnvValue}
-        onAddEnvVar={() => { if(newEnvKey) { setEnvVars([...envVars, {key: newEnvKey, value: newEnvValue}]); setNewEnvKey(''); setNewEnvValue('') } }}
+        onAddEnvVar={() => { if(newEnvKey.trim()) { setEnvVars([...envVars, {key: newEnvKey.trim(), value: newEnvValue.trim()}]); setNewEnvKey(''); setNewEnvValue('') } }}
         onRemoveEnvVar={(i) => setEnvVars(envVars.filter((_, idx) => idx !== i))}
         onCreate={onCreateContainer}
       />
