@@ -9,6 +9,7 @@ export interface ModalProps {
   footer?: React.ReactNode
   className?: string
   style?: React.CSSProperties
+  bodyStyle?: React.CSSProperties
   headerExtra?: React.ReactNode
 }
 
@@ -21,6 +22,7 @@ export function Modal({
   footer, 
   className, 
   style,
+  bodyStyle,
   headerExtra 
 }: ModalProps) {
   if (!open) return null
@@ -67,10 +69,10 @@ export function Modal({
             {headerExtra}
           </div>
         )}
-        
-        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-          {children}
-        </div>
+        {/* Body */}
+      <div style={{ padding: 24, overflowY: 'auto', flex: 1, ...bodyStyle }}>
+        {children}
+      </div>
 
         {footer && (
           <div style={{

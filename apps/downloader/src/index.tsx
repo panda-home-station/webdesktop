@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { api } from '../../../src/api/client'
+import { Modal } from '../../../src/components/Modal'
 import Icon from '@mdi/react'
 import {
   mdiPlus,
@@ -107,9 +108,9 @@ const PathPicker = ({ initialPath, onClose, onSelect }: { initialPath: string; o
 
   return (
     <div style={{
-      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-      background: '#fff', zIndex: 200, display: 'flex', flexDirection: 'column',
-      borderRadius: '8px', overflow: 'hidden'
+      height: '100%',
+      background: '#fff', display: 'flex', flexDirection: 'column',
+      overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{ padding: '16px 20px', borderBottom: '1px solid #eee', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fafafa' }}>
@@ -483,121 +484,124 @@ export default function Downloader() {
         </div>
 
         {/* Add Modal */}
-        {showAdd && (
-          <div style={{
-            position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 100
-          }}>
-            <div style={{ background: '#fff', padding: '30px', borderRadius: '8px', width: '600px', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', position: 'relative', maxHeight: '600px', minHeight: '300px', display: 'flex', flexDirection: 'column' }}>
-              {showPicker ? (
-                <PathPicker 
-                   initialPath={newPath} 
-                   onClose={() => setShowPicker(false)} 
-                   onSelect={(p) => { setNewPath(p); setShowPicker(false); }} 
-                />
-              ) : resolving ? (
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', minHeight: '200px' }}>
-                   <div className="spinner" style={{ width: '32px', height: '32px', border: '3px solid #f3f3f3', borderTop: '3px solid #1890ff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                   <div style={{ color: '#666' }}>正在解析种子信息...</div>
-                   <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-                </div>
-              ) : magnetInfo ? (
-                <>
-                  <h3 style={{ marginTop: 0, marginBottom: '16px', fontSize: '18px', color: '#333' }}>选择下载文件</h3>
-                  <div style={{ height: '300px', overflow: 'auto', border: '1px solid #eee', borderRadius: '4px', marginBottom: '16px' }}>
-                      {magnetInfo.files.map(file => (
-                          <div key={file.index} style={{ padding: '8px 12px', borderBottom: '1px solid #f5f5f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <input 
-                                  type="checkbox" 
-                                  checked={selectedFiles.includes(file.index)}
-                                  onChange={e => {
-                                      if (e.target.checked) {
-                                          setSelectedFiles([...selectedFiles, file.index])
-                                      } else {
-                                          setSelectedFiles(selectedFiles.filter(i => i !== file.index))
-                                      }
-                                  }}
-                                  style={{ cursor: 'pointer' }}
-                              />
-                              <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }} title={file.name}>{file.name}</div>
-                              <div style={{ fontSize: '12px', color: '#999', whiteSpace: 'nowrap' }}>{formatBytes(file.size)}</div>
-                          </div>
-                      ))}
-                  </div>
-                  <div style={{ padding: '8px 12px', background: '#f9f9f9', borderRadius: '4px', marginBottom: '16px', fontSize: '13px', color: '#666', display: 'flex', justifyContent: 'space-between' }}>
-                      <span>已选 {selectedFiles.length} 个文件</span>
-                      <span>总大小: {formatBytes(magnetInfo.files.filter(f => selectedFiles.includes(f.index)).reduce((acc, cur) => acc + cur.size, 0))}</span>
-                  </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666', fontWeight: 500 }}>存储位置</div>
-                    <div 
-                      onClick={() => setShowPicker(true)}
-                      style={{ 
-                        width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid #d9d9d9', 
-                        cursor: 'pointer', background: '#fafafa', color: '#666', display: 'flex', alignItems: 'center', 
-                        boxSizing: 'border-box', transition: 'all 0.2s'
-                      }}
-                    >
-                      <Icon path={mdiFolder} size={0.8} color="#888" style={{ marginRight: '8px' }} />
-                      <span style={{ color: '#333', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '14px' }}>
-                        {formatPathDisplay(newPath)}
-                      </span>
-                    </div>
-                  </div>
-
-                  {error && <div style={{ color: '#ff4d4f', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
-
-                  <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button onClick={() => { setMagnetInfo(null); setNewUrl(''); }} style={{ padding: '8px 24px', background: '#fff', border: '1px solid #d9d9d9', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', color: '#666' }}>取消</button>
-                    <button onClick={handleStartMagnet} style={{ padding: '8px 24px', background: '#1890ff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', boxShadow: '0 2px 0 rgba(0,0,0,0.045)' }}>立即下载</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h3 style={{ marginTop: 0, marginBottom: '24px', fontSize: '18px', color: '#333' }}>新建下载任务</h3>
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666', fontWeight: 500 }}>下载链接</div>
-                    <textarea 
-                      value={newUrl}
-                      onChange={e => setNewUrl(e.target.value)}
-                      placeholder="请输入 http、https、ftp、ftps、磁力链接等"
-                      rows={8}
-                      style={{ 
-                        width: '100%', padding: '12px', borderRadius: '4px', border: '1px solid #d9d9d9', 
-                        userSelect: 'text', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
-                        fontSize: '14px', lineHeight: '1.5'
-                      }}
-                    />
-                  </div>
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666', fontWeight: 500 }}>存储位置</div>
-                    <div 
-                      onClick={() => setShowPicker(true)}
-                      style={{ 
-                        width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid #d9d9d9', 
-                        cursor: 'pointer', background: '#fafafa', color: '#666', display: 'flex', alignItems: 'center', 
-                        boxSizing: 'border-box', transition: 'all 0.2s'
-                      }}
-                    >
-                      <Icon path={mdiFolder} size={0.8} color="#888" style={{ marginRight: '8px' }} />
-                      <span style={{ color: '#333', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '14px' }}>
-                        {formatPathDisplay(newPath)}
-                      </span>
-                    </div>
-                  </div>
-                  {error && <div style={{ color: '#ff4d4f', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                    <button onClick={() => setShowAdd(false)} style={{ padding: '8px 24px', background: '#fff', border: '1px solid #d9d9d9', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', color: '#666' }}>取消</button>
-                    <button onClick={handleAdd} style={{ padding: '8px 24px', background: '#1890ff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', boxShadow: '0 2px 0 rgba(0,0,0,0.045)' }}>下载</button>
-                  </div>
-                </>
-              )}
+        <Modal
+          open={showAdd}
+          onClose={() => setShowAdd(false)}
+          width={600}
+          title={showPicker ? null : magnetInfo ? "选择下载文件" : "新建下载任务"}
+          bodyStyle={showPicker ? { padding: 0, height: 500 } : { padding: 24 }}
+          footer={showPicker ? null : (
+             resolving ? null : (
+               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                 <button onClick={() => {
+                    if (magnetInfo) {
+                      setMagnetInfo(null);
+                      setNewUrl('');
+                    } else {
+                      setShowAdd(false);
+                    }
+                 }} style={{ padding: '8px 24px', background: '#fff', border: '1px solid #d9d9d9', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', color: '#666' }}>取消</button>
+                 <button onClick={magnetInfo ? handleStartMagnet : handleAdd} style={{ padding: '8px 24px', background: '#1890ff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px', boxShadow: '0 2px 0 rgba(0,0,0,0.045)' }}>
+                    {magnetInfo ? "立即下载" : "下载"}
+                 </button>
+               </div>
+             )
+          )}
+        >
+          {showPicker ? (
+            <PathPicker 
+               initialPath={newPath} 
+               onClose={() => setShowPicker(false)} 
+               onSelect={(p) => { setNewPath(p); setShowPicker(false); }} 
+            />
+          ) : resolving ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', minHeight: '200px' }}>
+               <div className="spinner" style={{ width: '32px', height: '32px', border: '3px solid #f3f3f3', borderTop: '3px solid #1890ff', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+               <div style={{ color: '#666' }}>正在解析种子信息...</div>
+               <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             </div>
-          </div>
-        )}
-      </div>
+          ) : magnetInfo ? (
+            <>
+               <div style={{ height: '300px', overflow: 'auto', border: '1px solid #eee', borderRadius: '4px', marginBottom: '16px' }}>
+                  {magnetInfo.files.map(file => (
+                      <div key={file.index} style={{ padding: '8px 12px', borderBottom: '1px solid #f5f5f5', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <input 
+                              type="checkbox" 
+                              checked={selectedFiles.includes(file.index)}
+                              onChange={e => {
+                                  if (e.target.checked) {
+                                      setSelectedFiles([...selectedFiles, file.index])
+                                  } else {
+                                      setSelectedFiles(selectedFiles.filter(i => i !== file.index))
+                                  }
+                              }}
+                              style={{ cursor: 'pointer' }}
+                          />
+                          <div style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }} title={file.name}>{file.name}</div>
+                          <div style={{ fontSize: '12px', color: '#999', whiteSpace: 'nowrap' }}>{formatBytes(file.size)}</div>
+                      </div>
+                  ))}
+              </div>
+              <div style={{ padding: '8px 12px', background: '#f9f9f9', borderRadius: '4px', marginBottom: '16px', fontSize: '13px', color: '#666', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>已选 {selectedFiles.length} 个文件</span>
+                  <span>总大小: {formatBytes(magnetInfo.files.filter(f => selectedFiles.includes(f.index)).reduce((acc, cur) => acc + cur.size, 0))}</span>
+              </div>
+
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666', fontWeight: 500 }}>存储位置</div>
+                <div 
+                  onClick={() => setShowPicker(true)}
+                  style={{ 
+                    width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid #d9d9d9', 
+                    cursor: 'pointer', background: '#fafafa', color: '#666', display: 'flex', alignItems: 'center', 
+                    boxSizing: 'border-box', transition: 'all 0.2s'
+                  }}
+                >
+                  <Icon path={mdiFolder} size={0.8} color="#888" style={{ marginRight: '8px' }} />
+                  <span style={{ color: '#333', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '14px' }}>
+                    {formatPathDisplay(newPath)}
+                  </span>
+                </div>
+              </div>
+
+              {error && <div style={{ color: '#ff4d4f', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
+            </>
+          ) : (
+            <>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666', fontWeight: 500 }}>下载链接</div>
+                <textarea 
+                  value={newUrl}
+                  onChange={e => setNewUrl(e.target.value)}
+                  placeholder="请输入 http、https、ftp、ftps、磁力链接等"
+                  rows={8}
+                  style={{ 
+                    width: '100%', padding: '12px', borderRadius: '4px', border: '1px solid #d9d9d9', 
+                    userSelect: 'text', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box',
+                    fontSize: '14px', lineHeight: '1.5'
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: '8px', fontSize: '14px', color: '#666', fontWeight: 500 }}>存储位置</div>
+                <div 
+                  onClick={() => setShowPicker(true)}
+                  style={{ 
+                    width: '100%', padding: '10px 12px', borderRadius: '4px', border: '1px solid #d9d9d9', 
+                    cursor: 'pointer', background: '#fafafa', color: '#666', display: 'flex', alignItems: 'center', 
+                    boxSizing: 'border-box', transition: 'all 0.2s'
+                  }}
+                >
+                  <Icon path={mdiFolder} size={0.8} color="#888" style={{ marginRight: '8px' }} />
+                  <span style={{ color: '#333', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '14px' }}>
+                    {formatPathDisplay(newPath)}
+                  </span>
+                </div>
+              </div>
+              {error && <div style={{ color: '#ff4d4f', marginBottom: '16px', fontSize: '13px' }}>{error}</div>}
+            </>
+          )}
+        </Modal>      </div>
     </div>
   )
 }
