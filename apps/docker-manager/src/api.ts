@@ -36,6 +36,16 @@ export const podmanApi = {
       return []
     }
   },
+  async listGpus() {
+    const token = getToken()
+    try {
+      const r = await axios.get('/api/podman/gpus', { params: token ? { token } : {} })
+      return r.data as { id: string, name: string }[]
+    } catch (e) {
+      console.warn('Failed to list gpus', e)
+      return []
+    }
+  },
   async start(id: string) {
     const token = getToken()
     await axios.post('/api/podman/container/start', { id }, { params: token ? { token } : {} })

@@ -43,6 +43,9 @@ interface CreateContainerModalProps {
   setNewEnvValue: (s: string) => void
   onAddEnvVar: () => void
   onRemoveEnvVar: (i: number) => void
+  gpuList: { id: string, name: string }[]
+  selectedGpu: string
+  setSelectedGpu: (s: string) => void
   onCreate: () => void
 }
 
@@ -130,6 +133,20 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
                 </div>
               </div>
             )}
+          </div>
+
+          <div>
+            <label style={labelStyle}>GPU 加速</label>
+            <select
+              style={inputStyle}
+              value={props.selectedGpu}
+              onChange={e => props.setSelectedGpu(e.target.value)}
+            >
+              <option value="">无</option>
+              {props.gpuList.map(g => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
           </div>
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>

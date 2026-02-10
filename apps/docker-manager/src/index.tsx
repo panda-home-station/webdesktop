@@ -29,6 +29,7 @@ export default function DockerManager() {
   const [images, setImages] = useState<Image[]>([])
   const [volumesList, setVolumesList] = useState<Volume[]>([])
   const [networksList, setNetworksList] = useState<Network[]>([])
+  const [gpus, setGpus] = useState<{ id: string, name: string }[]>([])
   const [loading, setLoading] = useState(false)
   
   // Registry State
@@ -63,20 +64,23 @@ export default function DockerManager() {
   const [envVars, setEnvVars] = useState<{ key: string, value: string }[]>([])
   const [newEnvKey, setNewEnvKey] = useState('')
   const [newEnvValue, setNewEnvValue] = useState('')
+  const [selectedGpu, setSelectedGpu] = useState('')
 
   const loadAll = async () => {
     setLoading(true)
     try {
-      const [cs, ims, vs, ns] = await Promise.all([
+      const [cs, ims, vs, ns, gs] = await Promise.all([
         podmanApi.listContainers(),
         podmanApi.listImages(),
         podmanApi.listVolumes(),
-        podmanApi.listNetworks()
+        podmanApi.listNetworks(),
+        podmanApi.listGpus()
       ])
       setContainers(cs)
       setImages(ims)
       setVolumesList(vs)
       setNetworksList(ns)
+      setGpus(gs)
     } finally {
       setLoading(false)
     }
@@ -169,6 +173,7 @@ export default function DockerManager() {
     setPorts([])
     setVolumes([])
     setEnvVars([])
+    setSelectedGpu('')
   }
 
   const onCloseCreateContainer = () => {
@@ -187,6 +192,7 @@ export default function DockerManager() {
       ports: ports.length > 0 ? ports : undefined,
       volumes: volumes.length > 0 ? volumes.map(v => `${v.host}:${v.container}`) : undefined,
       env: envVars.length > 0 ? envVars.map(v => `${v.key}=${v.value}`) : undefined,
+      gpu_id: selectedGpu || undefined,
     }
     try {
       await podmanApi.createContainer(payload)
@@ -338,6 +344,9 @@ export default function DockerManager() {
         setNewEnvValue={setNewEnvValue}
         onAddEnvVar={() => { if(newEnvKey.trim()) { setEnvVars([...envVars, {key: newEnvKey.trim(), value: newEnvValue.trim()}]); setNewEnvKey(''); setNewEnvValue('') } }}
         onRemoveEnvVar={(i) => setEnvVars(envVars.filter((_, idx) => idx !== i))}
+        gpuList={gpus}
+        selectedGpu={selectedGpu}
+        setSelectedGpu={setSelectedGpu}
         onCreate={onCreateContainer}
       />
     </div>
