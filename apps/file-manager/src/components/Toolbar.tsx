@@ -13,7 +13,10 @@ import {
   Download,
   Trash2,
   Search,
-  LucideIcon
+  LucideIcon,
+  AppWindow,
+  Package,
+  Users
 } from 'lucide-react'
 
 function usePress() {
@@ -123,10 +126,20 @@ export default function Toolbar({
 
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', background: '#f2f2f7', borderRadius: 8, padding: '2px 8px', height: 32, maxWidth: '100%', overflow: 'hidden' }}>
-           <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/')}>
-             <Home size={16} color="#6b7280" strokeWidth={1.5} />
-           </button>
-           {crumbs.slice(1).map((c, i) => (
+           {crumbs.length > 1 && crumbs[1].to === '/AppData' ? (
+             <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/AppData')}>
+               <Package size={16} color="#6b7280" strokeWidth={1.5} />
+             </button>
+           ) : crumbs.length > 1 && crumbs[1].to === '/Team' ? (
+             <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/Team')}>
+               <Users size={16} color="#6b7280" strokeWidth={1.5} />
+             </button>
+           ) : (
+             <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/')}>
+               <Home size={16} color="#6b7280" strokeWidth={1.5} />
+             </button>
+           )}
+           {(crumbs.length > 1 && (crumbs[1].to === '/AppData' || crumbs[1].to === '/Team') ? crumbs.slice(2) : crumbs.slice(1)).map((c, i) => (
               <React.Fragment key={`crumb-${i}-${c.to}`}>
                 <span style={{ color: '#9ca3af', margin: '0 4px', fontSize: 12 }}>/</span>
                 <button 

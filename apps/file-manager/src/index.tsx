@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import axios from 'axios'
 import {
   Folder,
+  Home,
+  Package,
   Users,
   Settings,
   Inbox,
@@ -1046,9 +1048,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     {
       title: '文件',
       items: [
-        { id: 'home', label: '我的文件', icon: <Folder size={20} strokeWidth={1.5} /> },
+        { id: 'home', label: '我的文件', icon: <Home size={20} strokeWidth={1.5} /> },
         { id: 'team', label: '团队文件', icon: <Users size={20} strokeWidth={1.5} /> },
-        { id: 'appdata', label: '应用文件', icon: <Settings size={20} strokeWidth={1.5} /> },
+        { id: 'appdata', label: '应用文件', icon: <Package size={20} strokeWidth={1.5} /> },
       ]
     },
     {
