@@ -58,25 +58,25 @@ export function Modal({
       }}>
         {(title || headerExtra) && (
           <div style={{
-            padding: '20px 24px',
+            padding: '12px 16px',
             borderBottom: '1px solid #e5e5ea',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flexShrink: 0
           }}>
-            <div style={{ fontSize: 18, fontWeight: 700 }}>{title}</div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>{title}</div>
             {headerExtra}
           </div>
         )}
         {/* Body */}
-      <div style={{ padding: 24, overflowY: 'auto', flex: 1, ...bodyStyle }}>
+      <div style={{ padding: 16, overflowY: 'auto', flex: 1, ...bodyStyle }}>
         {children}
       </div>
 
         {footer && (
           <div style={{
-            padding: '16px 24px',
+            padding: '12px 16px',
             background: '#f9f9f9',
             borderTop: '1px solid #e5e5ea',
             flexShrink: 0

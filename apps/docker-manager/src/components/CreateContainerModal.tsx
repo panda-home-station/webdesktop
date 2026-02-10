@@ -69,7 +69,7 @@ const sectionTitleStyle = {
   fontSize: 16,
   fontWeight: 600,
   color: '#1c1c1e',
-  marginBottom: 12,
+  marginBottom: 8,
   display: 'flex',
   alignItems: 'center',
   gap: 8
@@ -78,10 +78,10 @@ const sectionTitleStyle = {
 const cardStyle = {
   background: '#f9f9f9',
   borderRadius: 12,
-  padding: 16,
+  padding: 10,
   display: 'flex',
   flexDirection: 'column' as const,
-  gap: 12
+  gap: 10
 }
 
 const itemRowStyle = {
@@ -129,25 +129,27 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
       width={680}
     >
       {props.step === 1 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div>
             <label style={sectionTitleStyle}>基本信息</label>
             <div style={cardStyle}>
-              <div>
-                <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>镜像</div>
-                <div style={{ padding: '8px 12px', background: '#e5e5ea', borderRadius: 6, color: '#333', fontSize: 14, fontFamily: 'monospace' }}>
-                  {(props.image.repo_tags && props.image.repo_tags[0]) ? fmtImageName(props.image.repo_tags[0]) : props.image.id.slice(0, 12)}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>镜像</div>
+                  <div style={{ padding: '0 12px', height: 36, display: 'flex', alignItems: 'center', background: '#e5e5ea', borderRadius: 6, color: '#333', fontSize: 14, fontFamily: 'monospace', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                    {(props.image.repo_tags && props.image.repo_tags[0]) ? fmtImageName(props.image.repo_tags[0]) : props.image.id.slice(0, 12)}
+                  </div>
                 </div>
-              </div>
-              
-              <div>
-                <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>容器名称</div>
-                <input 
-                  style={inputStyle}
-                  value={props.containerName}
-                  onChange={e => props.setContainerName(e.target.value)}
-                  placeholder="留空自动生成"
-                />
+                
+                <div>
+                  <div style={{ fontSize: 13, color: '#666', marginBottom: 4 }}>容器名称</div>
+                  <input 
+                    style={inputStyle}
+                    value={props.containerName}
+                    onChange={e => props.setContainerName(e.target.value)}
+                    placeholder="留空自动生成"
+                  />
+                </div>
               </div>
             </div>
           </div>
@@ -161,22 +163,22 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
               </label>
               
               {props.enableResourceLimit && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                  <div>
-                    <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>CPU (核): {props.cpuLimit}</div>
-                    <input type="range" min="0.5" max="16" step="0.5" value={props.cpuLimit} onChange={e => props.setCpuLimit(Number(e.target.value))} style={{ width: '100%' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: 13, color: '#666', width: 100 }}>CPU: {props.cpuLimit} 核</div>
+                    <input type="range" min="0.5" max="16" step="0.5" value={props.cpuLimit} onChange={e => props.setCpuLimit(Number(e.target.value))} style={{ flex: 1 }} />
                   </div>
-                  <div>
-                    <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>内存 (GB): {props.memoryLimit}</div>
-                    <input type="range" min="0.5" max="32" step="0.5" value={props.memoryLimit} onChange={e => props.setMemoryLimit(Number(e.target.value))} style={{ width: '100%' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ fontSize: 13, color: '#666', width: 100 }}>内存: {props.memoryLimit} GB</div>
+                    <input type="range" min="0.5" max="32" step="0.5" value={props.memoryLimit} onChange={e => props.setMemoryLimit(Number(e.target.value))} style={{ flex: 1 }} />
                   </div>
                 </div>
               )}
 
-              <div style={{ borderTop: '1px solid #e5e5ea', paddingTop: 12, marginTop: 4 }}>
-                <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>GPU 加速</div>
+              <div style={{ borderTop: '1px solid #e5e5ea', paddingTop: 6, marginTop: 2, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 13, color: '#666', width: 100 }}>GPU 加速</div>
                 <select
-                  style={inputStyle}
+                  style={{ ...inputStyle, width: 'auto', flex: 1 }}
                   value={props.selectedGpu}
                   onChange={e => props.setSelectedGpu(e.target.value)}
                 >
@@ -197,7 +199,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
       )}
 
       {props.step === 2 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
             <label style={sectionTitleStyle}>端口映射</label>
             <div style={cardStyle}>
