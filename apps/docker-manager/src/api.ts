@@ -93,6 +93,11 @@ export const podmanApi = {
       hasPrev: !!data.prev
     }
   },
+  async fsList(path: string) {
+    const token = getToken()
+    const r = await axios.get('/api/docs/list', { params: { path, limit: 1000, offset: 0, ...(token ? { token } : {}) } })
+    return r.data as { path: string; entries: { name: string; is_dir: boolean }[] }
+  },
   async registryHot(page = 1, pageSize = 24) {
     const token = getToken()
     const r = await axios.get('/api/podman/registry/hot', { params: { page, page_size: pageSize, ...(token ? { token } : {}) } })
