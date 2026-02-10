@@ -115,7 +115,6 @@ export default function Window({
              winRef.current.style.top = `${newY}px`
              winRef.current.style.transform = 'none'
              winRef.current.style.transition = 'none'
-             winRef.current.style.borderTop = '1px solid var(--win-border)'
            }
         }
         return
@@ -148,7 +147,9 @@ export default function Window({
       lastDy = newDy
       
       if (winRef.current) {
-        winRef.current.style.transform = `translate(${newDx}px, ${newDy}px)`
+        // Use translate3d for GPU acceleration and round values to prevent sub-pixel rendering artifacts
+        // This fixes the issue where text appears to "float" or move differently than the window during slow drags
+        winRef.current.style.transform = `translate3d(${Math.round(newDx)}px, ${Math.round(newDy)}px, 0)`
         winRef.current.style.transition = 'none'
       }
     }
@@ -171,8 +172,8 @@ export default function Window({
       const minY = 0
       const maxY = H - 30
       
-      const nx = Math.max(minX, Math.min(rawX, maxX))
-      const ny = Math.max(minY, Math.min(rawY, maxY))
+      const nx = Math.round(Math.max(minX, Math.min(rawX, maxX)))
+      const ny = Math.round(Math.max(minY, Math.min(rawY, maxY)))
       
       // Reset transform and transition
       if (winRef.current) {
@@ -259,14 +260,11 @@ export default function Window({
         display: 'flex',
         flexDirection: 'column',
         background: 'var(--win-bg)',
-        borderLeft: '1px solid var(--win-border)',
-        borderRight: '1px solid var(--win-border)',
-        borderBottom: '1px solid var(--win-border)',
-        borderTop: maximized ? 'none' : '1px solid var(--win-border)',
         borderRadius: 'var(--win-radius)',
         boxShadow: 'var(--win-shadow)',
         backdropFilter: 'blur(22px)',
-        zIndex: zIndex
+        zIndex: zIndex,
+        willChange: 'transform'
       }}
       onMouseDown={handleMouseDown}
     >
