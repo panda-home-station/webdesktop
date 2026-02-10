@@ -19,10 +19,10 @@ export type Image = {
 }
 
 export type Volume = {
-  Name: string
-  Driver: string
-  Mountpoint: string
-  CreatedAt?: string
+  name: string
+  driver: string
+  mountpoint: string
+  created_at?: string
 }
 
 export type Network = {

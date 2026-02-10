@@ -589,6 +589,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
             setPathSelectorOpen(false)
             setEditingVolumeIndex(null)
         }}
+        initialPath={editingVolumeIndex !== null ? props.volumes[editingVolumeIndex].host : undefined}
         onSelect={(path) => {
           if (editingVolumeIndex !== null) {
               const newVols = [...props.volumes]
@@ -598,7 +599,6 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
           } else {
               props.setNewHostPath(path)
           }
-          setPathSelectorOpen(false)
         }}
       />
     </Modal>
