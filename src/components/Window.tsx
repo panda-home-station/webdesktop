@@ -76,6 +76,14 @@ export default function Window({
     // Use transform for performance to avoid React re-renders during drag
     let lastDx = 0
     let lastDy = 0
+    let rafId: number | null = null
+
+    // Performance optimization: remove heavy styles during drag
+    if (winRef.current) {
+      winRef.current.style.backdropFilter = 'none'
+      winRef.current.style.boxShadow = 'none'
+      winRef.current.style.willChange = 'transform, width, height'
+    }
 
     const move = (ev: MouseEvent) => {
       const dx = ev.clientX - dragStartX
@@ -115,6 +123,7 @@ export default function Window({
              winRef.current.style.top = `${newY}px`
              winRef.current.style.transform = 'none'
              winRef.current.style.transition = 'none'
+             winRef.current.style.borderTop = '1px solid var(--win-border)'
            }
         }
         return
@@ -146,20 +155,35 @@ export default function Window({
       lastDx = newDx
       lastDy = newDy
       
-      if (winRef.current) {
-        // Use translate3d for GPU acceleration
-        // Removing Math.round to allow sub-pixel movement, which combined with antialiased font smoothing
-        // should provide smoother movement and keep text/icons in sync
-        winRef.current.style.transform = `translate3d(${newDx}px, ${newDy}px, 0)`
-        winRef.current.style.transition = 'none'
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          if (winRef.current) {
+            // Use translate3d for GPU acceleration
+            winRef.current.style.transform = `translate3d(${lastDx}px, ${lastDy}px, 0)`
+            winRef.current.style.transition = 'none'
+          }
+          rafId = null
+        })
       }
     }
 
     const up = () => {
       document.removeEventListener('mousemove', move)
       document.removeEventListener('mouseup', up)
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+        rafId = null
+      }
 
-      if (isDraggingMaximized && !hasRestored) return
+      if (isDraggingMaximized && !hasRestored) {
+        // Restore styles if we didn't actually drag
+        if (winRef.current) {
+           winRef.current.style.backdropFilter = 'blur(22px)'
+           winRef.current.style.boxShadow = 'var(--win-shadow)'
+           winRef.current.style.willChange = 'transform'
+        }
+        return
+      }
 
       const W = window.innerWidth
       const H = window.innerHeight
@@ -180,6 +204,11 @@ export default function Window({
       if (winRef.current) {
         winRef.current.style.transform = ''
         winRef.current.style.transition = ''
+        
+        // Restore styles
+        winRef.current.style.backdropFilter = 'blur(22px)'
+        winRef.current.style.boxShadow = 'var(--win-shadow)'
+        winRef.current.style.willChange = 'transform'
       }
       
       onMove(id, nx, ny)
