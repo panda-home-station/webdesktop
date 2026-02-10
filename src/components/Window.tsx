@@ -147,9 +147,10 @@ export default function Window({
       lastDy = newDy
       
       if (winRef.current) {
-        // Use translate3d for GPU acceleration and round values to prevent sub-pixel rendering artifacts
-        // This fixes the issue where text appears to "float" or move differently than the window during slow drags
-        winRef.current.style.transform = `translate3d(${Math.round(newDx)}px, ${Math.round(newDy)}px, 0)`
+        // Use translate3d for GPU acceleration
+        // Removing Math.round to allow sub-pixel movement, which combined with antialiased font smoothing
+        // should provide smoother movement and keep text/icons in sync
+        winRef.current.style.transform = `translate3d(${newDx}px, ${newDy}px, 0)`
         winRef.current.style.transition = 'none'
       }
     }
@@ -267,7 +268,8 @@ export default function Window({
         willChange: 'transform',
         transform: 'translate3d(0,0,0)',
         backfaceVisibility: 'hidden',
-        WebkitFontSmoothing: 'subpixel-antialiased',
+        perspective: 1000,
+        WebkitFontSmoothing: 'antialiased',
         contain: 'paint'
       }}
       onMouseDown={handleMouseDown}
@@ -298,11 +300,11 @@ export default function Window({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
           {iconUrl ? (
-            <img src={iconUrl} alt="" width={18} height={18} style={{ borderRadius: 4 }} />
+            <img src={iconUrl} alt="" width={18} height={18} style={{ borderRadius: 4, transform: 'translateZ(0)', backfaceVisibility: 'hidden' }} />
           ) : (
             <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
           )}
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 16 }}>{title}</span>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 16, transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}>{title}</span>
         </div>
         <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
           <button
