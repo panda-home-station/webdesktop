@@ -11,7 +11,30 @@ import { RegistryView } from './components/RegistryView'
 import { VolumeList } from './components/VolumeList'
 import { NetworkList } from './components/NetworkList'
 import { CreateContainerModal } from './components/CreateContainerModal'
+import { Modal } from '../../../src/components/Modal'
 import { fmtImageName } from './utils'
+
+const btnCancelStyle: React.CSSProperties = {
+  padding: '8px 16px',
+  borderRadius: 6,
+  border: '1px solid #d1d5db',
+  background: 'white',
+  color: '#374151',
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: 'pointer'
+}
+
+const btnConfirmStyle = (danger?: boolean): React.CSSProperties => ({
+  padding: '8px 16px',
+  borderRadius: 6,
+  border: 'none',
+  background: danger ? '#ef4444' : '#2563eb',
+  color: 'white',
+  fontSize: 14,
+  fontWeight: 500,
+  cursor: 'pointer'
+})
 
 const TABS = [
   { id: 'overview', label: '概览', icon: <Icon path={mdiViewGridOutline} size="20px" /> },
@@ -65,6 +88,9 @@ export default function DockerManager() {
   const [newEnvKey, setNewEnvKey] = useState('')
   const [newEnvValue, setNewEnvValue] = useState('')
   const [selectedGpu, setSelectedGpu] = useState('')
+
+  // Confirmation State
+  const [confirmState, setConfirmState] = useState<{ type: 'start' | 'stop' | 'delete' | 'restart', id: string } | null>(null)
 
   const loadAll = async () => {
     setLoading(true)
@@ -206,6 +232,24 @@ export default function DockerManager() {
     }
   }
 
+  const performAction = async () => {
+    if (!confirmState) return
+    const { type, id } = confirmState
+    try {
+      if (type === 'delete') await podmanApi.remove(id)
+      else if (type === 'start') await podmanApi.start(id)
+      else if (type === 'stop') await podmanApi.stop(id)
+      else if (type === 'restart') await podmanApi.restart(id)
+      
+      loadAll()
+      setConfirmState(null)
+    } catch (e: any) {
+      const msg = e.response?.data?.message || e.message || 'Unknown error'
+      alert(`${type === 'delete' ? 'Remove' : type === 'start' ? 'Start' : type === 'stop' ? 'Stop' : 'Restart'} failed: ${msg}`)
+      setConfirmState(null)
+    }
+  }
+
   return (
     <div style={{ display: 'flex', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', color: '#1f2937', background: '#f2f2f7', position: 'relative' }} className="noselect">
       <Sidebar
@@ -227,44 +271,10 @@ export default function DockerManager() {
           {active === 'containers' && (
             <ContainerList
               containers={containers}
-              onStart={async (id) => { 
-                try {
-                  await podmanApi.start(id); 
-                  loadAll();
-                } catch (e: any) {
-                  const msg = e.response?.data?.message || e.message || 'Unknown error';
-                  alert(`Start failed: ${msg}`);
-                }
-              }}
-              onStop={async (id) => { 
-                try {
-                  await podmanApi.stop(id); 
-                  loadAll();
-                } catch (e: any) {
-                  const msg = e.response?.data?.message || e.message || 'Unknown error';
-                  alert(`Stop failed: ${msg}`);
-                }
-              }}
-              onRestart={async (id) => { 
-                try {
-                  await podmanApi.restart(id); 
-                  loadAll();
-                } catch (e: any) {
-                  const msg = e.response?.data?.message || e.message || 'Unknown error';
-                  alert(`Restart failed: ${msg}`);
-                }
-              }}
-              onRemove={async (id) => { 
-                if(confirm('确认删除?')) { 
-                  try {
-                    await podmanApi.remove(id); 
-                    loadAll();
-                  } catch (e: any) {
-                    const msg = e.response?.data?.message || e.message || 'Unknown error';
-                    alert(`Remove failed: ${msg}`);
-                  }
-                } 
-              }}
+              onStart={(id) => setConfirmState({ type: 'start', id })}
+              onStop={(id) => setConfirmState({ type: 'stop', id })}
+              onRestart={(id) => setConfirmState({ type: 'restart', id })}
+              onRemove={(id) => setConfirmState({ type: 'delete', id })}
             />
           )}
           {active === 'images' && (
@@ -303,6 +313,34 @@ export default function DockerManager() {
           )}
         </div>
       </div>
+
+      <Modal
+        open={!!confirmState}
+        title={confirmState?.type === 'delete' ? '删除容器' : confirmState?.type === 'start' ? '启动容器' : confirmState?.type === 'stop' ? '停止容器' : '重启容器'}
+        onClose={() => setConfirmState(null)}
+        width={320}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <button onClick={() => setConfirmState(null)} style={btnCancelStyle}>取消</button>
+            <button onClick={performAction} style={btnConfirmStyle(confirmState?.type === 'delete' || confirmState?.type === 'stop' || confirmState?.type === 'restart')}>
+              {confirmState?.type === 'delete' ? '删除' : confirmState?.type === 'start' ? '启动' : confirmState?.type === 'stop' ? '停止' : '重启'}
+            </button>
+          </div>
+        }
+      >
+        <p style={{ margin: 0, fontSize: 14, color: '#374151', lineHeight: 1.5 }}>
+          {confirmState?.type === 'delete' && (
+            <>
+              确定要删除此容器吗？
+              <br />
+              <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
+            </>
+          )}
+          {confirmState?.type === 'start' && '确定要启动此容器吗？'}
+          {confirmState?.type === 'stop' && '确定要停止此容器吗？'}
+          {confirmState?.type === 'restart' && '确定要重启此容器吗？'}
+        </p>
+      </Modal>
 
       <CreateContainerModal
         open={createContainerOpen}
