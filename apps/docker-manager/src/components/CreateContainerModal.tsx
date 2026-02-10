@@ -5,7 +5,7 @@ import { Modal } from '../../../../src/components/Modal'
 import { PathSelector } from './PathSelector'
 import Icon from '@mdi/react'
 import { 
-  mdiFolder, 
+  mdiFolderOutline,
   mdiPlus, 
   mdiTrashCanOutline, 
   mdiAlertCircleOutline,
@@ -363,9 +363,9 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
                         {props.volumes.map((v, i) => (
                           <div key={i} style={{ ...itemRowStyle, borderBottom: i === props.volumes.length - 1 ? 'none' : '1px solid #f2f2f7' }}>
                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, alignItems: 'center' }}>
-                                <div style={{ display: 'flex', gap: 8 }}>
+                                <div style={{ position: 'relative', width: '100%' }}>
                                    <input 
-                                     style={{ ...inputStyle, height: 32, padding: '0 8px', flex: 1, minWidth: 0 }} 
+                                     style={{ ...inputStyle, height: 32, padding: '0 32px 0 8px', minWidth: 0 }} 
                                      placeholder="Host Path" 
                                      value={v.host} 
                                      onChange={e => {
@@ -377,8 +377,8 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
                                    <button onClick={() => {
                                       setEditingVolumeIndex(i)
                                       setPathSelectorOpen(true)
-                                   }} style={{ height: 32, width: 32, background: '#f2f2f7', border: '1px solid #e5e5ea', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                                     <Icon path={mdiFolder} size={0.7} color="#007aff" />
+                                   }} style={{ position: 'absolute', right: 0, top: 0, height: 32, width: 32, background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}>
+                                     <Icon path={mdiFolderOutline} size={0.7} color="#8e8e93" />
                                    </button>
                                 </div>
                                 <input 
