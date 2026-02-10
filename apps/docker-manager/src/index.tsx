@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
 import Icon from '@mdi/react'
 import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiHarddisk, mdiNetwork } from '@mdi/js'
+import { Layers } from 'lucide-react'
 import { podmanApi } from './api'
 import { Container, Image, Volume, Network, Mirror } from './types'
 import { Overview } from './components/Overview'
@@ -43,7 +44,7 @@ const TABS = [
   { id: 'volumes', label: '存储卷', icon: <Icon path={mdiHarddisk} size="20px" /> },
   { id: 'networks', label: '网络', icon: <Icon path={mdiNetwork} size="20px" /> },
   { id: 'registry', label: '仓库', icon: <Icon path={mdiDatabase} size="20px" /> },
-  { id: 'compose', label: '编排', icon: <Icon path={mdiTableColumn} size="20px" /> },
+  { id: 'compose', label: '编排', icon: <Layers size={18} /> },
 ]
 
 export default function DockerManager() {

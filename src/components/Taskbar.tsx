@@ -136,7 +136,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           </GlassTile>
         </button>
       </div>
-      <div style={{ width: '100%', height: 1, background: 'var(--win-border)', margin: '10px 0', opacity: 0.6 }} />
+      <div style={{ width: '100%', height: 1, background: 'rgba(255,255,255,0.3)', margin: '10px 0' }} />
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, flex: 1, width: '100%' }}>
         {runningAppIds.map(id => {
           const a = apps.find(x => x.id === id)
