@@ -4,7 +4,18 @@ import { iOSButtonStyle, fmtImageName } from '../utils'
 import { Modal } from '../../../../src/components/Modal'
 import { PathSelector } from './PathSelector'
 import Icon from '@mdi/react'
-import { mdiFolder, mdiPlus, mdiTrashCan, mdiAlertCircleOutline } from '@mdi/js'
+import { 
+  mdiFolder, 
+  mdiPlus, 
+  mdiTrashCanOutline, 
+  mdiAlertCircleOutline,
+  mdiServerNetwork,
+  mdiHarddisk,
+  mdiFormatListBulleted,
+  mdiShieldAccount,
+  mdiIpNetwork,
+  mdiConsoleLine
+} from '@mdi/js'
 
 interface CreateContainerModalProps {
   open: boolean
@@ -49,6 +60,14 @@ interface CreateContainerModalProps {
   gpuList: { id: string, name: string }[]
   selectedGpu: string
   setSelectedGpu: (s: string) => void
+  privileged: boolean
+  setPrivileged: (b: boolean) => void
+  capAdd: string[]
+  setCapAdd: (c: string[]) => void
+  networkMode: string
+  setNetworkMode: (s: string) => void
+  cmd: string
+  setCmd: (s: string) => void
   onCreate: () => void
 }
 
@@ -84,19 +103,26 @@ const cardStyle = {
   gap: 10
 }
 
+const listWrapperStyle = {
+  background: '#fff',
+  borderRadius: 8,
+  border: '1px solid #e5e5ea',
+  overflow: 'hidden'
+}
+
 const itemRowStyle = {
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'space-between',
-  padding: '10px 12px',
+  padding: '6px 12px',
   background: '#fff',
-  borderRadius: 8,
-  border: '1px solid #f2f2f7',
   fontSize: 14
 }
 
 export function CreateContainerModal(props: CreateContainerModalProps) {
   const [pathSelectorOpen, setPathSelectorOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState('ports')
+  const [editingVolumeIndex, setEditingVolumeIndex] = useState<number | null>(null)
 
   if (!props.image) return null
 
@@ -199,130 +225,328 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
       )}
 
       {props.step === 2 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div>
-            <label style={sectionTitleStyle}>端口映射</label>
-            <div style={cardStyle}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
-                <div>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>主机端口</div>
-                  <input style={inputStyle} placeholder="例如: 8080" value={props.newHostPort} onChange={e => props.setNewHostPort(e.target.value)} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>容器端口</div>
-                   <input 
-                      style={inputStyle} 
-                      placeholder="例如: 80" 
-                      value={props.newContainerPort} 
-                      onChange={e => props.setNewContainerPort(e.target.value)}
-                      list="exposed-ports"
-                   />
-                   <datalist id="exposed-ports">
-                     {exposedPorts.map(p => <option key={p} value={p} />)}
-                   </datalist>
-                </div>
-                <button onClick={props.onAddPort} style={{ ...iOSButtonStyle('primary'), height: 36 }}>
-                  <Icon path={mdiPlus} size={0.8} /> 添加
-                </button>
+        <div style={{ display: 'flex', height: 420, gap: 20 }}>
+          {/* Sidebar */}
+          <div style={{ width: 140, display: 'flex', flexDirection: 'column', gap: 4, borderRight: '1px solid #e5e5ea', paddingRight: 10 }}>
+            {[
+              { id: 'ports', label: '端口设置', icon: mdiServerNetwork },
+              { id: 'volumes', label: '存储位置', icon: mdiHarddisk },
+              { id: 'env', label: '环境变量', icon: mdiFormatListBulleted },
+              { id: 'perms', label: '权限设置', icon: mdiShieldAccount },
+              { id: 'network', label: '网络配置', icon: mdiIpNetwork },
+              { id: 'cmd', label: '启动命令', icon: mdiConsoleLine },
+            ].map(tab => (
+              <div 
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  background: activeTab === tab.id ? '#e5e5ea' : 'transparent',
+                  color: activeTab === tab.id ? '#000' : '#666',
+                  fontSize: 14,
+                  fontWeight: activeTab === tab.id ? 500 : 400,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8
+                }}
+              >
+                <Icon path={tab.icon} size={0.8} />
+                {tab.label}
               </div>
-
-              {props.ports.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {props.ports.map((p, i) => (
-                    <div key={i} style={itemRowStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ color: '#007aff', fontWeight: 600 }}>{p.host}</span>
-                        <span style={{ color: '#8e8e93' }}>➜</span>
-                        <span>{p.container}</span>
-                      </div>
-                      <button onClick={() => props.onRemovePort(i)} style={{ color: '#ff3b30', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                        <Icon path={mdiTrashCan} size={0.8} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            ))}
           </div>
 
-          <div>
-             <label style={sectionTitleStyle}>存储卷</label>
-             <div style={cardStyle}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
-                   <div>
-                     <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>主机路径</div>
-                     <div style={{ display: 'flex', gap: 8 }}>
-                       <input style={inputStyle} placeholder="/选择主机路径" value={props.newHostPath} onChange={e => props.setNewHostPath(e.target.value)} />
-                       <button onClick={() => setPathSelectorOpen(true)} style={{ height: 36, width: 36, background: '#f2f2f7', border: '1px solid #e5e5ea', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                         <Icon path={mdiFolder} size={0.8} color="#007aff" />
+          {/* Content */}
+          <div style={{ flex: 1, overflowY: 'auto', paddingRight: 4 }}>
+            {activeTab === 'ports' && (
+              <div>
+                <label style={sectionTitleStyle}>端口映射</label>
+                <div style={{ ...cardStyle, padding: '6px 10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    {/* Header Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', border: '1px solid transparent' }}>
+                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1 }}>
+                          <div style={{ fontSize: 12, color: '#666' }}>主机端口</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>容器端口</div>
+                       </div>
+                       <button style={{ visibility: 'hidden', padding: 4, border: 'none', background: 'none' }}>
+                          <Icon path={mdiTrashCanOutline} size={0.8} />
                        </button>
-                     </div>
-                   </div>
-                   <div>
-                      <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>容器路径</div>
-                      <input style={inputStyle} placeholder="/data" value={props.newContainerPath} onChange={e => props.setNewContainerPath(e.target.value)} />
-                   </div>
-                   <button onClick={props.onAddVolume} style={{ ...iOSButtonStyle('primary'), height: 36 }}>
-                      <Icon path={mdiPlus} size={0.8} /> 添加
-                   </button>
-                </div>
-                
-                {props.volumes.length > 0 && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {props.volumes.map((v, i) => (
-                      <div key={i} style={itemRowStyle}>
-                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                               <Icon path={mdiFolder} size={0.7} color="#8e8e93" />
-                               <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={v.host}>{v.host}</span>
-                            </div>
-                            <span style={{ color: '#8e8e93' }}>➜</span>
-                            <span style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }} title={v.container}>{v.container}</span>
-                         </div>
-                         <button onClick={() => props.onRemoveVolume(i)} style={{ color: '#ff3b30', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                            <Icon path={mdiTrashCan} size={0.8} />
-                         </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-             </div>
-          </div>
-          
-          <div>
-            <label style={sectionTitleStyle}>环境变量</label>
-            <div style={cardStyle}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, alignItems: 'end' }}>
-                <div>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>变量名 (Key)</div>
-                  <input style={inputStyle} placeholder="KEY" value={props.newEnvKey} onChange={e => props.setNewEnvKey(e.target.value)} />
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>变量值 (Value)</div>
-                  <input style={inputStyle} placeholder="VALUE" value={props.newEnvValue} onChange={e => props.setNewEnvValue(e.target.value)} />
-                </div>
-                <button onClick={props.onAddEnvVar} style={{ ...iOSButtonStyle('primary'), height: 36 }}>
-                  <Icon path={mdiPlus} size={0.8} /> 添加
-                </button>
-              </div>
-
-              {props.envVars.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {props.envVars.map((v, i) => (
-                    <div key={i} style={itemRowStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 600 }}>{v.key}</span>
-                        <span style={{ color: '#8e8e93' }}>=</span>
-                        <span style={{ wordBreak: 'break-all' }}>{v.value}</span>
-                      </div>
-                      <button onClick={() => props.onRemoveEnvVar(i)} style={{ color: '#ff3b30', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-                        <Icon path={mdiTrashCan} size={0.8} />
-                      </button>
                     </div>
-                  ))}
+
+                    <div style={{ ...listWrapperStyle, display: props.ports.length > 0 ? 'flex' : 'none', flexDirection: 'column' }}>
+                      {props.ports.map((p, i) => (
+                        <div key={i} style={{ ...itemRowStyle, borderBottom: i === props.ports.length - 1 ? 'none' : '1px solid #f2f2f7' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, alignItems: 'center' }}>
+                             <input 
+                                style={{ ...inputStyle, height: 32 }} 
+                                placeholder="Host" 
+                                value={p.host} 
+                                onChange={e => {
+                                  const newPorts = [...props.ports]
+                                  newPorts[i].host = e.target.value
+                                  props.setPorts(newPorts)
+                                }}
+                              />
+                              <div style={{ position: 'relative' }}>
+                                 <input 
+                                    style={{ ...inputStyle, height: 32 }} 
+                                    placeholder="Container" 
+                                    value={p.container} 
+                                    onChange={e => {
+                                      const newPorts = [...props.ports]
+                                      newPorts[i].container = e.target.value
+                                      // Auto-fill host port if empty
+                                      if (!newPorts[i].host && e.target.value) {
+                                          newPorts[i].host = e.target.value
+                                      }
+                                      props.setPorts(newPorts)
+                                    }}
+                                    list={`exposed-ports-${i}`}
+                                 />
+                                 <datalist id={`exposed-ports-${i}`}>
+                                   {exposedPorts.map(ep => <option key={ep} value={ep} />)}
+                                 </datalist>
+                              </div>
+                          </div>
+                          <button onClick={() => props.onRemovePort(i)} style={{ color: '#8e8e93', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                            <Icon path={mdiTrashCanOutline} size={0.8} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={props.onAddPort} 
+                    style={{ 
+                        width: '100%', 
+                        height: 36, 
+                        marginTop: 12, 
+                        border: '1px dashed #c7c7cc', 
+                        borderRadius: 8, 
+                        background: 'none', 
+                        color: '#007aff', 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
+                    }}
+                  >
+                    <Icon path={mdiPlus} size={0.8} /> 添加端口映射
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {activeTab === 'volumes' && (
+              <div>
+                 <label style={sectionTitleStyle}>存储卷</label>
+                 <div style={{ ...cardStyle, padding: '6px 10px' }}>
+                   <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    {/* Header Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', border: '1px solid transparent' }}>
+                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1 }}>
+                          <div style={{ fontSize: 12, color: '#666' }}>主机路径</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>容器路径</div>
+                       </div>
+                       <button style={{ visibility: 'hidden', padding: 4, border: 'none', background: 'none' }}>
+                          <Icon path={mdiTrashCanOutline} size={0.8} />
+                       </button>
+                    </div>
+
+                    {props.volumes.length > 0 && (
+                      <div style={{ ...listWrapperStyle, display: 'flex', flexDirection: 'column' }}>
+                        {props.volumes.map((v, i) => (
+                          <div key={i} style={{ ...itemRowStyle, borderBottom: i === props.volumes.length - 1 ? 'none' : '1px solid #f2f2f7' }}>
+                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, alignItems: 'center' }}>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                   <input 
+                                     style={{ ...inputStyle, height: 32, padding: '0 8px', flex: 1, minWidth: 0 }} 
+                                     placeholder="Host Path" 
+                                     value={v.host} 
+                                     onChange={e => {
+                                        const newVols = [...props.volumes]
+                                        newVols[i].host = e.target.value
+                                        props.setVolumes(newVols)
+                                     }}
+                                   />
+                                   <button onClick={() => {
+                                      setEditingVolumeIndex(i)
+                                      setPathSelectorOpen(true)
+                                   }} style={{ height: 32, width: 32, background: '#f2f2f7', border: '1px solid #e5e5ea', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                                     <Icon path={mdiFolder} size={0.7} color="#007aff" />
+                                   </button>
+                                </div>
+                                <input 
+                                   style={{ ...inputStyle, height: 32, padding: '0 8px' }} 
+                                   placeholder="Container Path" 
+                                   value={v.container} 
+                                   onChange={e => {
+                                      const newVols = [...props.volumes]
+                                      newVols[i].container = e.target.value
+                                      props.setVolumes(newVols)
+                                   }}
+                                />
+                             </div>
+                             <button onClick={() => props.onRemoveVolume(i)} style={{ color: '#8e8e93', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                                <Icon path={mdiTrashCanOutline} size={0.8} />
+                             </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                    <button 
+                      onClick={props.onAddVolume} 
+                      style={{ 
+                          width: '100%', 
+                          height: 36, 
+                          marginTop: 12, 
+                          border: '1px dashed #c7c7cc', 
+                          borderRadius: 8, 
+                          background: 'none', 
+                          color: '#007aff', 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 4
+                      }}
+                    >
+                      <Icon path={mdiPlus} size={0.8} /> 添加存储卷
+                    </button>
+                 </div>
+              </div>
+            )}
+            
+            {activeTab === 'env' && (
+              <div>
+                <label style={sectionTitleStyle}>环境变量</label>
+                <div style={{ ...cardStyle, padding: '6px 10px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    {/* Header Row */}
+                    <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px', border: '1px solid transparent' }}>
+                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1 }}>
+                          <div style={{ fontSize: 12, color: '#666' }}>变量名</div>
+                          <div style={{ fontSize: 12, color: '#666' }}>变量值</div>
+                       </div>
+                       <button style={{ visibility: 'hidden', padding: 4, border: 'none', background: 'none' }}>
+                          <Icon path={mdiTrashCanOutline} size={0.8} />
+                       </button>
+                    </div>
+
+                    <div style={{ ...listWrapperStyle, display: props.envVars.length > 0 ? 'flex' : 'none', flexDirection: 'column' }}>
+                      {props.envVars.map((v, i) => (
+                        <div key={i} style={{ ...itemRowStyle, borderBottom: i === props.envVars.length - 1 ? 'none' : '1px solid #f2f2f7' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, flex: 1, alignItems: 'center' }}>
+                              <input 
+                                  style={{ ...inputStyle, height: 32, padding: '0 8px', flex: 1, minWidth: 0 }} 
+                                  placeholder="Key"
+                                  value={v.key} 
+                                  onChange={e => {
+                                    const newEnv = [...props.envVars]
+                                    newEnv[i].key = e.target.value
+                                    props.setEnvVars(newEnv)
+                                  }}
+                              />
+                              <input 
+                                  style={{ ...inputStyle, height: 32, padding: '0 8px', flex: 1, minWidth: 0 }} 
+                                  placeholder="Value"
+                                  value={v.value} 
+                                  onChange={e => {
+                                    const newEnv = [...props.envVars]
+                                    newEnv[i].value = e.target.value
+                                    props.setEnvVars(newEnv)
+                                  }}
+                              />
+                          </div>
+                          <button onClick={() => props.onRemoveEnvVar(i)} style={{ color: '#8e8e93', background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                            <Icon path={mdiTrashCanOutline} size={0.8} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button 
+                    onClick={props.onAddEnvVar} 
+                    style={{ 
+                        width: '100%', 
+                        height: 36, 
+                        marginTop: 12, 
+                        border: '1px dashed #c7c7cc', 
+                        borderRadius: 8, 
+                        background: 'none', 
+                        color: '#007aff', 
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 4
+                    }}
+                  >
+                    <Icon path={mdiPlus} size={0.8} /> 添加环境变量
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'perms' && (
+               <div>
+                  <label style={sectionTitleStyle}>高级权限设置</label>
+                  <div style={cardStyle}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 14 }}>
+                      <input type="checkbox" checked={props.privileged} onChange={e => props.setPrivileged(e.target.checked)} />
+                      特权模式 (Privileged)
+                      <div style={{ fontSize: 12, color: '#8e8e93', marginLeft: 4 }}>(慎用)</div>
+                    </label>
+                    <div style={{ fontSize: 12, color: '#666', marginTop: -4, marginLeft: 24 }}>
+                      授予容器所有 capabilities，并解除设备访问限制。
+                    </div>
+                  </div>
+               </div>
+            )}
+
+            {activeTab === 'network' && (
+              <div>
+                 <label style={sectionTitleStyle}>网络配置</label>
+                 <div style={cardStyle}>
+                    <div>
+                      <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>网络模式</div>
+                      <select style={inputStyle} value={props.networkMode} onChange={e => props.setNetworkMode(e.target.value)}>
+                        <option value="bridge">Bridge (默认)</option>
+                        <option value="host">Host (主机网络)</option>
+                        <option value="none">None (无网络)</option>
+                      </select>
+                    </div>
+                 </div>
+              </div>
+            )}
+
+            {activeTab === 'cmd' && (
+               <div>
+                  <label style={sectionTitleStyle}>启动命令</label>
+                  <div style={cardStyle}>
+                     <div>
+                       <div style={{ fontSize: 13, color: '#666', marginBottom: 6 }}>命令 (Command)</div>
+                       <input 
+                          style={inputStyle} 
+                          placeholder="例如: /bin/sh -c 'echo hello'" 
+                          value={props.cmd} 
+                          onChange={e => props.setCmd(e.target.value)} 
+                       />
+                       <div style={{ fontSize: 12, color: '#8e8e93', marginTop: 4 }}>
+                         覆盖镜像默认的启动命令。
+                       </div>
+                     </div>
+                  </div>
+               </div>
+            )}
           </div>
         </div>
       )}
@@ -361,9 +585,19 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
 
       <PathSelector 
         open={pathSelectorOpen} 
-        onClose={() => setPathSelectorOpen(false)}
+        onClose={() => {
+            setPathSelectorOpen(false)
+            setEditingVolumeIndex(null)
+        }}
         onSelect={(path) => {
-          props.setNewHostPath(path)
+          if (editingVolumeIndex !== null) {
+              const newVols = [...props.volumes]
+              newVols[editingVolumeIndex].host = path
+              props.setVolumes(newVols)
+              setEditingVolumeIndex(null)
+          } else {
+              props.setNewHostPath(path)
+          }
           setPathSelectorOpen(false)
         }}
       />

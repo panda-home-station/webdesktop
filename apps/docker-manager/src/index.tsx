@@ -88,6 +88,10 @@ export default function DockerManager() {
   const [newEnvKey, setNewEnvKey] = useState('')
   const [newEnvValue, setNewEnvValue] = useState('')
   const [selectedGpu, setSelectedGpu] = useState('')
+  const [privileged, setPrivileged] = useState(false)
+  const [capAdd, setCapAdd] = useState<string[]>([])
+  const [networkMode, setNetworkMode] = useState('bridge')
+  const [cmd, setCmd] = useState('')
 
   // Confirmation State
   const [confirmState, setConfirmState] = useState<{ type: 'start' | 'stop' | 'delete' | 'restart', id: string } | null>(null)
@@ -196,10 +200,29 @@ export default function DockerManager() {
     setAutoStart(true)
     setCreateContainerOpen(true)
     setCreateStep(1)
-    setPorts([])
-    setVolumes([])
-    setEnvVars([])
+    
+    // Pre-fill ports from image
+    const initialPorts = img.exposed_ports?.map(p => ({ host: p.toString(), container: p.toString() })) || []
+    setPorts(initialPorts)
+
+    // Pre-fill volumes from image
+    const initialVolumes = img.volumes?.map(v => ({ host: '', container: v })) || []
+    setVolumes(initialVolumes)
+
+    // Pre-fill env vars from image
+    const initialEnv = img.env?.map(e => {
+      const parts = e.split('=')
+      const key = parts[0]
+      const value = parts.slice(1).join('=')
+      return { key, value }
+    }).filter(e => !['PATH', 'HOSTNAME', 'HOME', 'TERM'].includes(e.key)) || []
+    setEnvVars(initialEnv)
+
     setSelectedGpu('')
+    setPrivileged(false)
+    setCapAdd([])
+    setNetworkMode('bridge')
+    setCmd('')
   }
 
   const onCloseCreateContainer = () => {
@@ -219,6 +242,10 @@ export default function DockerManager() {
       volumes: volumes.length > 0 ? volumes.map(v => `${v.host}:${v.container}`) : undefined,
       env: envVars.length > 0 ? envVars.map(v => `${v.key}=${v.value}`) : undefined,
       gpu_id: selectedGpu || undefined,
+      privileged: privileged,
+      cap_add: capAdd.length > 0 ? capAdd : undefined,
+      network_mode: networkMode,
+      cmd: cmd ? cmd.split(' ') : undefined,
     }
     try {
       await podmanApi.createContainer(payload)
@@ -248,6 +275,36 @@ export default function DockerManager() {
       alert(`${type === 'delete' ? 'Remove' : type === 'start' ? 'Start' : type === 'stop' ? 'Stop' : 'Restart'} failed: ${msg}`)
       setConfirmState(null)
     }
+  }
+
+  const onAddPort = () => {
+    setPorts([...ports, { host: '', container: '' }])
+  }
+
+  const onRemovePort = (i: number) => {
+    const newPorts = [...ports]
+    newPorts.splice(i, 1)
+    setPorts(newPorts)
+  }
+
+  const onAddVolume = () => {
+    setVolumes([...volumes, { host: '', container: '' }])
+  }
+
+  const onRemoveVolume = (i: number) => {
+    const newVolumes = [...volumes]
+    newVolumes.splice(i, 1)
+    setVolumes(newVolumes)
+  }
+
+  const onAddEnvVar = () => {
+    setEnvVars([...envVars, { key: '', value: '' }])
+  }
+
+  const onRemoveEnvVar = (i: number) => {
+    const newEnv = [...envVars]
+    newEnv.splice(i, 1)
+    setEnvVars(newEnv)
   }
 
   return (
@@ -364,27 +421,35 @@ export default function DockerManager() {
         setNewHostPort={setNewHostPort}
         newContainerPort={newContainerPort}
         setNewContainerPort={setNewContainerPort}
-        onAddPort={() => { if(newHostPort.trim() && newContainerPort.trim()) { setPorts([...ports, {host: newHostPort.trim(), container: newContainerPort.trim()}]); setNewHostPort(''); setNewContainerPort('') } }}
-        onRemovePort={(i) => setPorts(ports.filter((_, idx) => idx !== i))}
+        onAddPort={onAddPort}
+        onRemovePort={onRemovePort}
         volumes={volumes}
         setVolumes={setVolumes}
         newHostPath={newHostPath}
         setNewHostPath={setNewHostPath}
         newContainerPath={newContainerPath}
         setNewContainerPath={setNewContainerPath}
-        onAddVolume={() => { if(newHostPath.trim() && newContainerPath.trim()) { setVolumes([...volumes, {host: newHostPath.trim(), container: newContainerPath.trim()}]); setNewHostPath(''); setNewContainerPath('') } }}
-        onRemoveVolume={(i) => setVolumes(volumes.filter((_, idx) => idx !== i))}
+        onAddVolume={onAddVolume}
+        onRemoveVolume={onRemoveVolume}
         envVars={envVars}
         setEnvVars={setEnvVars}
         newEnvKey={newEnvKey}
         setNewEnvKey={setNewEnvKey}
         newEnvValue={newEnvValue}
         setNewEnvValue={setNewEnvValue}
-        onAddEnvVar={() => { if(newEnvKey.trim()) { setEnvVars([...envVars, {key: newEnvKey.trim(), value: newEnvValue.trim()}]); setNewEnvKey(''); setNewEnvValue('') } }}
-        onRemoveEnvVar={(i) => setEnvVars(envVars.filter((_, idx) => idx !== i))}
+        onAddEnvVar={onAddEnvVar}
+        onRemoveEnvVar={onRemoveEnvVar}
         gpuList={gpus}
         selectedGpu={selectedGpu}
         setSelectedGpu={setSelectedGpu}
+        privileged={privileged}
+        setPrivileged={setPrivileged}
+        capAdd={capAdd}
+        setCapAdd={setCapAdd}
+        networkMode={networkMode}
+        setNetworkMode={setNetworkMode}
+        cmd={cmd}
+        setCmd={setCmd}
         onCreate={onCreateContainer}
       />
     </div>
