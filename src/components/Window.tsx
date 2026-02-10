@@ -264,7 +264,11 @@ export default function Window({
         boxShadow: 'var(--win-shadow)',
         backdropFilter: 'blur(22px)',
         zIndex: zIndex,
-        willChange: 'transform'
+        willChange: 'transform',
+        transform: 'translate3d(0,0,0)',
+        backfaceVisibility: 'hidden',
+        WebkitFontSmoothing: 'subpixel-antialiased',
+        contain: 'paint'
       }}
       onMouseDown={handleMouseDown}
     >
