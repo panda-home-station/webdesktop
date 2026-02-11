@@ -70,7 +70,8 @@ export default function DockerManager() {
   const [mirrors, setMirrors] = useState<Mirror[]>([])
   const [settingsSaving, setSettingsSaving] = useState(false)
 
-  // Create Container State
+  const [creating, setCreating] = useState(false)
+  const [performingAction, setPerformingAction] = useState(false)
   const [createContainerOpen, setCreateContainerOpen] = useState(false)
   const [selectedImage, setSelectedImage] = useState<Image | null>(null)
   const [createStep, setCreateStep] = useState(1)
@@ -233,6 +234,7 @@ export default function DockerManager() {
 
   const onCreateContainer = async () => {
     if (!selectedImage) return
+    setCreating(true)
     const payload: any = {
       image_id: selectedImage.id,
       name: containerName || undefined,
@@ -257,24 +259,29 @@ export default function DockerManager() {
       console.error(e)
       const msg = e.response?.data || e.message || 'Unknown error'
       alert(`Failed to create container: ${typeof msg === 'object' ? JSON.stringify(msg) : msg}`)
+    } finally {
+      setCreating(false)
     }
   }
 
   const performAction = async () => {
     if (!confirmState) return
     const { type, id } = confirmState
+    setPerformingAction(true)
     try {
       if (type === 'delete') await podmanApi.remove(id)
       else if (type === 'start') await podmanApi.start(id)
       else if (type === 'stop') await podmanApi.stop(id)
       else if (type === 'restart') await podmanApi.restart(id)
       
-      loadAll()
+      await loadAll()
       setConfirmState(null)
     } catch (e: any) {
       const msg = e.response?.data?.message || e.message || 'Unknown error'
       alert(`${type === 'delete' ? 'Remove' : type === 'start' ? 'Start' : type === 'stop' ? 'Stop' : 'Restart'} failed: ${msg}`)
       setConfirmState(null)
+    } finally {
+      setPerformingAction(false)
     }
   }
 
@@ -375,14 +382,51 @@ export default function DockerManager() {
       <Modal
         open={!!confirmState}
         title={confirmState?.type === 'delete' ? '删除容器' : confirmState?.type === 'start' ? '启动容器' : confirmState?.type === 'stop' ? '停止容器' : '重启容器'}
-        onClose={() => setConfirmState(null)}
+        onClose={() => !performingAction && setConfirmState(null)}
         width={320}
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <button onClick={() => setConfirmState(null)} style={btnCancelStyle}>取消</button>
-            <button onClick={performAction} style={btnConfirmStyle(confirmState?.type === 'delete' || confirmState?.type === 'stop' || confirmState?.type === 'restart')}>
-              {confirmState?.type === 'delete' ? '删除' : confirmState?.type === 'start' ? '启动' : confirmState?.type === 'stop' ? '停止' : '重启'}
+            <button 
+              onClick={() => setConfirmState(null)} 
+              style={{ ...btnCancelStyle, opacity: performingAction ? 0.5 : 1, cursor: performingAction ? 'not-allowed' : 'pointer' }}
+              disabled={performingAction}
+            >
+              取消
             </button>
+            <button 
+              onClick={performAction} 
+              style={{ 
+                ...btnConfirmStyle(confirmState?.type === 'delete' || confirmState?.type === 'stop' || confirmState?.type === 'restart'),
+                opacity: performingAction ? 0.7 : 1,
+                cursor: performingAction ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}
+              disabled={performingAction}
+            >
+              {performingAction && (
+                 <div style={{ 
+                   width: 12, 
+                   height: 12, 
+                   border: '2px solid rgba(255,255,255,0.3)', 
+                   borderTopColor: '#fff', 
+                   borderRadius: '50%', 
+                   animation: 'spin 0.8s linear infinite' 
+                 }} />
+               )}
+               {performingAction ? (
+                 confirmState?.type === 'delete' ? '正在删除容器...' :
+                 confirmState?.type === 'start' ? '正在启动容器...' :
+                 confirmState?.type === 'stop' ? '正在停止容器...' :
+                 '正在重启容器...'
+               ) : (
+                 confirmState?.type === 'delete' ? '删除' : 
+                 confirmState?.type === 'start' ? '启动' : 
+                 confirmState?.type === 'stop' ? '停止' : 
+                 '重启'
+               )}
+             </button>
           </div>
         }
       >
@@ -452,6 +496,7 @@ export default function DockerManager() {
         cmd={cmd}
         setCmd={setCmd}
         onCreate={onCreateContainer}
+        creating={creating}
       />
     </div>
   )

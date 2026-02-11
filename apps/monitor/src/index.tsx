@@ -138,7 +138,7 @@ export default function MonitorApp() {
         {/* CPU Chart */}
         <Section title="处理器 (CPU)">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 24, fontWeight: 700 }}>{currentStats?.cpu_usage.toFixed(2)}%</span>
+            <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{currentStats?.cpu_usage.toFixed(2)}%</span>
             <Cpu size={20} color="#3b82f6" />
           </div>
           <div style={{ height: 180 }}>
@@ -161,7 +161,7 @@ export default function MonitorApp() {
         {/* GPU Chart */}
         <Section title="图形处理器 (GPU)">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 24, fontWeight: 700 }}>{currentStats?.gpu_usage?.toFixed(2) ?? 'N/A'}%</span>
+            <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{currentStats?.gpu_usage?.toFixed(2) ?? 'N/A'}%</span>
             <GpuIcon size={20} color="#ef4444" />
           </div>
           <div style={{ height: 180 }}>
@@ -184,7 +184,7 @@ export default function MonitorApp() {
         {/* Memory Chart */}
         <Section title="内存 (Memory)">
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 24, fontWeight: 700 }}>{currentStats?.memory_usage.toFixed(2)}%</span>
+            <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{currentStats?.memory_usage.toFixed(2)}%</span>
             <MemoryIcon size={20} color="#10b981" />
           </div>
           <div style={{ height: 180 }}>
@@ -210,11 +210,11 @@ export default function MonitorApp() {
             <div style={{ display: 'flex', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>读取</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.disk_read_kbps ?? 0)}</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.disk_read_kbps ?? 0)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>写入</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.disk_write_kbps ?? 0)}</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.disk_write_kbps ?? 0)}</div>
               </div>
             </div>
             <HardDrive size={20} color="#f59e0b" />
@@ -253,11 +253,11 @@ export default function MonitorApp() {
             <div style={{ display: 'flex', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>下载</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.net_recv_kbps ?? 0)}</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.net_recv_kbps ?? 0)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>上传</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.net_sent_kbps ?? 0)}</div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.net_sent_kbps ?? 0)}</div>
               </div>
             </div>
             <Network size={20} color="#8b5cf6" />
@@ -446,7 +446,7 @@ function StatCard({ title, value, icon: Icon, color, subValue }: any) {
         <span style={{ fontSize: 14, fontWeight: 500, color: '#6b7280' }}>{title}</span>
       </div>
       <div>
-        <div style={{ fontSize: 24, fontWeight: 700, color: '#111827' }}>{value}</div>
+        <div style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{value}</div>
         {subValue && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{subValue}</div>}
       </div>
     </div>

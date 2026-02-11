@@ -73,6 +73,7 @@ interface CreateContainerModalProps {
   cmd: string
   setCmd: (s: string) => void
   onCreate: () => void
+  creating?: boolean
 }
 
 const inputStyle = {
@@ -152,15 +153,58 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
   const footer = (
     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
        {props.step > 1 ? (
-         <button onClick={() => props.setStep(props.step - 1)} style={iOSButtonStyle('default')}>上一步</button>
+         <button 
+           onClick={() => props.setStep(props.step - 1)} 
+           style={{ ...iOSButtonStyle('default'), opacity: props.creating ? 0.5 : 1, cursor: props.creating ? 'not-allowed' : 'pointer' }}
+           disabled={props.creating}
+         >
+           上一步
+         </button>
        ) : <div />}
        
        <div style={{ display: 'flex', gap: 12 }}>
-         <button onClick={props.onClose} style={iOSButtonStyle('default')}>取消</button>
+         <button 
+           onClick={props.onClose} 
+           style={{ ...iOSButtonStyle('default'), opacity: props.creating ? 0.5 : 1, cursor: props.creating ? 'not-allowed' : 'pointer' }}
+           disabled={props.creating}
+         >
+           取消
+         </button>
          {props.step < 3 ? (
            <button onClick={() => props.setStep(props.step + 1)} style={iOSButtonStyle('primary')}>下一步</button>
          ) : (
-           <button onClick={props.onCreate} style={iOSButtonStyle('primary')}>创建容器</button>
+           <button 
+             onClick={props.onCreate} 
+             style={{ 
+               ...iOSButtonStyle('primary'), 
+               opacity: props.creating ? 0.7 : 1, 
+               cursor: props.creating ? 'not-allowed' : 'pointer',
+               display: 'flex',
+               alignItems: 'center',
+               gap: 8
+             }}
+             disabled={props.creating}
+           >
+             {props.creating ? (
+               <>
+                 <style>{`
+                   @keyframes spin {
+                     from { transform: rotate(0deg); }
+                     to { transform: rotate(360deg); }
+                   }
+                 `}</style>
+                 <div style={{ 
+                   width: 14, 
+                   height: 14, 
+                   border: '2px solid rgba(255,255,255,0.3)', 
+                   borderTopColor: '#fff', 
+                   borderRadius: '50%', 
+                   animation: 'spin 0.8s linear infinite' 
+                 }} />
+                 正在创建...
+               </>
+             ) : '创建容器'}
+           </button>
          )}
        </div>
     </div>
@@ -179,7 +223,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
       bodyStyle={{ padding: 0 }}
     >
       {props.step === 1 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 16, height: 420, boxSizing: 'border-box', overflowY: 'auto' }}>
           <div>
             <label style={sectionTitleStyle}>基本信息</label>
             <div style={cardStyle}>
@@ -249,7 +293,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
       )}
 
       {props.step === 2 && (
-        <div style={{ display: 'flex', height: 420, gap: 20 }}>
+        <div style={{ display: 'flex', height: 420, gap: 20, boxSizing: 'border-box' }}>
           {/* Sidebar */}
           <div style={{ width: 140, display: 'flex', flexDirection: 'column', gap: 4, borderRight: '1px solid #e5e5ea', paddingRight: 10, paddingLeft: 16, paddingTop: 16 }}>
             {[
@@ -553,7 +597,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
       )}
 
       {props.step === 3 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 420, overflowY: 'auto', padding: '16px 0 16px 16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 420, overflowY: 'auto', padding: '16px 0 16px 16px', boxSizing: 'border-box' }}>
           <div style={{ paddingRight: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
               <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e6f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
