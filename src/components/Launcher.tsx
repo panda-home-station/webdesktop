@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { listApps, loadApp } from '../apps/registry'
 import { requestPermission } from '../sdk/permissions'
+import { setAnimating, setLauncherOpen } from '../sdk/desktop'
 
 type Props = {
   onOpen: (id: string, title: string, Comp: React.ComponentType<any>, iconUrl?: string) => void
@@ -18,12 +19,21 @@ export default function Launcher({ isOpen, onOpen, onClose }: Props & { isOpen: 
   // Reset search on open
   const inputRef = React.useRef<HTMLInputElement>(null)
   useEffect(() => {
+    setLauncherOpen(isOpen)
     if (isOpen) {
+        setAnimating(true)
         setQ('')
         // Focus input when opened
         requestAnimationFrame(() => {
           inputRef.current?.focus()
         })
+        // 动画大约 200-300ms
+        const timer = setTimeout(() => setAnimating(false), 300)
+        return () => clearTimeout(timer)
+    } else {
+        setAnimating(true)
+        const timer = setTimeout(() => setAnimating(false), 200)
+        return () => clearTimeout(timer)
     }
   }, [isOpen])
 

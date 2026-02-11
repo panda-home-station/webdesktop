@@ -129,3 +129,42 @@ export function subscribeShowDesktop(handler: () => void) {
   ev.addEventListener('showDesktop', h as EventListener)
   return () => ev.removeEventListener('showDesktop', h as EventListener)
 }
+
+export function setDragging(isDragging: boolean) {
+  ev.dispatchEvent(new CustomEvent('dragging', { detail: isDragging }))
+}
+
+export function subscribeDragging(handler: (isDragging: boolean) => void) {
+  const h = (e: Event) => {
+    const ce = e as CustomEvent
+    handler(ce.detail as boolean)
+  }
+  ev.addEventListener('dragging', h as EventListener)
+  return () => ev.removeEventListener('dragging', h as EventListener)
+}
+
+export function setAnimating(isAnimating: boolean) {
+  ev.dispatchEvent(new CustomEvent('animating', { detail: isAnimating }))
+}
+
+export function subscribeAnimating(handler: (isAnimating: boolean) => void) {
+  const h = (e: Event) => {
+    const ce = e as CustomEvent
+    handler(ce.detail as boolean)
+  }
+  ev.addEventListener('animating', h as EventListener)
+  return () => ev.removeEventListener('animating', h as EventListener)
+}
+
+export function setLauncherOpen(isOpen: boolean) {
+  ev.dispatchEvent(new CustomEvent('launcherOpen', { detail: isOpen }))
+}
+
+export function subscribeLauncherOpen(handler: (isOpen: boolean) => void) {
+  const h = (e: Event) => {
+    const ce = e as CustomEvent
+    handler(ce.detail as boolean)
+  }
+  ev.addEventListener('launcherOpen', h as EventListener)
+  return () => ev.removeEventListener('launcherOpen', h as EventListener)
+}

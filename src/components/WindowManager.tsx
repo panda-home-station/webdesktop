@@ -4,7 +4,7 @@ import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
-import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher } from '../sdk/desktop'
+import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher, setAnimating } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
 
 type Win = {
@@ -130,12 +130,16 @@ export default function WindowManager() {
   }, [])
 
   const minimize = useCallback((id: string) => {
+    setAnimating(true)
     setWins(ws => ws.map(w => (w.id === id ? { ...w, minimized: true } : w)))
+    setTimeout(() => setAnimating(false), 300)
   }, [])
 
   const restore = useCallback((id: string) => {
+    setAnimating(true)
     setWins(ws => ws.map(w => (w.id === id ? { ...w, minimized: false } : w)))
     bringToFront(id)
+    setTimeout(() => setAnimating(false), 300)
   }, [bringToFront])
 
   const handleResize = useCallback((id: string, w_: number, h_: number, x_?: number, y_?: number) => {
@@ -154,6 +158,7 @@ export default function WindowManager() {
   }, [bringToFront])
 
   const toggleMaximize = useCallback((id: string) => {
+    setAnimating(true)
     setWins(ws =>
       ws.map(w => {
         if (w.id !== id) return w
@@ -162,9 +167,8 @@ export default function WindowManager() {
           const dockLeft = 12
           const dockWidth = 60
           const dockGap = 0
-          const statusH = 0
+          const H = window.innerHeight
           const W = window.innerWidth
-          const H = window.innerHeight - statusH
           const x = dockLeft + dockWidth + dockGap
           const wmax = Math.max(300, W - x)
           return { ...w, prev, x, y: 0, w: wmax, h: H, maximized: true }
@@ -175,6 +179,7 @@ export default function WindowManager() {
       })
     )
     bringToFront(id)
+    setTimeout(() => setAnimating(false), 300)
   }, [bringToFront])
 
   const openById = useCallback(async (id: string) => {
@@ -213,7 +218,10 @@ export default function WindowManager() {
         if (w.maximized) {
           const x = dockLeft + dockWidth + dockGap
           const wmax = Math.max(300, W - x)
-          return { ...w, w: wmax, h: H, x, y: 0 }
+          if (w.w !== wmax || w.h !== H || w.x !== x || w.y !== 0) {
+            return { ...w, w: wmax, h: H, x, y: 0 }
+          }
+          return w
         }
 
         // Keep non-maximized windows visible
@@ -331,7 +339,9 @@ export default function WindowManager() {
     })
     const unsubShow = subscribeShowDesktop(() => {
       setShowLauncher(false)
+      setAnimating(true)
       setWins(ws => ws.map(w => ({ ...w, minimized: true })))
+      setTimeout(() => setAnimating(false), 400)
     })
     const unsubLaunch = subscribeLauncher(() => {
       setShowLauncher(true)

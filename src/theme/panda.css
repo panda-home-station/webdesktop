@@ -51,7 +51,6 @@
   border: 1px solid var(--win-border);
   border-radius: var(--win-radius);
   box-shadow: var(--win-shadow);
-  backdrop-filter: blur(22px);
 }
 
 .panda-titlebar {

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import Icon from '@mdi/react'
 import { mdiAbTesting } from '@mdi/js'
-import { getAppContextMenu } from '../sdk/desktop'
+import { getAppContextMenu, setDragging, subscribeDragging } from '../sdk/desktop'
 
 export interface WinProps {
   id: string
@@ -80,10 +80,12 @@ export default function Window({
 
     // Performance optimization: remove heavy styles during drag
     if (winRef.current) {
-      winRef.current.style.backdropFilter = 'none'
+      // 仅对当前拖拽的窗口禁用昂贵的特效，以保证其移动的绝对流畅
       winRef.current.style.boxShadow = 'none'
       winRef.current.style.willChange = 'transform, width, height'
     }
+
+    setDragging(true)
 
     const move = (ev: MouseEvent) => {
       const dx = ev.clientX - dragStartX
@@ -123,7 +125,6 @@ export default function Window({
              winRef.current.style.top = `${newY}px`
              winRef.current.style.transform = 'none'
              winRef.current.style.transition = 'none'
-             winRef.current.style.borderTop = '1px solid var(--win-border)'
            }
         }
         return
@@ -170,6 +171,7 @@ export default function Window({
     const up = () => {
       document.removeEventListener('mousemove', move)
       document.removeEventListener('mouseup', up)
+      setDragging(false)
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = null
@@ -178,7 +180,6 @@ export default function Window({
       if (isDraggingMaximized && !hasRestored) {
         // Restore styles if we didn't actually drag
         if (winRef.current) {
-           winRef.current.style.backdropFilter = 'blur(22px)'
            winRef.current.style.boxShadow = 'var(--win-shadow)'
            winRef.current.style.willChange = 'transform'
         }
@@ -206,7 +207,6 @@ export default function Window({
         winRef.current.style.transition = ''
         
         // Restore styles
-        winRef.current.style.backdropFilter = 'blur(22px)'
         winRef.current.style.boxShadow = 'var(--win-shadow)'
         winRef.current.style.willChange = 'transform'
       }
@@ -283,19 +283,21 @@ export default function Window({
       ref={winRef}
       style={{
         position: 'absolute',
-        top: y,
-        left: x,
-        width: w,
-        height: h,
+        top: maximized ? 0 : y,
+        left: maximized ? x : x, // x is already calculated for maximized in WindowManager
+        width: maximized ? 'calc(100% - ' + x + 'px)' : w, 
+        height: maximized ? '100%' : h,
         display: 'flex',
         flexDirection: 'column',
-        background: 'var(--win-bg)',
-        borderRadius: 'var(--win-radius)',
-        boxShadow: 'var(--win-shadow)',
-        backdropFilter: 'blur(22px)',
+        background: maximized ? 'var(--win-bg)' : 'transparent',
+        borderRadius: maximized ? 0 : 'var(--win-radius)',
+        boxShadow: maximized ? 'none' : 'var(--win-shadow)',
+        border: maximized ? 'none' : '1px solid rgba(0,0,0,0.15)',
+        overflow: 'hidden',
         zIndex: zIndex,
-        willChange: 'transform',
-        transform: 'translate3d(0,0,0)',
+        willChange: maximized ? 'none' : 'transform',
+        transform: maximized ? 'none' : 'translate3d(0,0,0)',
+        boxSizing: 'border-box',
         backfaceVisibility: 'hidden',
         perspective: 1000,
         WebkitFontSmoothing: 'antialiased',
@@ -312,9 +314,11 @@ export default function Window({
           alignItems: 'center',
           padding: '0 12px',
           cursor: 'move',
-          borderTopLeftRadius: 'var(--win-radius)',
-          borderTopRightRadius: 'var(--win-radius)',
-          userSelect: 'none'
+          borderTopLeftRadius: maximized ? 0 : 'var(--win-radius)',
+          borderTopRightRadius: maximized ? 0 : 'var(--win-radius)',
+          userSelect: 'none',
+          background: 'var(--titlebar-bg)',
+          borderBottom: '1px solid rgba(0,0,0,0.05)'
         }}
         onMouseDown={handleTitleMouseDown}
         onDoubleClick={() => onMaximize(id)}
@@ -389,8 +393,8 @@ export default function Window({
         position: 'relative',
         overflow: 'auto',
         background: '#ffffff',
-        borderBottomLeftRadius: 'var(--win-radius)',
-        borderBottomRightRadius: 'var(--win-radius)'
+        borderBottomLeftRadius: maximized ? 0 : 'var(--win-radius)',
+        borderBottomRightRadius: maximized ? 0 : 'var(--win-radius)'
       }}>
         {content}
         {menu && (
