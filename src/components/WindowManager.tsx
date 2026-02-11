@@ -369,12 +369,20 @@ export default function WindowManager() {
     setPersistZOrder(zOrder)
   }, [zOrder])
 
+  const handleLauncherOpen = useCallback((id: string, title: string, Comp: React.ComponentType<any>, iconUrl?: string) => {
+    open({ id: `${id}-${Date.now()}`, title, content: <Comp />, appId: id, iconUrl })
+  }, [open])
+
+  const handleLauncherClose = useCallback(() => {
+    setShowLauncher(false)
+  }, [])
+
   return (
     <div style={{ position: 'relative', flex: 1 }}>
       <Launcher
         isOpen={showLauncher}
-        onOpen={(id, title, Comp, iconUrl) => open({ id: `${id}-${Date.now()}`, title, content: <Comp />, appId: id, iconUrl })}
-        onClose={() => setShowLauncher(false)}
+        onOpen={handleLauncherOpen}
+        onClose={handleLauncherClose}
       />
       <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
         {wins.map(w => {

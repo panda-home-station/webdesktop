@@ -48,3 +48,44 @@ html, body {
   from { opacity: 1; transform: scale(1); }
   to { opacity: 0; transform: scale(0.95); }
 }
+
+.launcher-app-item {
+  /* 移除动画，实现瞬时切换 */
+  transition: none !important;
+  contain: layout paint style;
+  position: relative;
+  z-index: 1;
+  /* 强制硬件加速，减少与背景层的重绘干扰 */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.launcher-app-item:hover {
+  /* 再次加深背景颜色，确保选中状态清晰可见 */
+  background-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+.launcher-app-item:active {
+  background-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.launcher-icon-container {
+  contain: content;
+  pointer-events: none;
+  /* 强制硬件加速 */
+  transform: translateZ(0);
+}
+
+/* 优化长列表渲染算法：跳过视口外元素的渲染计算 */
+.launcher-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: 1000px; /* 预估高度，防止滚动条抖动 */
+  /* 启用硬件加速 */
+  transform: translateZ(0);
+}
+
+/* 移除复杂的缩放动画，改用简单的淡入淡出或直接显示 */
+@keyframes launcher-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}

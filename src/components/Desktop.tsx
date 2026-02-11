@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import WindowManager from './WindowManager'
 import { getWallpaper, setWallpaper } from '../state/desktop'
 import { openApp } from '../sdk/desktop'
@@ -167,7 +168,7 @@ export default function Desktop() {
     <div style={style} className="panda-desktop" onContextMenu={onContextMenu}>
       <SmoothWallpaper src={wallpaper} />
       <WindowManager />
-      {menu && (
+      {menu && createPortal(
         <div className="semi-portal" style={{ zIndex: 10005 }}>
           <div
             tabIndex={-1}
@@ -340,7 +341,8 @@ export default function Desktop() {
             style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10004 }}
             onMouseDown={closeMenu}
           />
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
