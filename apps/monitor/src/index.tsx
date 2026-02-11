@@ -27,14 +27,9 @@ class StatsStore extends EventEmitter {
   private history: Stats[] = []
   private current: Stats | null = null
   private timer: any = null
-  private isPaused: boolean = false
 
   getHistory() { return this.history }
   getCurrent() { return this.current }
-
-  setPaused(paused: boolean) {
-    this.isPaused = paused
-  }
 
   async fetch() {
     try {
@@ -100,17 +95,12 @@ const CanvasAreaChart = memo(({
   }, [])
 
   const draw = useCallback(() => {
-    // 动画期间或 Launcher 打开时停止绘制
-    // 因为 Launcher 的 30px 全屏模糊在有后台渲染时对 GPU 压力极大
-    if (isAnimatingRef.current || isLauncherOpenRef.current) return 
+    // Launcher 打开时停止绘制，因为 30px 全屏模糊在有后台渲染时对 GPU 压力极大
+    if (isLauncherOpenRef.current) return 
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true })
     if (!ctx) return
-
-    const data = dataRef.current
-    const len = data.length
-    if (!data || len < 2) return
 
     const { width, height: h, dpr } = dimensionsRef.current
     if (width === 0 || h === 0) return
@@ -122,12 +112,16 @@ const CanvasAreaChart = memo(({
       gradientCache.current = {}
     }
 
-    // 拖拽期间使用简化绘制逻辑 (不使用渐变填充，仅绘制折线)
-    const isDragging = isDraggingRef.current
+    // 拖拽或动画期间使用简化绘制逻辑 (不使用渐变填充，仅绘制折线)
+    const isSimplified = isDraggingRef.current || isAnimatingRef.current
 
     // 1. 清除画布
     ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, width, h)
+
+    const data = dataRef.current
+    const len = data.length
+    if (!data || len < 2) return
 
     // 2. Domain 计算
     let currentDomain = domain
@@ -148,8 +142,8 @@ const CanvasAreaChart = memo(({
     keys.forEach((key: string, index: number) => {
       const color = colors[index]
       
-      // 仅在非拖拽状态下绘制填充区域 (渐变非常耗性能)
-      if (!isDragging) {
+      // 仅在非简化状态下绘制填充区域 (渐变非常耗性能)
+      if (!isSimplified) {
         const gradientKey = `${color}-${h}`
         if (!gradientCache.current[gradientKey]) {
           const gradient = ctx.createLinearGradient(0, 0, 0, h)
@@ -182,7 +176,7 @@ const CanvasAreaChart = memo(({
         else ctx.lineTo(x, y)
       }
       ctx.strokeStyle = color
-      ctx.lineWidth = isDragging ? 1 : 2 // 拖拽时线宽变细，进一步减小渲染压力
+      ctx.lineWidth = isSimplified ? 1 : 2 // 简化模式下线宽变细，进一步减小渲染压力
       ctx.lineJoin = 'round'
       ctx.stroke()
     })
@@ -214,6 +208,9 @@ const CanvasAreaChart = memo(({
         dpr: window.devicePixelRatio || 1
       }
       
+      // 初始时，如果数据还没加载，先画一个白底，避免黑屏
+      requestAnimationFrame(draw)
+
       // 防抖：如果在动画中，不立即触发重绘，避免掉帧
       if (isAnimatingRef.current) return
 
@@ -556,12 +553,8 @@ export default function MonitorApp() {
   // 订阅实时数据更新，仅启动和停止 store，不触发当前组件 re-render
   useEffect(() => {
     statsStore.start()
-    const unsub = subscribeDragging(dragging => {
-      statsStore.setPaused(dragging)
-    })
     return () => {
       statsStore.stop()
-      unsub()
     }
   }, [])
 
