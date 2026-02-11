@@ -36,6 +36,19 @@ const formatFullTime = (timeStr: string) => {
   return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
 }
 
+const formatBytes = (kb: number) => {
+  if (kb === 0) return '0 KB'
+  const k = 1024
+  const sizes = ['KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(kb) / Math.log(k))
+  if (i < 0) return kb.toFixed(2) + ' KB'
+  return parseFloat((kb / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
+}
+
+const formatSpeed = (kbps: number) => {
+  return formatBytes(kbps) + '/s'
+}
+
 const TABS = [
   { id: 'performance', label: '性能', icon: <Activity size={20} /> },
   { id: 'cpu', label: '处理器', icon: <Cpu size={20} /> },
@@ -136,8 +149,8 @@ export default function MonitorApp() {
                 <YAxis domain={[0, 100]} hide />
                 <Tooltip 
                   labelFormatter={formatTime} 
-                  formatter={formatValue}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+                  formatter={(val: any) => [`${val.toFixed(2)}%`, '使用率']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
                 />
                 <Area isAnimationActive={false} type="monotone" dataKey="cpu_usage" stroke="#3b82f6" strokeWidth={2} fill="url(#colorCpu)" />
               </AreaChart>
@@ -159,8 +172,8 @@ export default function MonitorApp() {
                 <YAxis domain={[0, 100]} hide />
                 <Tooltip 
                   labelFormatter={formatTime} 
-                  formatter={formatValue}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+                  formatter={(val: any) => [`${val.toFixed(2)}%`, '使用率']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
                 />
                 <Area isAnimationActive={false} type="monotone" dataKey="gpu_usage" stroke="#ef4444" strokeWidth={2} fill="url(#colorGpu)" />
               </AreaChart>
@@ -182,8 +195,8 @@ export default function MonitorApp() {
                 <YAxis domain={[0, 100]} hide />
                 <Tooltip 
                   labelFormatter={formatTime} 
-                  formatter={formatValue}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+                  formatter={(val: any) => [`${val.toFixed(2)}%`, '使用率']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
                 />
                 <Area isAnimationActive={false} type="monotone" dataKey="memory_usage" stroke="#10b981" strokeWidth={2} fill="url(#colorMem)" />
               </AreaChart>
@@ -197,11 +210,11 @@ export default function MonitorApp() {
             <div style={{ display: 'flex', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>读取</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{(currentStats?.disk_read_kbps ?? 0).toFixed(2)} KB/s</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.disk_read_kbps ?? 0)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>写入</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{(currentStats?.disk_write_kbps ?? 0).toFixed(2)} KB/s</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.disk_write_kbps ?? 0)}</div>
               </div>
             </div>
             <HardDrive size={20} color="#f59e0b" />
@@ -214,8 +227,8 @@ export default function MonitorApp() {
                 <YAxis hide />
                 <Tooltip 
                   labelFormatter={formatTime} 
-                  formatter={formatValue}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+                  formatter={(val: any) => [formatSpeed(val), '速度']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
                 />
                 <Area isAnimationActive={false} type="monotone" dataKey="disk_read_kbps" name="读取" stroke="#f59e0b" strokeWidth={2} fill="url(#colorDiskRead)" />
                 <Area isAnimationActive={false} type="monotone" dataKey="disk_write_kbps" name="写入" stroke="#d97706" strokeWidth={2} fill="url(#colorDiskWrite)" />
@@ -240,11 +253,11 @@ export default function MonitorApp() {
             <div style={{ display: 'flex', gap: 16 }}>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>下载</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{(currentStats?.net_recv_kbps ?? 0).toFixed(2)} KB/s</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.net_recv_kbps ?? 0)}</div>
               </div>
               <div>
                 <div style={{ fontSize: 11, color: '#8e8e93' }}>上传</div>
-                <div style={{ fontSize: 18, fontWeight: 700 }}>{(currentStats?.net_sent_kbps ?? 0).toFixed(2)} KB/s</div>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{formatSpeed(currentStats?.net_sent_kbps ?? 0)}</div>
               </div>
             </div>
             <Network size={20} color="#8b5cf6" />
@@ -257,8 +270,8 @@ export default function MonitorApp() {
                 <YAxis hide />
                 <Tooltip 
                   labelFormatter={formatTime} 
-                  formatter={formatValue}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+                  formatter={(val: any) => [formatSpeed(val), '速度']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
                 />
                 <Area isAnimationActive={false} type="monotone" dataKey="net_recv_kbps" name="下载" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorNetRecv)" />
                 <Area isAnimationActive={false} type="monotone" dataKey="net_sent_kbps" name="上传" stroke="#ec4899" strokeWidth={2} fill="url(#colorNetSent)" />
@@ -299,11 +312,11 @@ export default function MonitorApp() {
 
   const renderDetail = (type: 'cpu' | 'memory' | 'disk' | 'network' | 'gpu') => {
     const config = {
-      cpu: { key: 'cpu_usage', name: 'CPU 使用率', unit: '%', color: '#3b82f6' },
-      gpu: { key: 'gpu_usage', name: 'GPU 使用率', unit: '%', color: '#ef4444' },
-      memory: { key: 'memory_usage', name: '内存 使用率', unit: '%', color: '#10b981' },
-      disk: { key: 'disk_usage', name: '磁盘 使用率', unit: '%', color: '#f59e0b' },
-      network: { key: 'net_recv_kbps', name: '下行速度', unit: ' KB/s', color: '#8b5cf6' }
+      cpu: { key: 'cpu_usage', name: 'CPU 使用率', unit: '%', color: '#3b82f6', formatter: (v: any) => `${v.toFixed(2)}%` },
+      gpu: { key: 'gpu_usage', name: 'GPU 使用率', unit: '%', color: '#ef4444', formatter: (v: any) => `${v.toFixed(2)}%` },
+      memory: { key: 'memory_usage', name: '内存 使用率', unit: '%', color: '#10b981', formatter: (v: any) => `${v.toFixed(2)}%` },
+      disk: { key: 'disk_usage', name: '磁盘 使用率', unit: '%', color: '#f59e0b', formatter: (v: any) => `${v.toFixed(2)}%` },
+      network: { key: 'net_recv_kbps', name: '下行速度', unit: '', color: '#8b5cf6', formatter: (v: any) => formatSpeed(v) }
     }[type]
 
     return (
@@ -314,11 +327,11 @@ export default function MonitorApp() {
               <AreaChart data={realtimeHistory}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
                 <XAxis dataKey="created_at" tickFormatter={formatTime} fontSize={12} tickMargin={8} />
-                <YAxis fontSize={12} unit={config.unit} tickLine={false} axisLine={false} />
+                <YAxis fontSize={12} unit={config.unit} tickLine={false} axisLine={false} tickFormatter={type === 'network' ? formatSpeed : undefined} />
                 <Tooltip 
-                  labelFormatter={formatFullTime} 
-                  formatter={formatValue}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+                  labelFormatter={formatTime} 
+                  formatter={(val: any) => [config.formatter(val), '数值']}
+                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
                 />
                 <Area isAnimationActive={false} type="monotone" dataKey={config.key} name={config.name} stroke={config.color} strokeWidth={2} fill={`url(#color${type})`} />
                 {type === 'network' && <Area isAnimationActive={false} type="monotone" dataKey="net_sent_kbps" name="上行速度" stroke="#ec4899" strokeWidth={2} fill="url(#colorSent)" />}
@@ -377,7 +390,7 @@ export default function MonitorApp() {
           <HistoryChart data={historyData} keys={['gpu_usage']} colors={['#ef4444']} unit="%" />
         </Section>
         <Section title="网络流量 (KB/s)">
-          <HistoryChart data={historyData} keys={['net_recv_kbps', 'net_sent_kbps']} colors={['#8b5cf6', '#ec4899']} unit="" />
+          <HistoryChart data={historyData} keys={['net_recv_kbps', 'net_sent_kbps']} colors={['#8b5cf6', '#ec4899']} unit="speed" />
         </Section>
         <Section title="磁盘使用率 (%)">
           <HistoryChart data={historyData} keys={['disk_usage']} colors={['#f59e0b']} unit="%" />
@@ -452,17 +465,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function HistoryChart({ data, keys, colors, unit }: any) {
+  const isSpeed = unit === 'speed'
   return (
     <div style={{ height: 240 }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data}>
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
           <XAxis dataKey="created_at" tickFormatter={formatTime} fontSize={11} />
-          <YAxis fontSize={11} unit={unit} tickLine={false} axisLine={false} />
+          <YAxis fontSize={11} unit={isSpeed ? '' : unit} tickLine={false} axisLine={false} tickFormatter={isSpeed ? formatSpeed : undefined} />
           <Tooltip 
             labelFormatter={formatFullTime} 
-            formatter={(val: any) => (typeof val === 'number' ? val.toFixed(2) : val)}
-            contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} 
+            formatter={(val: any) => [isSpeed ? formatSpeed(val) : `${val.toFixed(2)}${unit}`, '数值']}
+            contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
           />
           {keys.map((key: string, i: number) => (
             <Area key={key} isAnimationActive={false} type="monotone" dataKey={key} stroke={colors[i]} strokeWidth={2} fill={`${colors[i]}10`} />
