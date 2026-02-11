@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, memo } from 'react'
 import axios from 'axios'
 import {
   XAxis,
@@ -16,24 +16,13 @@ interface Stats {
   cpu_usage: number
   memory_usage: number
   gpu_usage: number | null
+  gpu_memory_usage: number | null
   net_recv_kbps: number
   net_sent_kbps: number
   disk_usage: number
   disk_read_kbps?: number
   disk_write_kbps?: number
   created_at: string
-}
-
-const formatTime = (timeStr: string) => {
-  if (!timeStr) return ''
-  const date = new Date(timeStr)
-  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
-}
-
-const formatFullTime = (timeStr: string) => {
-  if (!timeStr) return ''
-  const date = new Date(timeStr)
-  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
 }
 
 const formatBytes = (kb: number) => {
@@ -49,6 +38,22 @@ const formatSpeed = (kbps: number) => {
   return formatBytes(kbps) + '/s'
 }
 
+const formatTime = (timeStr: string) => {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+}
+
+const formatFullTime = (timeStr: string) => {
+  if (!timeStr) return ''
+  const date = new Date(timeStr)
+  return `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`
+}
+
+const cpuFormatter = (val: any) => [`${val.toFixed(2)}%`, '使用率']
+const gpuDualFormatter = (val: any, name: any) => [`${val?.toFixed(2) ?? 0}%`, name]
+const speedFormatter = (val: any) => [formatSpeed(val), '速度']
+
 const TABS = [
   { id: 'performance', label: '性能', icon: <Activity size={20} /> },
   { id: 'cpu', label: '处理器', icon: <Cpu size={20} /> },
@@ -58,6 +63,317 @@ const TABS = [
   { id: 'network', label: '网络', icon: <Network size={20} /> },
   { id: 'history', label: '历史记录', icon: <Calendar size={20} /> },
 ]
+
+const Section = memo(({ title, children }: { title: string; children: React.ReactNode }) => {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <h3 style={{ fontSize: 13, fontWeight: 400, color: '#6c6c70', marginBottom: 8, marginLeft: 8 }}>{title.toUpperCase()}</h3>
+      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20, overflow: 'hidden' }}>
+        {children}
+      </div>
+    </div>
+  )
+})
+
+const HistoryChart = memo(({ data, keys, colors, unit }: any) => {
+  const isSpeed = unit === 'speed'
+  return (
+    <div style={{ height: 240 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+          <XAxis dataKey="created_at" tickFormatter={formatTime} fontSize={11} />
+          <YAxis fontSize={11} unit={isSpeed ? '' : unit} tickLine={false} axisLine={false} tickFormatter={isSpeed ? formatSpeed : undefined} />
+          <Tooltip 
+            labelFormatter={formatFullTime} 
+            formatter={(val: any) => [isSpeed ? formatSpeed(val) : `${val.toFixed(2)}${unit}`, '数值']}
+            isAnimationActive={false}
+            animationDuration={0}
+            contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
+          />
+          {keys.map((key: string, i: number) => (
+            <Area key={key} isAnimationActive={false} type="linear" dataKey={key} stroke={colors[i]} strokeWidth={2} fill={`${colors[i]}10`} />
+          ))}
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  )
+})
+
+const PerformanceChart = memo(({ title, icon: Icon, color, value, data, dataKey, fillId }: any) => {
+  return (
+    <Section title={title}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{value}</span>
+        <Icon size={20} color={color} />
+      </div>
+      <div style={{ height: 180 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+            <XAxis dataKey="created_at" hide />
+            <YAxis domain={[0, 100]} hide />
+            <Tooltip 
+              labelFormatter={formatTime} 
+              formatter={cpuFormatter}
+              isAnimationActive={false}
+              animationDuration={0}
+              contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
+            />
+            <Area isAnimationActive={false} type="linear" dataKey={dataKey} stroke={color} strokeWidth={2} fill={`url(#${fillId})`} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </Section>
+  )
+})
+
+const DualPerformanceChart = memo(({ title, icon: Icon, data, dataKey1, dataKey2, name1, name2, color1, color2, value1, value2, formatter }: any) => {
+  return (
+    <Section title={title}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <div>
+            <div style={{ fontSize: 11, color: '#8e8e93' }}>{name1}</div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{value1}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: '#8e8e93' }}>{name2}</div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{value2}</div>
+          </div>
+        </div>
+        <Icon size={20} color={color1} />
+      </div>
+      <div style={{ height: 180 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+            <XAxis dataKey="created_at" hide />
+            <YAxis domain={[0, 100]} hide />
+            <Tooltip 
+              labelFormatter={formatTime} 
+              formatter={formatter}
+              isAnimationActive={false}
+              animationDuration={0}
+              contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
+            />
+            <Area isAnimationActive={false} type="linear" dataKey={dataKey1} name={name1} stroke={color1} strokeWidth={2} fill={`url(#color${dataKey1})`} />
+            <Area isAnimationActive={false} type="linear" dataKey={dataKey2} name={name2} stroke={color2} strokeWidth={2} fill={`url(#color${dataKey2})`} />
+            <defs>
+              <linearGradient id={`color${dataKey1}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color1} stopOpacity={0.1}/>
+                <stop offset="95%" stopColor={color1} stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id={`color${dataKey2}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color2} stopOpacity={0.1}/>
+                <stop offset="95%" stopColor={color2} stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </Section>
+  )
+})
+
+const PerformanceView = memo(({ currentStats, realtimeHistory }: { currentStats: Stats | null; realtimeHistory: Stats[] }) => (
+  <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1400, margin: '0 auto' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
+      <div>
+        <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: '#1c1c1e' }}>性能</h1>
+        <p style={{ margin: '4px 0 0 0', color: '#8e8e93', fontSize: 14 }}>实时系统资源使用情况</p>
+      </div>
+    </div>
+
+    <div style={{ 
+      display: 'grid', 
+      gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+      gap: 24 
+    }}>
+      <PerformanceChart 
+        title="处理器 (CPU)" 
+        icon={Cpu} 
+        color="#3b82f6" 
+        value={`${currentStats?.cpu_usage.toFixed(2)}%`} 
+        data={realtimeHistory} 
+        dataKey="cpu_usage" 
+        fillId="colorCpu" 
+      />
+      <DualPerformanceChart 
+        title="图形处理器 (GPU)" 
+        icon={GpuIcon} 
+        data={realtimeHistory} 
+        dataKey1="gpu_usage" 
+        dataKey2="gpu_memory_usage" 
+        name1="使用率" 
+        name2="显存" 
+        color1="#ef4444" 
+        color2="#a855f7" 
+        value1={`${currentStats?.gpu_usage?.toFixed(2) ?? 'N/A'}%`} 
+        value2={`${currentStats?.gpu_memory_usage?.toFixed(2) ?? 'N/A'}%`} 
+        formatter={gpuDualFormatter} 
+      />
+      <PerformanceChart 
+        title="内存 (Memory)" 
+        icon={MemoryIcon} 
+        color="#10b981" 
+        value={`${currentStats?.memory_usage.toFixed(2)}%`} 
+        data={realtimeHistory} 
+        dataKey="memory_usage" 
+        fillId="colorMem" 
+      />
+      <DualPerformanceChart 
+        title="磁盘读写 (Disk I/O)" 
+        icon={HardDrive} 
+        data={realtimeHistory} 
+        dataKey1="disk_read_kbps" 
+        dataKey2="disk_write_kbps" 
+        name1="读取" 
+        name2="写入" 
+        color1="#f59e0b" 
+        color2="#d97706" 
+        value1={formatSpeed(currentStats?.disk_read_kbps ?? 0)} 
+        value2={formatSpeed(currentStats?.disk_write_kbps ?? 0)} 
+        formatter={speedFormatter} 
+      />
+      <DualPerformanceChart 
+        title="网络速度 (Network)" 
+        icon={Network} 
+        data={realtimeHistory} 
+        dataKey1="net_recv_kbps" 
+        dataKey2="net_sent_kbps" 
+        name1="下载" 
+        name2="上传" 
+        color1="#8b5cf6" 
+        color2="#ec4899" 
+        value1={formatSpeed(currentStats?.net_recv_kbps ?? 0)} 
+        value2={formatSpeed(currentStats?.net_sent_kbps ?? 0)} 
+        formatter={speedFormatter} 
+      />
+    </div>
+
+    <svg style={{ height: 0, width: 0, position: 'absolute' }}>
+      <defs>
+        <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
+          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+        </linearGradient>
+        <linearGradient id="colorGpu" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
+          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+        </linearGradient>
+        <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
+          <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+        </linearGradient>
+      </defs>
+    </svg>
+  </div>
+))
+
+const DetailView = memo(({ type, realtimeHistory }: { type: 'cpu' | 'memory' | 'disk' | 'network' | 'gpu'; realtimeHistory: Stats[] }) => {
+  const config = {
+    cpu: { key: 'cpu_usage', name: 'CPU 使用率', unit: '%', color: '#3b82f6', formatter: (v: any) => `${v.toFixed(2)}%` },
+    gpu: { key: 'gpu_usage', name: 'GPU 使用率', unit: '%', color: '#ef4444', formatter: (v: any) => v === null ? '0.00%' : `${v.toFixed(2)}%` },
+    memory: { key: 'memory_usage', name: '内存 使用率', unit: '%', color: '#10b981', formatter: (v: any) => `${v.toFixed(2)}%` },
+    disk: { key: 'disk_usage', name: '磁盘 使用率', unit: '%', color: '#f59e0b', formatter: (v: any) => `${v.toFixed(2)}%` },
+    network: { key: 'net_recv_kbps', name: '下行速度', unit: '', color: '#8b5cf6', formatter: (v: any) => formatSpeed(v) }
+  }[type]
+
+  return (
+    <div style={{ padding: 32, height: '100%', boxSizing: 'border-box', maxWidth: 1200, margin: '0 auto' }}>
+      <Section title={`${config.name} 详情`}>
+        <div style={{ height: 400 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={realtimeHistory}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+              <XAxis dataKey="created_at" tickFormatter={formatTime} fontSize={12} tickMargin={8} />
+              <YAxis fontSize={12} unit={config.unit} tickLine={false} axisLine={false} tickFormatter={type === 'network' ? formatSpeed : undefined} />
+              <Tooltip 
+                labelFormatter={formatTime} 
+                formatter={(val: any) => [config.formatter(val), '数值']}
+                isAnimationActive={false}
+                animationDuration={0}
+                contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
+              />
+              <Area isAnimationActive={false} type="linear" dataKey={config.key} name={config.name} stroke={config.color} strokeWidth={2} fill={`url(#color${type}Detail)`} />
+              {type === 'gpu' && <Area isAnimationActive={false} type="linear" dataKey="gpu_memory_usage" name="显存使用率" stroke="#a855f7" strokeWidth={2} fill="url(#colorGpuMemDetail)" />}
+              {type === 'network' && <Area isAnimationActive={false} type="linear" dataKey="net_sent_kbps" name="上行速度" stroke="#ec4899" strokeWidth={2} fill="url(#colorSentDetail)" />}
+              {type === 'disk' && <Area isAnimationActive={false} type="linear" dataKey="disk_read_kbps" name="读取速度" stroke="#f59e0b" strokeWidth={2} fill="url(#colorDiskReadDetail)" />}
+              {type === 'disk' && <Area isAnimationActive={false} type="linear" dataKey="disk_write_kbps" name="写入速度" stroke="#d97706" strokeWidth={2} fill="url(#colorDiskWriteDetail)" />}
+              <defs>
+                <linearGradient id={`color${type}Detail`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={config.color} stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor={config.color} stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorGpuMemDetail" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#a855f7" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorSentDetail" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ec4899" stopOpacity={0.2}/>
+                  <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
+                </linearGradient>
+                <linearGradient id="colorDiskReadDetail" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#f59e0b" stopOpacity="0.2"/>
+                  <stop offset="95%" stopColor="#f59e0b" stopOpacity="0"/>
+                </linearGradient>
+                <linearGradient id="colorDiskWriteDetail" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#d97706" stopOpacity="0.2"/>
+                  <stop offset="95%" stopColor="#d97706" stopOpacity="0"/>
+                </linearGradient>
+              </defs>
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Section>
+    </div>
+  )
+})
+
+const HistoryView = memo(({ historyData, range, setRange }: { historyData: Stats[]; range: '1h' | '6h' | '24h'; setRange: (r: '1h' | '6h' | '24h') => void }) => (
+  <div style={{ padding: 32, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>历史数据查看</h2>
+      <div style={{ display: 'flex', background: '#fff', padding: 4, borderRadius: 10, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+        {(['1h', '6h', '24h'] as const).map(r => (
+          <button
+            key={r}
+            onClick={() => setRange(r)}
+            style={{
+              padding: '6px 16px',
+              border: 'none',
+              background: range === r ? '#3b82f6' : 'transparent',
+              color: range === r ? '#fff' : '#4b5563',
+              borderRadius: 8,
+              cursor: 'pointer',
+              fontSize: 13,
+              fontWeight: 600,
+              transition: 'all 0.2s'
+            }}
+          >
+            {r === '1h' ? '1小时' : r === '6h' ? '6小时' : '24小时'}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
+      <Section title="CPU & 内存 (%)">
+        <HistoryChart data={historyData} keys={['cpu_usage', 'memory_usage']} colors={['#3b82f6', '#10b981']} unit="%" />
+      </Section>
+      <Section title="GPU 使用率 (%)">
+        <HistoryChart data={historyData} keys={['gpu_usage']} colors={['#ef4444']} unit="%" />
+      </Section>
+      <Section title="网络流量 (KB/s)">
+        <HistoryChart data={historyData} keys={['net_recv_kbps', 'net_sent_kbps']} colors={['#8b5cf6', '#ec4899']} unit="speed" />
+      </Section>
+      <Section title="磁盘使用率 (%)">
+        <HistoryChart data={historyData} keys={['disk_usage']} colors={['#f59e0b']} unit="%" />
+      </Section>
+    </div>
+  </div>
+))
 
 export default function MonitorApp() {
   const [currentStats, setCurrentStats] = useState<Stats | null>(null)
@@ -74,7 +390,7 @@ export default function MonitorApp() {
       setCurrentStats(data)
       setRealtimeHistory(prev => {
         const next = [...prev, data]
-        if (next.length > 30) return next.slice(1) // Keep 1 minute of 2s updates
+        if (next.length > 30) return next.slice(1)
         return next
       })
     } catch (e) {
@@ -98,7 +414,6 @@ export default function MonitorApp() {
           limit: 1000
         }
       })
-      // API returns desc, we want asc for chart
       setHistoryData(res.data.reverse())
     } catch (e) {
       console.error('Failed to fetch history', e)
@@ -119,295 +434,15 @@ export default function MonitorApp() {
     }
   }, [activeTab, range, fetchHistory])
 
-  const formatValue = (val: any) => (typeof val === 'number' ? val.toFixed(2) : val)
-
-  const renderPerformance = () => (
-    <div style={{ padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 24, maxWidth: 1400, margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 8 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: '#1c1c1e' }}>性能</h1>
-          <p style={{ margin: '4px 0 0 0', color: '#8e8e93', fontSize: 14 }}>实时系统资源使用情况</p>
-        </div>
-      </div>
-
-      <div style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
-        gap: 24 
-      }}>
-        {/* CPU Chart */}
-        <Section title="处理器 (CPU)">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{currentStats?.cpu_usage.toFixed(2)}%</span>
-            <Cpu size={20} color="#3b82f6" />
-          </div>
-          <div style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={realtimeHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="created_at" hide />
-                <YAxis domain={[0, 100]} hide />
-                <Tooltip 
-                  labelFormatter={formatTime} 
-                  formatter={(val: any) => [`${val.toFixed(2)}%`, '使用率']}
-                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
-                />
-                <Area isAnimationActive={false} type="monotone" dataKey="cpu_usage" stroke="#3b82f6" strokeWidth={2} fill="url(#colorCpu)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Section>
-
-        {/* GPU Chart */}
-        <Section title="图形处理器 (GPU)">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{currentStats?.gpu_usage?.toFixed(2) ?? 'N/A'}%</span>
-            <GpuIcon size={20} color="#ef4444" />
-          </div>
-          <div style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={realtimeHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="created_at" hide />
-                <YAxis domain={[0, 100]} hide />
-                <Tooltip 
-                  labelFormatter={formatTime} 
-                  formatter={(val: any) => [`${val.toFixed(2)}%`, '使用率']}
-                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
-                />
-                <Area isAnimationActive={false} type="monotone" dataKey="gpu_usage" stroke="#ef4444" strokeWidth={2} fill="url(#colorGpu)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Section>
-
-        {/* Memory Chart */}
-        <Section title="内存 (Memory)">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{currentStats?.memory_usage.toFixed(2)}%</span>
-            <MemoryIcon size={20} color="#10b981" />
-          </div>
-          <div style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={realtimeHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="created_at" hide />
-                <YAxis domain={[0, 100]} hide />
-                <Tooltip 
-                  labelFormatter={formatTime} 
-                  formatter={(val: any) => [`${val.toFixed(2)}%`, '使用率']}
-                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
-                />
-                <Area isAnimationActive={false} type="monotone" dataKey="memory_usage" stroke="#10b981" strokeWidth={2} fill="url(#colorMem)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Section>
-
-        {/* Disk R/W Chart */}
-        <Section title="磁盘读写 (Disk I/O)">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 11, color: '#8e8e93' }}>读取</div>
-                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.disk_read_kbps ?? 0)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: '#8e8e93' }}>写入</div>
-                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.disk_write_kbps ?? 0)}</div>
-              </div>
-            </div>
-            <HardDrive size={20} color="#f59e0b" />
-          </div>
-          <div style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={realtimeHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="created_at" hide />
-                <YAxis hide />
-                <Tooltip 
-                  labelFormatter={formatTime} 
-                  formatter={(val: any) => [formatSpeed(val), '速度']}
-                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
-                />
-                <Area isAnimationActive={false} type="monotone" dataKey="disk_read_kbps" name="读取" stroke="#f59e0b" strokeWidth={2} fill="url(#colorDiskRead)" />
-                <Area isAnimationActive={false} type="monotone" dataKey="disk_write_kbps" name="写入" stroke="#d97706" strokeWidth={2} fill="url(#colorDiskWrite)" />
-                <defs>
-                  <linearGradient id="colorDiskRead" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorDiskWrite" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#d97706" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#d97706" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Section>
-
-        {/* Network Chart */}
-        <Section title="网络速度 (Network)">
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-            <div style={{ display: 'flex', gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 11, color: '#8e8e93' }}>下载</div>
-                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.net_recv_kbps ?? 0)}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: '#8e8e93' }}>上传</div>
-                <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{formatSpeed(currentStats?.net_sent_kbps ?? 0)}</div>
-              </div>
-            </div>
-            <Network size={20} color="#8b5cf6" />
-          </div>
-          <div style={{ height: 180 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={realtimeHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="created_at" hide />
-                <YAxis hide />
-                <Tooltip 
-                  labelFormatter={formatTime} 
-                  formatter={(val: any) => [formatSpeed(val), '速度']}
-                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
-                />
-                <Area isAnimationActive={false} type="monotone" dataKey="net_recv_kbps" name="下载" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorNetRecv)" />
-                <Area isAnimationActive={false} type="monotone" dataKey="net_sent_kbps" name="上传" stroke="#ec4899" strokeWidth={2} fill="url(#colorNetSent)" />
-                <defs>
-                  <linearGradient id="colorNetRecv" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorNetSent" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Section>
-      </div>
-
-      <svg style={{ height: 0, width: 0, position: 'absolute' }}>
-        <defs>
-          <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.2}/>
-            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-          </linearGradient>
-          <linearGradient id="colorGpu" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2}/>
-            <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-          </linearGradient>
-          <linearGradient id="colorMem" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
-            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-          </linearGradient>
-        </defs>
-      </svg>
-    </div>
-  )
-
-  const renderDetail = (type: 'cpu' | 'memory' | 'disk' | 'network' | 'gpu') => {
-    const config = {
-      cpu: { key: 'cpu_usage', name: 'CPU 使用率', unit: '%', color: '#3b82f6', formatter: (v: any) => `${v.toFixed(2)}%` },
-      gpu: { key: 'gpu_usage', name: 'GPU 使用率', unit: '%', color: '#ef4444', formatter: (v: any) => `${v.toFixed(2)}%` },
-      memory: { key: 'memory_usage', name: '内存 使用率', unit: '%', color: '#10b981', formatter: (v: any) => `${v.toFixed(2)}%` },
-      disk: { key: 'disk_usage', name: '磁盘 使用率', unit: '%', color: '#f59e0b', formatter: (v: any) => `${v.toFixed(2)}%` },
-      network: { key: 'net_recv_kbps', name: '下行速度', unit: '', color: '#8b5cf6', formatter: (v: any) => formatSpeed(v) }
-    }[type]
-
-    return (
-      <div style={{ padding: 32, height: '100%', boxSizing: 'border-box', maxWidth: 1200, margin: '0 auto' }}>
-        <Section title={`${config.name} 详情`}>
-          <div style={{ height: 400 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={realtimeHistory}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="created_at" tickFormatter={formatTime} fontSize={12} tickMargin={8} />
-                <YAxis fontSize={12} unit={config.unit} tickLine={false} axisLine={false} tickFormatter={type === 'network' ? formatSpeed : undefined} />
-                <Tooltip 
-                  labelFormatter={formatTime} 
-                  formatter={(val: any) => [config.formatter(val), '数值']}
-                  contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
-                />
-                <Area isAnimationActive={false} type="monotone" dataKey={config.key} name={config.name} stroke={config.color} strokeWidth={2} fill={`url(#color${type})`} />
-                {type === 'network' && <Area isAnimationActive={false} type="monotone" dataKey="net_sent_kbps" name="上行速度" stroke="#ec4899" strokeWidth={2} fill="url(#colorSent)" />}
-                {type === 'disk' && <Area isAnimationActive={false} type="monotone" dataKey="disk_read_kbps" name="读取速度" stroke="#f59e0b" strokeWidth={2} fill="url(#colorDiskRead)" />}
-                {type === 'disk' && <Area isAnimationActive={false} type="monotone" dataKey="disk_write_kbps" name="写入速度" stroke="#d97706" strokeWidth={2} fill="url(#colorDiskWrite)" />}
-                <defs>
-                  <linearGradient id={`color${type}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={config.color} stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor={config.color} stopOpacity={0}/>
-                  </linearGradient>
-                  <linearGradient id="colorSent" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ec4899" stopOpacity={0.1}/>
-                    <stop offset="95%" stopColor="#ec4899" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Section>
-      </div>
-    )
-  }
-
-  const renderHistory = () => (
-    <div style={{ padding: 32, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1200, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>历史数据查看</h2>
-        <div style={{ display: 'flex', background: '#fff', padding: 4, borderRadius: 10, border: '1px solid #e5e7eb', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
-          {(['1h', '6h', '24h'] as const).map(r => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              style={{
-                padding: '6px 16px',
-                border: 'none',
-                background: range === r ? '#3b82f6' : 'transparent',
-                color: range === r ? '#fff' : '#4b5563',
-                borderRadius: 8,
-                cursor: 'pointer',
-                fontSize: 13,
-                fontWeight: 600,
-                transition: 'all 0.2s'
-              }}
-            >
-              {r === '1h' ? '1小时' : r === '6h' ? '6小时' : '24小时'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr', gap: 24 }}>
-        <Section title="CPU & 内存 (%)">
-          <HistoryChart data={historyData} keys={['cpu_usage', 'memory_usage']} colors={['#3b82f6', '#10b981']} unit="%" />
-        </Section>
-        <Section title="GPU 使用率 (%)">
-          <HistoryChart data={historyData} keys={['gpu_usage']} colors={['#ef4444']} unit="%" />
-        </Section>
-        <Section title="网络流量 (KB/s)">
-          <HistoryChart data={historyData} keys={['net_recv_kbps', 'net_sent_kbps']} colors={['#8b5cf6', '#ec4899']} unit="speed" />
-        </Section>
-        <Section title="磁盘使用率 (%)">
-          <HistoryChart data={historyData} keys={['disk_usage']} colors={['#f59e0b']} unit="%" />
-        </Section>
-      </div>
-    </div>
-  )
-
   const renderContent = () => {
     switch (activeTab) {
-      case 'performance': return renderPerformance()
-      case 'cpu': return renderDetail('cpu')
-      case 'gpu': return renderDetail('gpu')
-      case 'memory': return renderDetail('memory')
-      case 'disk': return renderDetail('disk')
-      case 'network': return renderDetail('network')
-      case 'history': return renderHistory()
+      case 'performance': return <PerformanceView currentStats={currentStats} realtimeHistory={realtimeHistory} />
+      case 'cpu': return <DetailView type="cpu" realtimeHistory={realtimeHistory} />
+      case 'gpu': return <DetailView type="gpu" realtimeHistory={realtimeHistory} />
+      case 'memory': return <DetailView type="memory" realtimeHistory={realtimeHistory} />
+      case 'disk': return <DetailView type="disk" realtimeHistory={realtimeHistory} />
+      case 'network': return <DetailView type="network" realtimeHistory={realtimeHistory} />
+      case 'history': return <HistoryView historyData={historyData} range={range} setRange={setRange} />
       default: return null
     }
   }
@@ -423,66 +458,6 @@ export default function MonitorApp() {
       <div style={{ flex: 1, overflowY: 'auto' }}>
         {renderContent()}
       </div>
-    </div>
-  )
-}
-
-function StatCard({ title, value, icon: Icon, color, subValue }: any) {
-  return (
-    <div style={{ 
-      background: '#fff', 
-      borderRadius: 16, 
-      padding: 20, 
-      border: '1px solid #e5e7eb', 
-      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 12
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${color}15`, display: 'grid', placeItems: 'center' }}>
-          <Icon size={20} color={color} />
-        </div>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#6b7280' }}>{title}</span>
-      </div>
-      <div>
-        <div style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{value}</div>
-        {subValue && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{subValue}</div>}
-      </div>
-    </div>
-  )
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <h3 style={{ fontSize: 13, fontWeight: 400, color: '#6c6c70', marginBottom: 8, marginLeft: 8 }}>{title.toUpperCase()}</h3>
-      <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20, overflow: 'hidden' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function HistoryChart({ data, keys, colors, unit }: any) {
-  const isSpeed = unit === 'speed'
-  return (
-    <div style={{ height: 240 }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-          <XAxis dataKey="created_at" tickFormatter={formatTime} fontSize={11} />
-          <YAxis fontSize={11} unit={isSpeed ? '' : unit} tickLine={false} axisLine={false} tickFormatter={isSpeed ? formatSpeed : undefined} />
-          <Tooltip 
-            labelFormatter={formatFullTime} 
-            formatter={(val: any) => [isSpeed ? formatSpeed(val) : `${val.toFixed(2)}${unit}`, '数值']}
-            contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', fontSize: 12 }} 
-          />
-          {keys.map((key: string, i: number) => (
-            <Area key={key} isAnimationActive={false} type="monotone" dataKey={key} stroke={colors[i]} strokeWidth={2} fill={`${colors[i]}10`} />
-          ))}
-        </AreaChart>
-      </ResponsiveContainer>
     </div>
   )
 }
