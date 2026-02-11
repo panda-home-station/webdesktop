@@ -1,0 +1,10 @@
+{
+  "name": "monitor",
+  "title": "资源管理器",
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 800,
+  "minHeight": 500
+}
