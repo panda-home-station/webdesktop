@@ -1,10 +1,13 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Image } from '../types'
 import { iOSButtonStyle, fmtImageName } from '../utils'
 import { Modal } from '../../../../src/components/Modal'
 import { PathSelector } from './PathSelector'
+import { podmanApi } from '../api'
 import Icon from '@mdi/react'
 import { 
+  mdiInformationOutline,
+  mdiHammerWrench,
   mdiFolderOutline,
   mdiPlus, 
   mdiTrashCanOutline, 
@@ -123,6 +126,24 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
   const [pathSelectorOpen, setPathSelectorOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('ports')
   const [editingVolumeIndex, setEditingVolumeIndex] = useState<number | null>(null)
+  const [portStatus, setPortStatus] = useState<Record<string, boolean>>({})
+
+  useEffect(() => {
+    if (props.step === 3 && props.ports.length > 0) {
+      const hostPorts = props.ports.map(p => parseInt(p.host)).filter(p => !isNaN(p))
+      if (hostPorts.length > 0) {
+        podmanApi.checkPorts(hostPorts).then(results => {
+          const status: Record<string, boolean> = {}
+          results.forEach(r => {
+            status[r.port.toString()] = r.in_use
+          })
+          setPortStatus(status)
+        }).catch(err => {
+          console.error('Failed to check ports:', err)
+        })
+      }
+    }
+  }, [props.step, props.ports])
 
   if (!props.image) return null
 
@@ -552,33 +573,144 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
       )}
 
       {props.step === 3 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 24, alignItems: 'center', paddingTop: 32 }}>
-          <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#e6f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-             <Icon path={mdiAlertCircleOutline} size={1.5} color="#007aff" />
-          </div>
-          
-          <div style={{ fontSize: 18, fontWeight: 600, color: '#1c1f23' }}>确认创建容器?</div>
-          <div style={{ color: '#8f959e', textAlign: 'center', maxWidth: 400, lineHeight: 1.5 }}>
-            容器创建后将自动启动。请确保端口未被占用，且挂载路径权限正确。
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, height: 420, overflowY: 'auto', paddingRight: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#e6f7ff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+               <Icon path={mdiAlertCircleOutline} size={1} color="#007aff" />
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: '#1c1f23' }}>确认配置信息</div>
+              <div style={{ fontSize: 13, color: '#8e8e93' }}>请在创建前核对以下设置</div>
+            </div>
           </div>
 
-          <div style={{ width: '100%', maxWidth: 500, background: '#f9f9f9', borderRadius: 8, padding: 24, marginTop: 16, border: '1px solid #e1e3e5' }}>
-             <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: 12, fontSize: 14 }}>
-               <div style={{ color: '#8f959e' }}>容器名称</div>
-               <div style={{ fontWeight: 500 }}>{props.containerName || '未命名'}</div>
-               
-               <div style={{ color: '#8f959e' }}>镜像</div>
-               <div style={{ fontFamily: 'monospace' }}>{(props.image.repo_tags && props.image.repo_tags[0]) || props.image.id.slice(0, 12)}</div>
-               
-               <div style={{ color: '#8f959e' }}>端口映射</div>
-               <div>{props.ports.length} 个</div>
-               
-               <div style={{ color: '#8f959e' }}>存储卷</div>
-               <div>{props.volumes.length} 个</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {/* Basic Info */}
+            <div style={cardStyle}>
+               <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                 <Icon path={mdiInformationOutline} size={0.6} /> 基本信息
+               </div>
+               <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px 12px', fontSize: 14 }}>
+                  <div style={{ color: '#666' }}>容器名称</div>
+                  <div style={{ fontWeight: 500 }}>{props.containerName || <span style={{ color: '#8e8e93', fontStyle: 'italic' }}>自动生成</span>}</div>
+                  
+                  <div style={{ color: '#666' }}>镜像</div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 13 }}>{(props.image.repo_tags && props.image.repo_tags[0]) || props.image.id.slice(0, 12)}</div>
 
-               <div style={{ color: '#8f959e' }}>资源限制</div>
-               <div>{props.enableResourceLimit ? `${props.cpuLimit}核 / ${props.memoryLimit}GB` : '未启用'}</div>
-             </div>
+                  <div style={{ color: '#666' }}>开机自启</div>
+                  <div>{props.autoStart ? '是' : '否'}</div>
+               </div>
+            </div>
+
+            {/* Resources */}
+            <div style={cardStyle}>
+               <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                 <Icon path={mdiHammerWrench} size={0.6} /> 资源与权限
+               </div>
+               <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px 12px', fontSize: 14 }}>
+                  <div style={{ color: '#666' }}>资源限制</div>
+                  <div>{props.enableResourceLimit ? `${props.cpuLimit} 核 / ${props.memoryLimit} GB` : '无限制'}</div>
+                  
+                  <div style={{ color: '#666' }}>GPU 加速</div>
+                  <div>{props.selectedGpu ? (props.gpuList.find(g => g.id === props.selectedGpu)?.name || props.selectedGpu) : '未启用'}</div>
+
+                  <div style={{ color: '#666' }}>特权模式</div>
+                  <div>{props.privileged ? '已开启' : '关闭'}</div>
+
+                  {props.capAdd.length > 0 && (
+                    <>
+                      <div style={{ color: '#666' }}>额外能力</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {props.capAdd.map(c => (
+                          <span key={c} style={{ fontSize: 11, background: '#f2f2f7', padding: '2px 6px', borderRadius: 4, color: '#666' }}>{c}</span>
+                        ))}
+                      </div>
+                    </>
+                  )}
+               </div>
+            </div>
+
+            {/* Network */}
+            <div style={cardStyle}>
+               <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                 <Icon path={mdiIpNetwork} size={0.6} /> 网络与端口
+               </div>
+               <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '8px 12px', fontSize: 14 }}>
+                  <div style={{ color: '#666' }}>网络模式</div>
+                  <div style={{ textTransform: 'capitalize' }}>{props.networkMode}</div>
+                  
+                  <div style={{ color: '#666' }}>端口映射</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {props.ports.length === 0 ? <span style={{ color: '#8e8e93' }}>无</span> : props.ports.map((p, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'monospace', background: '#eee', padding: '2px 6px', borderRadius: 4 }}>{p.host || '自动'}</span>
+                        <span style={{ color: '#8e8e93' }}>→</span>
+                        <span style={{ fontFamily: 'monospace' }}>{p.container}</span>
+                        {p.host && portStatus[p.host] === true && (
+                          <span style={{ color: '#ff3b30', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Icon path={mdiAlertCircleOutline} size={0.6} /> 端口已被占用
+                          </span>
+                        )}
+                        {p.host && portStatus[p.host] === false && (
+                          <span style={{ color: '#34c759', fontSize: 12 }}>● 可用</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+               </div>
+            </div>
+
+            {/* Volumes */}
+            {props.volumes.length > 0 && (
+              <div style={cardStyle}>
+                 <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                   <Icon path={mdiHarddisk} size={0.6} /> 存储卷
+                 </div>
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 13 }}>
+                    {props.volumes.map((v, i) => (
+                      <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '4px 8px', background: '#fff', borderRadius: 6, border: '1px solid #e5e5ea' }}>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                           <span style={{ color: '#8e8e93', width: 40 }}>主机:</span>
+                           <span style={{ wordBreak: 'break-all' }}>{v.host || <span style={{ fontStyle: 'italic', color: '#ccc' }}>未设置</span>}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                           <span style={{ color: '#8e8e93', width: 40 }}>容器:</span>
+                           <span style={{ wordBreak: 'break-all' }}>{v.container}</span>
+                        </div>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+            )}
+
+            {/* Env Vars */}
+            {props.envVars.length > 0 && (
+               <div style={cardStyle}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon path={mdiFormatListBulleted} size={0.6} /> 环境变量
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 12px', fontSize: 13 }}>
+                     {props.envVars.map((e, i) => (
+                       <div key={i} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                         <span style={{ color: '#8e8e93' }}>{e.key}=</span>
+                         <span>{e.value}</span>
+                       </div>
+                     ))}
+                  </div>
+               </div>
+            )}
+
+            {/* Command */}
+            {props.cmd && (
+               <div style={cardStyle}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: '#8e8e93', marginBottom: 4, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Icon path={mdiConsoleLine} size={0.6} /> 启动命令
+                  </div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 13, background: '#fff', padding: '8px 12px', borderRadius: 6, border: '1px solid #e5e5ea' }}>
+                    {props.cmd}
+                  </div>
+               </div>
+            )}
           </div>
         </div>
       )}
