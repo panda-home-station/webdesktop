@@ -111,6 +111,6 @@ export const podmanApi = {
   async checkPorts(ports: number[]) {
     const token = getToken()
     const r = await axios.post('/api/system/check_ports', { ports }, { params: token ? { token } : {} })
-    return r.data.results as { port: number, in_use: boolean }[]
+    return r.data.results as { port: number, in_use: boolean, error?: string }[]
   }
 }

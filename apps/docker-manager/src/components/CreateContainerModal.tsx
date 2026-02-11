@@ -128,18 +128,18 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
   const [pathSelectorOpen, setPathSelectorOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('ports')
   const [editingVolumeIndex, setEditingVolumeIndex] = useState<number | null>(null)
-  const [portStatus, setPortStatus] = useState<Record<string, boolean>>({})
+  const [portResults, setPortResults] = useState<Record<string, { in_use: boolean, error?: string }>>({})
 
   useEffect(() => {
     if (props.step === 3 && props.ports.length > 0) {
       const hostPorts = props.ports.map(p => parseInt(p.host)).filter(p => !isNaN(p))
       if (hostPorts.length > 0) {
         podmanApi.checkPorts(hostPorts).then(results => {
-          const status: Record<string, boolean> = {}
+          const status: Record<string, { in_use: boolean, error?: string }> = {}
           results.forEach(r => {
-            status[r.port.toString()] = r.in_use
+            status[r.port.toString()] = { in_use: r.in_use, error: r.error }
           })
-          setPortStatus(status)
+          setPortResults(status)
         }).catch(err => {
           console.error('Failed to check ports:', err)
         })
@@ -627,14 +627,19 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
                           <span style={{ fontFamily: 'monospace', background: '#eee', padding: '2px 6px', borderRadius: 4 }}>{p.host || '自动'}</span>
                           <span style={{ color: '#8e8e93' }}>→</span>
                           <span style={{ fontFamily: 'monospace' }}>{p.container}</span>
-                          {p.host && portStatus[p.host] === true && (
+                          {p.host && portResults[p.host]?.in_use === true && (
                             <span style={{ color: '#ff3b30', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
                               <Icon path={mdiAlertCircleOutline} size={0.6} /> 端口已被占用
                             </span>
                           )}
-                          {p.host && portStatus[p.host] === false && (
-                            <span style={{ color: '#34c759', fontSize: 12 }}>● 可用</span>
-                          )}
+                          {p.host && portResults[p.host]?.in_use === false && (
+                             <span style={{ color: portResults[p.host]?.error ? '#ff9500' : '#34c759', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                {portResults[p.host]?.error ? '● 检查异常' : '● 可用'}
+                                {portResults[p.host]?.error && (
+                                  <span style={{ color: '#8e8e93', fontSize: 11 }}>({portResults[p.host]?.error})</span>
+                                )}
+                             </span>
+                           )}
                         </div>
                       ))}
                     </div>
