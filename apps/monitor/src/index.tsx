@@ -231,14 +231,27 @@ const CanvasAreaChart = memo(({
 interface Stats {
   cpu_usage: number
   memory_usage: number
+  memory_used: number | null
+  memory_total: number | null
   gpu_usage: number | null
   gpu_memory_usage: number | null
+  gpu_memory_used: number | null
+  gpu_memory_total: number | null
   net_recv_kbps: number
   net_sent_kbps: number
   disk_usage: number
   disk_read_kbps?: number
   disk_write_kbps?: number
   created_at: string
+}
+
+const formatRawBytes = (bytes: number) => {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  if (i < 0) return bytes.toFixed(2) + ' B'
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
 }
 
 const formatBytes = (kb: number) => {
@@ -263,8 +276,8 @@ const formatTime = (timeStr: string) => {
 const TABS = [
   { id: 'performance', label: '性能', icon: <Activity size={20} /> },
   { id: 'cpu', label: '处理器', icon: <Cpu size={20} /> },
-  { id: 'gpu', label: '图形处理器', icon: <GpuIcon size={20} /> },
   { id: 'memory', label: '内存', icon: <MemoryIcon size={20} /> },
+  { id: 'gpu', label: '图形处理器', icon: <GpuIcon size={20} /> },
   { id: 'disk', label: '磁盘', icon: <HardDrive size={20} /> },
   { id: 'network', label: '网络', icon: <Network size={20} /> },
   { id: 'history', label: '历史记录', icon: <Calendar size={20} /> },
@@ -290,44 +303,79 @@ const Section = memo(({ title, children }: { title: string; children: React.Reac
 })
 
 // 专门用于显示实时数值的组件，避免上层组件 re-render
-const StatsValue = memo(({ formatter, dataKey }: { formatter: (v: any) => string, dataKey: string }) => {
+const StatsValue = memo(({ formatter, dataKey, subFormatter, subDataKey1, subDataKey2 }: { 
+  formatter: (v: any) => string, 
+  dataKey: string,
+  subFormatter?: (v1: any, v2: any) => string,
+  subDataKey1?: string,
+  subDataKey2?: string
+}) => {
   const [value, setValue] = useState('0')
+  const [subValue, setSubValue] = useState('')
 
   useEffect(() => {
     return statsStore.on('update', ({ current }: any) => {
       if (current) {
         setValue(formatter(current[dataKey]))
+        if (subFormatter && subDataKey1 && subDataKey2) {
+          setSubValue(subFormatter(current[subDataKey1], current[subDataKey2]))
+        }
       }
     })
-  }, [formatter, dataKey])
+  }, [formatter, dataKey, subFormatter, subDataKey1, subDataKey2])
 
-  return <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{value}</span>
+  return (
+    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+      <span style={{ fontSize: 24, fontWeight: 600, color: '#3a3a3c' }}>{value}</span>
+      {subValue && <span style={{ fontSize: 13, color: '#8e8e93' }}>{subValue}</span>}
+    </div>
+  )
 })
 
 // 双数值显示组件
-const DualStatsValue = memo(({ name1, name2, dataKey1, dataKey2, formatter }: { name1: string, name2: string, dataKey1: string, dataKey2: string, formatter: (v: any) => string }) => {
-  const [values, setValues] = useState({ v1: '0', v2: '0' })
+const DualStatsValue = memo(({ name1, name2, dataKey1, dataKey2, formatter, subFormatter1, subDataKey1_1, subDataKey1_2, subFormatter2, subDataKey2_1, subDataKey2_2 }: { 
+  name1: string, 
+  name2: string, 
+  dataKey1: string, 
+  dataKey2: string, 
+  formatter: (v: any) => string,
+  subFormatter1?: (v1: any, v2: any) => string,
+  subDataKey1_1?: string,
+  subDataKey1_2?: string,
+  subFormatter2?: (v1: any, v2: any) => string,
+  subDataKey2_1?: string,
+  subDataKey2_2?: string
+}) => {
+  const [state, setState] = useState({ v1: '0', v2: '0', s1: '', s2: '' })
 
   useEffect(() => {
     return statsStore.on('update', ({ current }: any) => {
       if (current) {
-        setValues({
+        setState({
           v1: formatter(current[dataKey1]),
-          v2: formatter(current[dataKey2])
+          v2: formatter(current[dataKey2]),
+          s1: (subFormatter1 && subDataKey1_1 && subDataKey1_2) ? subFormatter1(current[subDataKey1_1], current[subDataKey1_2]) : '',
+          s2: (subFormatter2 && subDataKey2_1 && subDataKey2_2) ? subFormatter2(current[subDataKey2_1], current[subDataKey2_2]) : ''
         })
       }
     })
-  }, [dataKey1, dataKey2, formatter])
+  }, [dataKey1, dataKey2, formatter, subFormatter1, subDataKey1_1, subDataKey1_2, subFormatter2, subDataKey2_1, subDataKey2_2])
 
   return (
-    <div style={{ display: 'flex', gap: 16 }}>
+    <div style={{ display: 'flex', gap: 24 }}>
       <div>
         <div style={{ fontSize: 11, color: '#8e8e93' }}>{name1}</div>
-        <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{values.v1}</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{state.v1}</span>
+          {state.s1 && <span style={{ fontSize: 11, color: '#8e8e93' }}>{state.s1}</span>}
+        </div>
       </div>
       <div>
         <div style={{ fontSize: 11, color: '#8e8e93' }}>{name2}</div>
-        <div style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{values.v2}</div>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontSize: 18, fontWeight: 600, color: '#3a3a3c' }}>{state.v2}</span>
+          {state.s2 && <span style={{ fontSize: 11, color: '#8e8e93' }}>{state.s2}</span>}
+        </div>
       </div>
     </div>
   )
@@ -362,11 +410,17 @@ const HistoryChart = memo(({ data, keys, colors, unit }: any) => {
   )
 })
 
-const PerformanceChart = memo(({ title, icon: Icon, color, dataKey }: any) => {
+const PerformanceChart = memo(({ title, icon: Icon, color, dataKey, subFormatter, subDataKey1, subDataKey2 }: any) => {
   return (
     <Section title={title}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <StatsValue dataKey={dataKey} formatter={(v) => typeof v === 'number' ? `${v.toFixed(2)}%` : '0.00%'} />
+        <StatsValue 
+          dataKey={dataKey} 
+          formatter={(v) => typeof v === 'number' ? `${v.toFixed(2)}%` : '0.00%'} 
+          subFormatter={subFormatter}
+          subDataKey1={subDataKey1}
+          subDataKey2={subDataKey2}
+        />
         <Icon size={20} color={color} />
       </div>
       <div style={{ height: 180 }}>
@@ -380,7 +434,7 @@ const PerformanceChart = memo(({ title, icon: Icon, color, dataKey }: any) => {
   )
 })
 
-const DualPerformanceChart = memo(({ title, icon: Icon, dataKey1, dataKey2, name1, name2, color1, color2, unit }: any) => {
+const DualPerformanceChart = memo(({ title, icon: Icon, dataKey1, dataKey2, name1, name2, color1, color2, unit, subFormatter1, subDataKey1_1, subDataKey1_2, subFormatter2, subDataKey2_1, subDataKey2_2 }: any) => {
   const formatter = unit === 'speed' ? formatSpeed : (v: any) => typeof v === 'number' ? `${v.toFixed(2)}%` : 'N/A'
   
   return (
@@ -392,6 +446,12 @@ const DualPerformanceChart = memo(({ title, icon: Icon, dataKey1, dataKey2, name
           dataKey1={dataKey1} 
           dataKey2={dataKey2} 
           formatter={formatter} 
+          subFormatter1={subFormatter1}
+          subDataKey1_1={subDataKey1_1}
+          subDataKey1_2={subDataKey1_2}
+          subFormatter2={subFormatter2}
+          subDataKey2_1={subDataKey2_1}
+          subDataKey2_2={subDataKey2_2}
         />
         <Icon size={20} color={color1} />
       </div>
@@ -427,6 +487,15 @@ const PerformanceView = memo(() => (
         color="#3b82f6" 
         dataKey="cpu_usage" 
       />
+      <PerformanceChart 
+        title="内存 (Memory)" 
+        icon={MemoryIcon} 
+        color="#10b981" 
+        dataKey="memory_usage" 
+        subFormatter={(v1: any, v2: any) => v1 && v2 ? `${formatRawBytes(v1)} / ${formatRawBytes(v2)}` : ''}
+        subDataKey1="memory_used"
+        subDataKey2="memory_total"
+      />
       <DualPerformanceChart 
         title="图形处理器 (GPU)" 
         icon={GpuIcon} 
@@ -436,12 +505,9 @@ const PerformanceView = memo(() => (
         name2="显存" 
         color1="#ef4444" 
         color2="#a855f7" 
-      />
-      <PerformanceChart 
-        title="内存 (Memory)" 
-        icon={MemoryIcon} 
-        color="#10b981" 
-        dataKey="memory_usage" 
+        subFormatter2={(v1: any, v2: any) => v1 && v2 ? `${formatRawBytes(v1)} / ${formatRawBytes(v2)}` : ''}
+        subDataKey2_1="gpu_memory_used"
+        subDataKey2_2="gpu_memory_total"
       />
       <DualPerformanceChart 
         title="磁盘读写 (Disk I/O)" 
