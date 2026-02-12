@@ -234,7 +234,7 @@ export default function Desktop() {
                       position: 'absolute',
                       left: '100%',
                       top: -4,
-                      marginLeft: 4,
+                      marginLeft: 0, // 紧贴父菜单项，消除间隙且不重叠
                       minWidth: 160,
                       padding: 6,
                       borderRadius: 10,
