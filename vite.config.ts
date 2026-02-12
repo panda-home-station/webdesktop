@@ -9,7 +9,15 @@ export default defineConfig({
     strictPort: false,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8000',
+        target: `http://127.0.0.1:${process.env.VITE_PNAS_PORT || 8000}`,
+        changeOrigin: true,
+      },
+      '/health': {
+        target: `http://127.0.0.1:${process.env.VITE_PNAS_PORT || 8000}`,
+        changeOrigin: true,
+      },
+      '/version': {
+        target: `http://127.0.0.1:${process.env.VITE_PNAS_PORT || 8000}`,
         changeOrigin: true,
       }
     }
