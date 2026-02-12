@@ -54,7 +54,7 @@ export default function AgentApp() {
         display: 'flex',
         height: '100%',
         width: '100%',
-        minWidth: (isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED) + CHAT_MIN_WIDTH,
+        minWidth: (isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED) + CHAT_MIN_WIDTH + (isWorkspaceOpen ? RESIZER_WIDTH : 0),
         backgroundColor: '#ffffff',
         color: '#1a1a1a',
         fontFamily: 'system-ui, -apple-system, sans-serif',

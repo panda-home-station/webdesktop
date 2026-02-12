@@ -32,7 +32,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       display: 'flex',
       flexDirection: 'column',
       backgroundColor: '#fafafa',
-      zIndex: 10
+      zIndex: 10,
+      boxSizing: 'border-box'
     }}>
       <div className="custom-scrollbar" style={{ 
         flex: 1, 

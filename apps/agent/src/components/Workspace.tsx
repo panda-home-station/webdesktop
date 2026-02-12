@@ -32,7 +32,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      zIndex: 5
+      zIndex: 5,
+      boxSizing: 'border-box'
     }}>
       <div style={{ height: 60, borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', padding: '0 20px', justifyContent: 'space-between', backgroundColor: '#fff' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>

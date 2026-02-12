@@ -42,7 +42,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       minWidth: 450,
       backgroundColor: '#fff',
       position: 'relative',
-      zIndex: 1
+      zIndex: 1,
+      boxSizing: 'border-box'
     }}>
       {/* Chat Header */}
       <div style={{ height: 60, borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', padding: '0 16px', justifyContent: 'space-between', backgroundColor: '#fff' }}>
