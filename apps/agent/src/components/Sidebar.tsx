@@ -33,7 +33,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       flexDirection: 'column',
       backgroundColor: '#fafafa',
       zIndex: 10,
-      boxSizing: 'border-box'
+      boxSizing: 'border-box',
+      userSelect: 'none'
     }}>
       <div className="custom-scrollbar" style={{ 
         flex: 1, 
@@ -71,10 +72,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 gap: isSidebarOpen ? 12 : 0,
                 color: '#555',
                 transition: 'all 0.2s',
-                width: isSidebarOpen ? 'auto' : '40px',
+                width: isSidebarOpen ? '100%' : '40px',
                 height: '40px',
-                whiteSpace: 'nowrap',
-                minWidth: isSidebarOpen ? SIDEBAR_EXPANDED - 24 : 'auto'
+                minWidth: 0,
+                maxWidth: isSidebarOpen ? SIDEBAR_EXPANDED - 24 : '40px',
+                overflow: 'hidden',
+                boxSizing: 'border-box'
               }}
               onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
               onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
@@ -95,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               {isSidebarOpen && (
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>{item.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
                 </div>
               )}
             </div>
@@ -137,10 +140,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 border: '1px solid',
                 borderColor: selectedAgent.id === agent.id ? '#eee' : 'transparent',
                 transition: 'all 0.2s',
-                width: isSidebarOpen ? 'auto' : '40px',
+                width: isSidebarOpen ? '100%' : '40px',
                 height: isSidebarOpen ? 'auto' : '40px',
-                whiteSpace: 'nowrap',
-                minWidth: isSidebarOpen ? SIDEBAR_EXPANDED - 24 : 'auto'
+                minWidth: 0,
+                maxWidth: isSidebarOpen ? SIDEBAR_EXPANDED - 24 : '40px',
+                overflow: 'hidden',
+                boxSizing: 'border-box'
               }}
             >
               <div style={{ 
@@ -158,7 +163,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
               {isSidebarOpen && (
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 2, whiteSpace: 'nowrap' }}>{agent.name}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
                   <div style={{ fontSize: 11, color: '#999', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.description}</div>
                 </div>
               )}
@@ -179,8 +184,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             justifyContent: isSidebarOpen ? 'flex-start' : 'center',
             gap: 12,
             color: '#666',
-            whiteSpace: 'nowrap',
-            minWidth: isSidebarOpen ? SIDEBAR_EXPANDED - 24 : 'auto'
+            width: isSidebarOpen ? '100%' : '40px',
+            minWidth: 0,
+            maxWidth: isSidebarOpen ? SIDEBAR_EXPANDED - 24 : '40px',
+            overflow: 'hidden',
+            boxSizing: 'border-box'
           }}
           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
           onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}

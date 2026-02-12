@@ -158,7 +158,8 @@ export default function AgentApp() {
             backgroundColor: isResizing ? '#3b82f6' : '#f0f0f0',
             transition: 'background-color 0.2s',
             zIndex: 100,
-            position: 'relative'
+            position: 'relative',
+            userSelect: 'none'
           }}
         >
           <div style={{
