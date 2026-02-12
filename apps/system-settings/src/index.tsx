@@ -300,15 +300,10 @@ function DeviceInfo({ info }: { info: any }) {
                 <div key={i} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', fontSize: 13, lineHeight: 1.5 }}>
                   <span style={{ fontWeight: 600, color: '#374151' }}>{disk.name}</span>
                   <span style={{ margin: '0 6px', color: '#9ca3af' }}>-</span>
-                  <span style={{ color: '#111827', marginRight: 8 }}>
-                    {disk.vendor ? `${disk.vendor} ` : ''}{disk.model}
-                  </span>
                   <span style={{ color: '#6b7280' }}>
                     {disk.is_rotational ? 'HDD' : 'SSD'} 
                     <span style={{ margin: '0 4px', color: '#e5e7eb' }}>|</span> 
                     {disk.size} 
-                    <span style={{ margin: '0 4px', color: '#e5e7eb' }}>|</span> 
-                    SN: {disk.serial || 'N/A'}
                   </span>
                 </div>
               ))}
