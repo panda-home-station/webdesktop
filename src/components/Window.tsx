@@ -140,11 +140,10 @@ export default function Window({
       
       // Allow dragging out of bounds but with limits
       // Left/Right: keep 30px visible
-      // Top: >= 0
-      // Bottom: Keep title bar visible (y <= H - 30)
+      // Top: >= -1 (allow covering 1px border/gap)
       const minX = 30 - currentW
       const maxX = W - 30
-      const minY = 0
+      const minY = -1
       const maxY = H - 30
       
       const clampedX = Math.max(minX, Math.min(rawX, maxX))
@@ -195,7 +194,7 @@ export default function Window({
       
       const minX = 30 - currentW
       const maxX = W - 30
-      const minY = 0
+      const minY = -1
       const maxY = H - 30
       
       const nx = Math.round(Math.max(minX, Math.min(rawX, maxX)))
@@ -211,7 +210,9 @@ export default function Window({
         winRef.current.style.willChange = 'transform'
       }
       
-      onMove(id, nx, ny)
+      if (nx !== x || ny !== y || hasRestored) {
+        onMove(id, nx, ny)
+      }
     }
     document.addEventListener('mousemove', move)
     document.addEventListener('mouseup', up)
@@ -295,11 +296,7 @@ export default function Window({
         border: maximized ? 'none' : '1px solid rgba(0,0,0,0.15)',
         overflow: 'hidden',
         zIndex: zIndex,
-        willChange: maximized ? 'none' : 'transform',
-        transform: maximized ? 'none' : 'translate3d(0,0,0)',
         boxSizing: 'border-box',
-        backfaceVisibility: 'hidden',
-        perspective: 1000,
         WebkitFontSmoothing: 'antialiased',
         contain: 'paint'
       }}

@@ -41,6 +41,53 @@ export default function WindowManager() {
     return next
   }
 
+  const clampWin = useCallback((w: Win, W: number, H: number) => {
+    const dockLeft = 12
+    const dockWidth = 60
+    const dockGap = 0
+    const statusH = 0
+
+    const a = apps.find(x => x.id === w.appId)
+    const minW = (a as any)?.minW ?? 300
+    const minH = (a as any)?.minH ?? 200
+
+    if (w.maximized) {
+      const x = dockLeft + dockWidth + dockGap
+      const wmax = Math.max(minW, W - x)
+      const hmax = H - statusH
+      if (w.w !== wmax || w.h !== hmax || w.x !== x || w.y !== 0) {
+        return { ...w, w: wmax, h: hmax, x, y: 0 }
+      }
+      return w
+    }
+
+    // Keep non-maximized windows visible
+    let currentW = Math.max(minW, w.w ?? 600)
+    let currentH = Math.max(minH, w.h ?? 400)
+    const currentX = w.x ?? 60
+    const currentY = w.y ?? 60
+
+    // Force shrink if larger than viewport, but not smaller than minW/minH
+    if (currentW > W) currentW = Math.max(minW, W)
+    if (currentH > H) currentH = Math.max(minH, H)
+
+    // Allow dragging out of bounds but with limits
+    // Left/Right: keep 30px visible
+    // Top: >= -1 (allow covering 1px border/gap)
+    const limitMinX = 30 - currentW
+    const limitMaxX = W - 30
+    const limitMinY = -1
+    const limitMaxY = H - 30 - statusH
+
+    const nx = Math.max(limitMinX, Math.min(currentX, limitMaxX))
+    const ny = Math.max(limitMinY, Math.min(currentY, limitMaxY))
+
+    if (nx !== currentX || ny !== currentY || currentW !== (w.w ?? 600) || currentH !== (w.h ?? 400)) {
+      return { ...w, x: nx, y: ny, w: currentW, h: currentH }
+    }
+    return w
+  }, [apps])
+
   const open = useCallback((w: Win) => {
     const a = apps.find(x => x.id === w.appId)
     const minW = (a as any)?.minW ?? 300
@@ -111,7 +158,8 @@ export default function WindowManager() {
 
       const nx = Math.max(minX, Math.min(cx, maxX))
       const ny = Math.max(minY, Math.min(cy, maxY))
-      return [...x, { ...w, id: uid, x: nx, y: ny, w: width, h: height }]
+      const newWin: Win = { ...w, id: uid, x: nx, y: ny, w: width, h: height }
+      return [...x, clampWin(newWin, window.innerWidth, window.innerHeight)]
     })
     setZOrder(x => [...x.filter(id => id !== newId), newId])
   }, [apps])
@@ -126,8 +174,11 @@ export default function WindowManager() {
   }, [])
 
   const setPos = useCallback((id: string, x: number, y: number) => {
-    setWins(ws => ws.map(w => (w.id === id ? { ...w, x, y } : w)))
-  }, [])
+    setWins(ws => ws.map(w => {
+      if (w.id !== id) return w
+      return clampWin({ ...w, x, y }, window.innerWidth, window.innerHeight)
+    }))
+  }, [clampWin])
 
   const minimize = useCallback((id: string) => {
     setAnimating(true)
@@ -145,17 +196,18 @@ export default function WindowManager() {
   const handleResize = useCallback((id: string, w_: number, h_: number, x_?: number, y_?: number) => {
     setWins(ws => ws.map(w => {
       if (w.id !== id) return w
-      return { ...w, w: w_, h: h_, x: x_ ?? w.x, y: y_ ?? w.y }
+      return clampWin({ ...w, w: w_, h: h_, x: x_ ?? w.x, y: y_ ?? w.y }, window.innerWidth, window.innerHeight)
     }))
-  }, [])
+  }, [clampWin])
 
   const handleDragFromMaximized = useCallback((id: string, x: number, y: number, w: number, h: number) => {
     setWins(ws => ws.map(win => {
       if (win.id !== id) return win
-      return { ...win, maximized: false, prev: undefined, x, y, w, h }
+      const updated = { ...win, maximized: false, prev: undefined, x, y, w, h }
+      return clampWin(updated, window.innerWidth, window.innerHeight)
     }))
     bringToFront(id)
-  }, [bringToFront])
+  }, [bringToFront, clampWin])
 
   const toggleMaximize = useCallback((id: string) => {
     setAnimating(true)
@@ -174,13 +226,14 @@ export default function WindowManager() {
           return { ...w, prev, x, y: 0, w: wmax, h: H, maximized: true }
         } else {
           const p = w.prev ?? { x: 60, y: 60, w: 600, h: 400 }
-          return { ...w, x: p.x, y: p.y, w: p.w, h: p.h, maximized: false, prev: undefined }
+          const restored = { ...w, x: p.x, y: p.y, w: p.w, h: p.h, maximized: false, prev: undefined }
+          return clampWin(restored, window.innerWidth, window.innerHeight)
         }
       })
     )
     bringToFront(id)
     setTimeout(() => setAnimating(false), 300)
-  }, [bringToFront])
+  }, [bringToFront, clampWin])
 
   const openById = useCallback(async (id: string) => {
     const existing = winsRef.current.find(w => w.appId === id)
@@ -207,49 +260,13 @@ export default function WindowManager() {
 
   React.useEffect(() => {
     const handleResize = () => {
-      setWins(ws => ws.map(w => {
-        const dockLeft = 12
-        const dockWidth = 60
-        const dockGap = 0
-        const statusH = 0
-        const W = window.innerWidth
-        const H = window.innerHeight - statusH
-
-        if (w.maximized) {
-          const x = dockLeft + dockWidth + dockGap
-          const wmax = Math.max(300, W - x)
-          if (w.w !== wmax || w.h !== H || w.x !== x || w.y !== 0) {
-            return { ...w, w: wmax, h: H, x, y: 0 }
-          }
-          return w
-        }
-
-        // Keep non-maximized windows visible
-        const currentW = w.w ?? 600
-        const currentX = w.x ?? 60
-        const currentY = w.y ?? 60
-
-        // Allow dragging out of bounds but with limits
-        // Left/Right: keep 30px visible
-        // Top: >= 0
-        // Bottom: Keep title bar visible (y <= H - 30)
-        const minX = 30 - currentW
-        const maxX = W - 30
-        const minY = 0
-        const maxY = H - 30
-
-        const nx = Math.max(minX, Math.min(currentX, maxX))
-        const ny = Math.max(minY, Math.min(currentY, maxY))
-
-        if (nx !== currentX || ny !== currentY) {
-          return { ...w, x: nx, y: ny }
-        }
-        return w
-      }))
+      setWins(ws => ws.map(w => clampWin(w, window.innerWidth, window.innerHeight)))
     }
     window.addEventListener('resize', handleResize)
+    // Run once on mount or when clampWin changes to catch initial state
+    handleResize()
     return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  }, [clampWin])
 
   React.useEffect(() => {
     const pw = getPersistWins()
@@ -267,7 +284,8 @@ export default function WindowManager() {
         setWins(x => {
           if (x.some(xx => xx.appId === w.appId)) return x
           const uid = ensureUniqueId(baseId, x)
-          return [...x, { id: uid, title: w.title || a.title, content: <Comp />, appId: a.id, iconUrl: w.iconUrl ?? a.iconUrl, x: w.x ?? 60, y: w.y ?? 60, w: w.w ?? 600, h: w.h ?? 400, minimized: !!w.minimized, maximized: !!w.maximized }]
+          const newWin: Win = { id: uid, title: w.title || a.title, content: <Comp />, appId: a.id, iconUrl: w.iconUrl ?? a.iconUrl, x: w.x ?? 60, y: w.y ?? 60, w: w.w ?? 600, h: w.h ?? 400, minimized: !!w.minimized, maximized: !!w.maximized }
+          return [...x, clampWin(newWin, window.innerWidth, window.innerHeight)]
         })
       }
       setPersistLoaded(true)
