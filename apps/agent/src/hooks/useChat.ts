@@ -24,7 +24,15 @@ export function useChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messagesEndRef.current) {
+      const container = messagesEndRef.current.parentElement?.parentElement
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior: 'smooth'
+        })
+      }
+    }
   }
 
   const loadSession = (sessionId: string) => {

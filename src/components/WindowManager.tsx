@@ -402,7 +402,13 @@ export default function WindowManager() {
         onOpen={handleLauncherOpen}
         onClose={handleLauncherClose}
       />
-      <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+      <div 
+        style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}
+        onScroll={(e) => {
+          e.currentTarget.scrollTop = 0
+          e.currentTarget.scrollLeft = 0
+        }}
+      >
         {wins.map(w => {
           if (w.minimized) return null
           const z = zOrder.indexOf(w.id) + 10

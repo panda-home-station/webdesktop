@@ -165,7 +165,15 @@ export default function Desktop() {
   const closeMenu = useCallback(() => setMenu(null), [])
 
   return (
-    <div style={style} className="panda-desktop" onContextMenu={onContextMenu}>
+    <div 
+      style={style} 
+      className="panda-desktop" 
+      onContextMenu={onContextMenu}
+      onScroll={(e) => {
+        e.currentTarget.scrollTop = 0
+        e.currentTarget.scrollLeft = 0
+      }}
+    >
       <SmoothWallpaper src={wallpaper} />
       <WindowManager />
       {menu && createPortal(
