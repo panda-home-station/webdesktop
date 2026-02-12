@@ -1,6 +1,6 @@
 import React from 'react'
 import { Sparkles, Terminal, Search, Workflow, Globe, Box } from 'lucide-react'
-import { Agent, Tool } from '../types'
+import { Agent, Tool, ChatSession } from '../types'
 
 export const SIDEBAR_EXPANDED = 240
 export const SIDEBAR_COLLAPSED = 60
@@ -47,4 +47,40 @@ export const AVAILABLE_TOOLS: Tool[] = [
   { id: 'web_search', name: '网页搜索', icon: <Globe size={14} />, description: '在互联网上搜索最新信息' },
   { id: 'file_system', name: '文件系统', icon: <Box size={14} />, description: '读写本地文件系统' },
   { id: 'terminal', name: '终端执行', icon: <Terminal size={14} />, description: '运行系统命令和脚本' },
+]
+
+export const MOCK_HISTORY: ChatSession[] = [
+  {
+    id: '1',
+    title: '如何使用 Python 进行数据分析',
+    lastMessage: '可以使用 pandas 和 matplotlib...',
+    timestamp: new Date(Date.now() - 3600000),
+    agentId: 'coder',
+    messages: [
+      { id: '1-1', role: 'user', content: '如何使用 Python 进行数据分析？', timestamp: new Date(Date.now() - 3700000) },
+      { id: '1-2', role: 'assistant', content: '可以使用 pandas 和 matplotlib...', timestamp: new Date(Date.now() - 3600000) }
+    ]
+  },
+  {
+    id: '2',
+    title: '深度学习入门指南',
+    lastMessage: '深度学习是机器学习的一个子集...',
+    timestamp: new Date(Date.now() - 86400000),
+    agentId: 'researcher',
+    messages: [
+      { id: '2-1', role: 'user', content: '深度学习入门指南', timestamp: new Date(Date.now() - 86500000) },
+      { id: '2-2', role: 'assistant', content: '深度学习是机器学习的一个子集...', timestamp: new Date(Date.now() - 86400000) }
+    ]
+  },
+  {
+    id: '3',
+    title: '帮我写一个 React 组件',
+    lastMessage: '好的，这是一个简单的 Button 组件...',
+    timestamp: new Date(Date.now() - 172800000),
+    agentId: 'coder',
+    messages: [
+      { id: '3-1', role: 'user', content: '帮 me 写一个 React 组件', timestamp: new Date(Date.now() - 172900000) },
+      { id: '3-2', role: 'assistant', content: '好的，这是一个简单的 Button 组件...', timestamp: new Date(Date.now() - 172800000) }
+    ]
+  }
 ]

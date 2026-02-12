@@ -1,6 +1,6 @@
 import React from 'react'
-import { Plus, Layers, Box, Settings, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Agent } from '../types'
+import { Plus, Layers, Box, Settings, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
+import { Agent, ChatSession } from '../types'
 import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, MOCK_AGENTS } from '../constants'
 
 interface SidebarProps {
@@ -11,6 +11,10 @@ interface SidebarProps {
   selectedAgent: Agent
   setSelectedAgent: (agent: Agent) => void
   setMessages: (messages: any[]) => void
+  history: ChatSession[]
+  selectedSessionId: string | null
+  loadSession: (sessionId: string) => void
+  createNewChat: () => void
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -20,7 +24,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsSettingsOpen,
   selectedAgent,
   setSelectedAgent,
-  setMessages
+  setMessages,
+  history,
+  selectedSessionId,
+  loadSession,
+  createNewChat
 }) => {
   return (
     <div style={{
@@ -54,7 +62,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           alignItems: isSidebarOpen ? 'stretch' : 'center'
         }}>
           {[
-            { id: 'new-chat', name: '新建会话', icon: <Plus size={16} />, action: () => setMessages([]) },
+            { id: 'new-chat', name: '新建会话', icon: <Plus size={16} />, action: createNewChat },
             { id: 'workspace', name: '工作空间', icon: <Layers size={16} />, action: () => setIsWorkspaceOpen(true) },
             { id: 'app-center', name: '应用中心', icon: <Box size={16} />, action: () => {} },
           ].map(item => (
@@ -70,7 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 alignItems: 'center',
                 justifyContent: isSidebarOpen ? 'flex-start' : 'center',
                 gap: isSidebarOpen ? 12 : 0,
-                color: '#555',
+                color: '#666',
                 transition: 'all 0.2s',
                 width: isSidebarOpen ? '100%' : '40px',
                 height: '40px',
@@ -117,16 +125,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
             whiteSpace: 'nowrap',
             minWidth: SIDEBAR_EXPANDED - 24
           }}>
-            智能代理
+            对话历史
           </div>
         )}
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {MOCK_AGENTS.map(agent => (
+          {history.map(session => (
             <div 
-              key={agent.id}
-              onClick={() => setSelectedAgent(agent)}
-              title={!isSidebarOpen ? agent.name : ''}
+              key={session.id}
+              onClick={() => loadSession(session.id)}
+              title={!isSidebarOpen ? session.title : ''}
               style={{
                 padding: isSidebarOpen ? '8px 12px' : '0',
                 borderRadius: 12,
@@ -135,10 +143,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 alignItems: 'center',
                 justifyContent: isSidebarOpen ? 'flex-start' : 'center',
                 gap: 12,
-                backgroundColor: selectedAgent.id === agent.id ? '#fff' : 'transparent',
-                boxShadow: selectedAgent.id === agent.id ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
+                backgroundColor: selectedSessionId === session.id ? '#fff' : 'transparent',
+                boxShadow: selectedSessionId === session.id ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
                 border: '1px solid',
-                borderColor: selectedAgent.id === agent.id ? '#eee' : 'transparent',
+                borderColor: selectedSessionId === session.id ? '#eee' : 'transparent',
                 transition: 'all 0.2s',
                 width: isSidebarOpen ? '100%' : '40px',
                 height: isSidebarOpen ? 'auto' : '40px',
@@ -152,19 +160,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 width: 32, 
                 height: 32, 
                 borderRadius: 10, 
-                background: selectedAgent.id === agent.id ? '#f0f7ff' : '#eee', 
-                color: selectedAgent.id === agent.id ? '#3b82f6' : '#666',
+                background: selectedSessionId === session.id ? '#f0f7ff' : '#eee', 
+                color: selectedSessionId === session.id ? '#3b82f6' : '#666',
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',
                 flexShrink: 0
               }}>
-                {agent.icon}
+                <MessageSquare size={16} />
               </div>
               {isSidebarOpen && (
                 <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: '#333', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.name}</div>
-                  <div style={{ fontSize: 11, color: '#999', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.description}</div>
+                  <div style={{ fontSize: 13, fontWeight: 500, color: '#666', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.title}</div>
+                  <div style={{ fontSize: 11, color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.lastMessage}</div>
                 </div>
               )}
             </div>

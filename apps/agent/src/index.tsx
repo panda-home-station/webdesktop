@@ -38,7 +38,11 @@ export default function AgentApp() {
     setApiEndpoint,
     apiModel,
     setApiModel,
-    messagesEndRef
+    messagesEndRef,
+    history,
+    selectedSessionId,
+    loadSession,
+    createNewChat
   } = useChat()
 
   const saveSettings = () => {
@@ -129,6 +133,10 @@ export default function AgentApp() {
         selectedAgent={selectedAgent}
         setSelectedAgent={setSelectedAgent}
         setMessages={setMessages}
+        history={history}
+        selectedSessionId={selectedSessionId}
+        loadSession={loadSession}
+        createNewChat={createNewChat}
       />
 
       {/* Column 2: Chat Area */}

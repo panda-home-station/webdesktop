@@ -46,3 +46,12 @@ export interface Tool {
   icon: React.ReactNode
   description: string
 }
+
+export type ChatSession = {
+  id: string
+  title: string
+  lastMessage: string
+  timestamp: Date
+  agentId: string
+  messages: Message[]
+}

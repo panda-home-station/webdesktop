@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Message, Agent, AgentWorkflow, AgentTask } from '../types'
-import { MOCK_AGENTS } from '../constants'
+import { Message, Agent, AgentWorkflow, AgentTask, ChatSession } from '../types'
+import { MOCK_AGENTS, MOCK_HISTORY } from '../constants'
 import axios from 'axios'
 
 export function useChat() {
@@ -9,6 +9,8 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<Agent>(MOCK_AGENTS[0])
+  const [history, setHistory] = useState<ChatSession[]>(MOCK_HISTORY)
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [activeWorkflow, setActiveWorkflow] = useState<AgentWorkflow | null>(null)
   const [tasks, setTasks] = useState<AgentTask[]>([
     { id: '1', title: '分析项目结构', status: 'completed', createdAt: new Date() },
@@ -23,6 +25,22 @@ export function useChat() {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const loadSession = (sessionId: string) => {
+    const session = history.find(s => s.id === sessionId)
+    if (session) {
+      setMessages(session.messages)
+      setSelectedSessionId(sessionId)
+      const agent = MOCK_AGENTS.find(a => a.id === session.agentId)
+      if (agent) setSelectedAgent(agent)
+    }
+  }
+
+  const createNewChat = () => {
+    setMessages([])
+    setSelectedSessionId(null)
+    setSelectedAgent(MOCK_AGENTS[0])
   }
 
   useEffect(() => {
@@ -224,6 +242,10 @@ export function useChat() {
     setApiEndpoint,
     apiModel,
     setApiModel,
-    messagesEndRef
+    messagesEndRef,
+    history,
+    selectedSessionId,
+    loadSession,
+    createNewChat
   }
 }
