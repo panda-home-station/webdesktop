@@ -1,5 +1,5 @@
 {
-  "name": "agent-chat",
+  "name": "agent",
   "title": "AI Assistant",
   "entry": "./src/index.tsx",
   "icons": {

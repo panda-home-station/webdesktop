@@ -267,7 +267,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            openApp('agent-chat')
+            openApp('agent')
           }}
           onMouseEnter={(e) => showTip('AI助手', e.currentTarget)}
           onMouseLeave={hideTip}
