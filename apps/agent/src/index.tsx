@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { 
   Send, 
   Bot, 
@@ -23,6 +23,13 @@ import {
   Box
 } from 'lucide-react'
 import axios from 'axios'
+
+type AgentTask = {
+  id: string
+  title: string
+  status: 'pending' | 'in_progress' | 'completed' | 'failed'
+  createdAt: Date
+}
 
 type Message = {
   role: 'user' | 'assistant' | 'system' | 'tool'
@@ -98,9 +105,111 @@ export default function AgentApp() {
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(true)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [workspaceWidth, setWorkspaceWidth] = useState(450)
+  const [isResizing, setIsResizing] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  // Layout Constants
+  const SIDEBAR_EXPANDED = 240
+  const SIDEBAR_COLLAPSED = 60
+  const CHAT_MIN_WIDTH = 450
+  const WORKSPACE_MIN_THRESHOLD = 450
+  const RESIZER_WIDTH = 1
+
+  // Sidebar toggle logic to maintain chat area width
+  const prevSidebarOpen = useRef(isSidebarOpen)
+  useEffect(() => {
+    if (prevSidebarOpen.current !== isSidebarOpen && isWorkspaceOpen) {
+      const diff = SIDEBAR_EXPANDED - SIDEBAR_COLLAPSED
+      if (isSidebarOpen) {
+        // Collapsed -> Expanded: Workspace should shrink
+        setWorkspaceWidth(prev => Math.max(WORKSPACE_MIN_THRESHOLD, prev - diff))
+      } else {
+        // Expanded -> Collapsed: Workspace should grow
+        setWorkspaceWidth(prev => prev + diff)
+      }
+    }
+    prevSidebarOpen.current = isSidebarOpen
+  }, [isSidebarOpen, isWorkspaceOpen])
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (!containerRef.current) return
+      const containerWidth = containerRef.current.offsetWidth
+      const sidebarWidth = isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
+      const resizerWidth = isWorkspaceOpen ? RESIZER_WIDTH : 0
+      
+      // 1. Priority: If workspace is open, check if it needs to be squeezed or closed
+      if (isWorkspaceOpen) {
+        const availableForWorkspace = containerWidth - sidebarWidth - CHAT_MIN_WIDTH - resizerWidth
+        if (availableForWorkspace < WORKSPACE_MIN_THRESHOLD) {
+          setIsWorkspaceOpen(false)
+        } else if (workspaceWidth > availableForWorkspace) {
+          // Squeeze workspace width if it's taking too much space
+          setWorkspaceWidth(Math.max(WORKSPACE_MIN_THRESHOLD, availableForWorkspace))
+        }
+      }
+
+      // 2. Sidebar auto-collapse logic (optional, keeping it but refined)
+      if (containerWidth < 600 && isSidebarOpen) {
+        setIsSidebarOpen(false)
+      }
+    }
+    
+    window.addEventListener('resize', handleResize)
+    handleResize()
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isSidebarOpen, isWorkspaceOpen, workspaceWidth])
+
+  const minWidth = WORKSPACE_MIN_THRESHOLD // Used for the resizer logic below
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }, [])
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false)
+  }, [])
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const containerWidth = containerRef.current.clientWidth
+      const sidebarWidth = isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
+      
+      // Calculate max width more defensively using clientWidth
+      const maxWorkspaceWidth = Math.floor(containerWidth - sidebarWidth - CHAT_MIN_WIDTH - RESIZER_WIDTH)
+      
+      // Calculate new width relative to container's right edge
+      let newWidth = Math.floor(rect.right - e.clientX - RESIZER_WIDTH)
+      
+      // Clamp the width
+      if (newWidth < WORKSPACE_MIN_THRESHOLD) newWidth = WORKSPACE_MIN_THRESHOLD
+      if (newWidth > maxWorkspaceWidth) newWidth = maxWorkspaceWidth
+      
+      setWorkspaceWidth(newWidth)
+    }
+  }, [isResizing, isSidebarOpen, SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, CHAT_MIN_WIDTH, WORKSPACE_MIN_THRESHOLD, RESIZER_WIDTH])
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize)
+    window.addEventListener('mouseup', stopResizing)
+    return () => {
+      window.removeEventListener('mousemove', resize)
+      window.removeEventListener('mouseup', stopResizing)
+    }
+  }, [resize, stopResizing])
+
   const [selectedAgent, setSelectedAgent] = useState<Agent>(MOCK_AGENTS[0])
   const [activeWorkflow, setActiveWorkflow] = useState<AgentWorkflow | null>(null)
+  const [tasks, setTasks] = useState<AgentTask[]>([
+    { id: '1', title: '分析项目结构', status: 'completed', createdAt: new Date() },
+    { id: '2', title: '实现三栏布局 UI', status: 'in_progress', createdAt: new Date() },
+    { id: '3', title: '对接工具 API', status: 'pending', createdAt: new Date() },
+  ])
   const [availableTools] = useState([
     { id: 'web_search', name: '网页搜索', icon: <Globe size={14} />, description: '在互联网上搜索最新信息' },
     { id: 'file_system', name: '文件系统', icon: <Box size={14} />, description: '读写本地文件系统' },
@@ -332,14 +441,18 @@ export default function AgentApp() {
   }
 
   return (
-    <div style={{
-      display: 'flex',
-      height: '100%',
-      width: '100%',
+    <div 
+      ref={containerRef}
+      style={{
+        display: 'flex',
+        height: '100%',
+        width: '100%',
+      minWidth: (isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED) + CHAT_MIN_WIDTH,
       backgroundColor: '#ffffff',
       color: '#1a1a1a',
       fontFamily: 'system-ui, -apple-system, sans-serif',
-      position: 'relative'
+      position: 'relative',
+      overflow: 'hidden'
     }}>
       <style>{`
         @keyframes bounce {
@@ -350,6 +463,10 @@ export default function AgentApp() {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-10px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
         .animate-spin-slow {
           animation: spin-slow 3s linear infinite;
         }
@@ -359,371 +476,503 @@ export default function AgentApp() {
         .message-bubble:hover {
           transform: translateX(4px);
         }
+        .custom-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .custom-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e0e0e0;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #d0d0d0;
+        }
+        .responsive-content {
+          width: 100%;
+          max-width: min(92%, 800px);
+          margin: 0 auto;
+          transition: all 0.3s ease;
+        }
+        @media (max-width: 768px) {
+          .responsive-content {
+            max-width: 100%;
+            padding: 0 8px !important;
+          }
+          .message-bubble-container {
+            max-width: 98% !important;
+          }
+          .chat-header {
+            padding: 0 10px !important;
+          }
+        }
       `}</style>
-      {/* Sidebar */}
+
+      {/* Column 1: Catalog (Sidebar) */}
       <div style={{
-        width: isSidebarOpen ? 260 : 0,
-        transition: 'width 0.3s ease',
+        width: isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED,
+        flexShrink: 0,
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
         overflow: 'hidden',
         borderRight: '1px solid #f0f0f0',
         display: 'flex',
         flexDirection: 'column',
-        backgroundColor: '#fafafa'
+        backgroundColor: '#fafafa',
+        zIndex: 10
       }}>
-        <div style={{ padding: '20px 16px', borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ width: 32, height: 32, borderRadius: 8, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-            <Command size={18} />
-          </div>
-          <span style={{ fontWeight: 600, fontSize: 16 }}>Agent Center</span>
-        </div>
-
-        <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-          <div style={{ fontSize: 12, fontWeight: 500, color: '#888', marginBottom: 8, paddingLeft: 8 }}>智能体列表</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {MOCK_AGENTS.map(agent => (
+        <div className="custom-scrollbar" style={{ 
+          flex: 1, 
+          overflowY: 'auto', 
+          padding: isSidebarOpen ? '12px' : '12px 0',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: isSidebarOpen ? 'stretch' : 'center'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 4, 
+            marginBottom: 24, 
+            marginTop: 8,
+            width: '100%',
+            alignItems: isSidebarOpen ? 'stretch' : 'center'
+          }}>
+            {[
+              { id: 'new-chat', name: '新建会话', icon: <Plus size={16} />, action: () => setMessages([]) },
+              { id: 'workspace', name: '工作空间', icon: <Layers size={16} />, action: () => setIsWorkspaceOpen(true) },
+              { id: 'app-center', name: '应用中心', icon: <Box size={16} />, action: () => {} },
+            ].map(item => (
               <div 
-                key={agent.id}
-                onClick={() => setSelectedAgent(agent)}
+                key={item.id}
+                onClick={item.action}
+                title={!isSidebarOpen ? item.name : ''}
                 style={{
-                  padding: '10px 12px',
-                  borderRadius: 10,
+                  padding: isSidebarOpen ? '0 12px' : '0',
+                  borderRadius: 8,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 12,
-                  backgroundColor: selectedAgent.id === agent.id ? '#fff' : 'transparent',
-                  boxShadow: selectedAgent.id === agent.id ? '0 2px 8px rgba(0,0,0,0.05)' : 'none',
-                  border: selectedAgent.id === agent.id ? '1px solid #eee' : '1px solid transparent',
-                  transition: 'all 0.2s'
+                  justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+                  gap: isSidebarOpen ? 12 : 0,
+                  color: '#555',
+                  transition: 'all 0.2s',
+                  width: isSidebarOpen ? 'auto' : '40px',
+                  height: '40px'
                 }}
+                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
               >
                 <div style={{ 
                   width: 32, 
                   height: 32, 
                   borderRadius: 8, 
-                  background: selectedAgent.id === agent.id ? '#000' : '#eee', 
-                  color: selectedAgent.id === agent.id ? '#fff' : '#666',
+                  background: '#eee', 
+                  color: '#666',
                   display: 'flex', 
                   alignItems: 'center', 
-                  justifyContent: 'center' 
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                  transform: 'translateX(0)',
                 }}>
-                  {agent.icon}
+                  {item.icon}
                 </div>
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 14, fontWeight: 500 }}>{agent.name}</div>
-                  <div style={{ fontSize: 11, color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{agent.description}</div>
-                </div>
+                {isSidebarOpen && (
+                  <div style={{ flex: 1, overflow: 'hidden', animation: 'slideIn 0.3s ease-out' }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap' }}>{item.name}</div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
 
-          {activeWorkflow && (
-            <>
-              <div style={{ fontSize: 12, fontWeight: 500, color: '#888', marginTop: 24, marginBottom: 8, paddingLeft: 8 }}>当前工作流</div>
+          <div style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: 2,
+            width: '100%',
+            alignItems: isSidebarOpen ? 'stretch' : 'center',
+            marginTop: 20
+          }}>
+            {isSidebarOpen && (
               <div style={{ 
-                padding: '12px', 
-                borderRadius: 12, 
-                backgroundColor: '#fff', 
-                border: '1px solid #eee',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+                padding: '0 12px', 
+                marginBottom: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                color: '#999',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
               }}>
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Workflow size={14} color="#3b82f6" />
-                  {activeWorkflow.title}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {activeWorkflow.steps.map(step => (
-                    <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      {step.status === 'completed' ? <CheckCircle2 size={14} color="#10b981" /> :
-                       step.status === 'running' ? <Clock size={14} color="#3b82f6" className="animate-spin-slow" /> :
-                       <Circle size={14} color="#ccc" />}
-                      <span style={{ fontSize: 12, color: step.status === 'pending' ? '#aaa' : '#444' }}>{step.label}</span>
-                    </div>
-                  ))}
-                </div>
+                历史会话
               </div>
-            </>
-          )}
-
-          <div style={{ fontSize: 12, fontWeight: 500, color: '#888', marginTop: 24, marginBottom: 8, paddingLeft: 8 }}>可用工具 (MCP)</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {availableTools.map(tool => (
-              <div 
-                key={tool.id}
-                style={{
-                  padding: '8px 12px',
-                  borderRadius: 8,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  backgroundColor: '#f5f5f5',
-                  border: '1px solid transparent',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <div style={{ color: '#666' }}>{tool.icon}</div>
-                <div style={{ fontSize: 12, color: '#444', fontWeight: 500 }}>{tool.name}</div>
-              </div>
-            ))}
+            )}
+            {isSidebarOpen ? (
+              [1, 2, 3].map(i => (
+                <div 
+                  key={i}
+                  style={{
+                    padding: '0 12px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    fontSize: 13,
+                    color: '#666',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    transition: 'all 0.2s',
+                    height: '40px'
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Clock size={14} color="#999" />
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>历史会话 {i}</span>
+                </div>
+              ))
+            ) : (
+              [1, 2, 3].map(i => (
+                <div 
+                  key={i}
+                  title={`历史会话 ${i}`}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+                  onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <Clock size={16} color="#999" />
+                </div>
+              ))
+            )}
           </div>
         </div>
 
-        <div style={{ padding: '16px', borderTop: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div 
-            onClick={() => setMessages([])}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
-            onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <Plus size={18} color="#666" />
-            <span style={{ fontSize: 14, color: '#444' }}>开启新对话</span>
-          </div>
+        <div style={{ 
+          padding: isSidebarOpen ? '16px' : '16px 0', 
+          borderTop: '1px solid #f0f0f0', 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: 4,
+          alignItems: isSidebarOpen ? 'stretch' : 'center'
+        }}>
           <div 
             onClick={() => setIsSettingsOpen(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px', borderRadius: 8, cursor: 'pointer', transition: 'background 0.2s' }}
+            title={!isSidebarOpen ? '设置' : ''}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: isSidebarOpen ? 'flex-start' : 'center',
+              gap: isSidebarOpen ? 10 : 0, 
+              padding: isSidebarOpen ? '0 12px' : '0', 
+              borderRadius: 8, 
+              cursor: 'pointer', 
+              transition: 'all 0.2s',
+              width: isSidebarOpen ? 'auto' : '40px',
+              height: '40px'
+            }}
             onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f0f0f0'}
             onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            <Settings size={18} color="#666" />
-            <span style={{ fontSize: 14, color: '#444' }}>设置</span>
+            <div style={{ 
+              width: 32, 
+              display: 'flex', 
+              justifyContent: 'center', 
+              flexShrink: 0,
+              transition: 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              transform: 'translateX(0)',
+            }}>
+              <Settings size={20} color="#666" />
+            </div>
+            {isSidebarOpen && (
+              <span style={{ fontSize: 14, color: '#444', fontWeight: 500, whiteSpace: 'nowrap' }}>设置</span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Main Chat Area */}
+      {/* Column 2: Chat Area */}
       <div style={{
         flex: 1,
+        minWidth: CHAT_MIN_WIDTH,
         display: 'flex',
         flexDirection: 'column',
+        backgroundColor: '#fff',
+        transition: isResizing ? 'none' : 'all 0.3s ease',
         position: 'relative',
-        backgroundColor: '#fff'
+        zIndex: 1
       }}>
-        {/* Header */}
-        <div style={{
-          height: 60,
-          borderBottom: '1px solid #f0f0f0',
-          display: 'flex',
-          alignItems: 'center',
-          padding: '0 20px',
-          justifyContent: 'space-between'
-        }}>
+        {/* Chat Header */}
+        <div 
+          className="chat-header"
+          style={{
+            height: 60,
+            borderBottom: '1px solid #f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 20px',
+            justifyContent: 'space-between',
+            backgroundColor: '#fff',
+            zIndex: 5
+          }}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button 
               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 4, borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
-              {isSidebarOpen ? <ChevronLeft size={20} color="#666" /> : <ChevronRight size={20} color="#666" />}
+              <ChevronLeft size={20} color="#666" style={{ transform: isSidebarOpen ? 'rotate(0deg)' : 'rotate(180deg)', transition: 'transform 0.3s' }} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#10b981' }}></div>
-              <span style={{ fontWeight: 600, fontSize: 15 }}>{selectedAgent.name}</span>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {selectedAgent.icon}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{selectedAgent.name}</div>
+                <div style={{ fontSize: 11, color: '#10b981', display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#10b981' }}></div>
+                  已连接
+                </div>
+              </div>
             </div>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <button 
-              onClick={() => setMessages([])}
-              style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '6px 10px', borderRadius: 8, fontSize: 13, color: '#666', display: 'flex', alignItems: 'center', gap: 6 }}
-              onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f5f5f5'}
-              onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+              onClick={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
+              style={{ 
+                border: '1px solid #eee', 
+                background: isWorkspaceOpen ? '#f0f7ff' : '#fff', 
+                cursor: 'pointer', 
+                padding: '6px 12px', 
+                borderRadius: 8, 
+                fontSize: 12, 
+                color: isWorkspaceOpen ? '#3b82f6' : '#666',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 6,
+                fontWeight: 500,
+                transition: 'all 0.2s'
+              }}
             >
-              <Plus size={16} />
-              清空对话
+              <Layers size={14} />
+              工作区
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 20, backgroundColor: '#f5f5f5', fontSize: 12, color: '#666' }}>
-              <Cpu size={14} />
-              <span>MCP: 8 Active</span>
-            </div>
           </div>
         </div>
 
         {/* Messages */}
-        <div style={{
+        <div className="custom-scrollbar" style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '24px 0',
+          overflowX: 'hidden',
+          padding: '40px 0',
+          scrollBehavior: 'smooth',
+          backgroundColor: '#fff',
           display: 'flex',
           flexDirection: 'column'
         }}>
-          <div style={{ maxWidth: 800, margin: '0 auto', width: '100%', padding: '0 20px' }}>
+          <div className="responsive-content" style={{ padding: '0 16px' }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: 'center', marginTop: 100 }}>
+              <div style={{ textAlign: 'center', marginTop: 48, padding: '0 20px' }}>
                 <div style={{ 
                   width: 64, 
                   height: 64, 
                   borderRadius: 20, 
-                  backgroundColor: '#f9f9f9', 
+                  background: '#f9f9f9', 
                   display: 'flex', 
                   alignItems: 'center', 
-                  justifyContent: 'center',
-                  margin: '0 auto 20px'
+                  justifyContent: 'center', 
+                  margin: '0 auto 24px',
+                  color: '#ccc',
+                  border: '1px solid #f0f0f0'
                 }}>
                   {selectedAgent.icon}
                 </div>
-                <h2 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12 }}>{selectedAgent.name}</h2>
-                <p style={{ color: '#666', fontSize: 15, maxWidth: 400, margin: '0 auto' }}>{selectedAgent.description}</p>
+                <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 12, color: '#1a1a1a' }}>{selectedAgent.name}</h2>
+                <p style={{ color: '#666', fontSize: 14, maxWidth: 400, margin: '0 auto', lineHeight: 1.6 }}>{selectedAgent.description}</p>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 40, maxWidth: 500, margin: '40px auto 0' }}>
-                  {['分析当前系统状态', '帮我写一个工作流', '查找最新的 AI 趋势', '优化这段 Python 代码'].map(tip => (
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '12px', 
+                  marginTop: 40,
+                  width: 'fit-content',
+                  margin: '40px auto 0'
+                }}>
+                  {['帮我分析项目结构', '创建一个自动化工作流', '查找最新的 AI 趋势', '优化这段代码逻辑'].map(tip => (
                     <div 
                       key={tip}
                       onClick={() => setInput(tip)}
-                      style={{ padding: '12px 16px', borderRadius: 12, border: '1px solid #eee', fontSize: 13, color: '#444', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}
-                      onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f9f9f9'}
-                      onMouseLeave={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                      style={{
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        color: '#3b82f6',
+                        transition: 'all 0.2s',
+                        textDecoration: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: '4px 0',
+                        width: '100%',
+                        justifyContent: 'flex-start'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.color = '#2563eb'
+                        e.currentTarget.style.textDecoration = 'underline'
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.color = '#3b82f6'
+                        e.currentTarget.style.textDecoration = 'none'
+                      }}
                     >
+                      <Plus size={14} />
                       {tip}
                     </div>
                   ))}
                 </div>
               </div>
             )}
-
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
+            
+            {messages.map((message) => (
+              <div 
+                key={message.id}
                 style={{
                   display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                  gap: 16,
                   marginBottom: 32,
-                  gap: 8
+                  animation: 'slideIn 0.3s ease-out',
+                  flexDirection: message.role === 'user' ? 'row-reverse' : 'row'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  {msg.role === 'assistant' ? (
-                    <div style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                      <Bot size={14} />
-                    </div>
-                  ) : (
-                    <div style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#eee', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#666' }}>
-                      <User size={14} />
-                    </div>
-                  )}
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#888' }}>
-                    {msg.role === 'assistant' ? selectedAgent.name : 'You'}
-                  </span>
-                </div>
-                
                 <div style={{
-                  maxWidth: '85%',
-                  padding: '12px 16px',
-                  borderRadius: 16,
-                  backgroundColor: msg.role === 'user' ? '#f5f5f5' : 'transparent',
-                  color: '#1a1a1a',
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
-                  border: msg.role === 'assistant' ? 'none' : 'none',
+                  width: 36,
+                  height: 36,
+                  borderRadius: 10,
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 8
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                  background: message.role === 'user' ? '#000' : '#f0f0f0',
+                  color: message.role === 'user' ? '#fff' : '#666'
                 }}>
-                  {msg.content}
-                  {msg.role === 'assistant' && !msg.content && (
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: '#ddd', animation: 'bounce 1s infinite' }}></div>
-                      <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: '#ddd', animation: 'bounce 1s infinite 0.2s' }}></div>
-                      <div style={{ width: 4, height: 4, borderRadius: '50%', backgroundColor: '#ddd', animation: 'bounce 1s infinite 0.4s' }}></div>
+                  {message.role === 'user' ? <User size={20} /> : <Bot size={20} />}
+                </div>
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: 8,
+                  maxWidth: 'calc(100% - 52px)',
+                  alignItems: message.role === 'user' ? 'flex-end' : 'flex-start'
+                }}>
+                  <div 
+                    className="message-bubble"
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: 16,
+                      backgroundColor: message.role === 'user' ? '#f4f4f4' : 'transparent',
+                      color: '#1a1a1a',
+                      fontSize: 15,
+                      lineHeight: 1.6,
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {message.content}
+                  </div>
+                  {message.toolCalls && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+                      {message.toolCalls.map((tool, idx) => (
+                        <div key={idx} style={{ 
+                          padding: '10px 14px', 
+                          backgroundColor: '#f8fafc', 
+                          borderRadius: 12, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: 10,
+                          fontSize: 12, 
+                          color: '#3b82f6', 
+                          border: '1px solid #dbeafe'
+                        }}>
+                          <Terminal size={14} />
+                          <span>调用工具: {tool.name}</span>
+                          {tool.status === 'running' && <div className="animate-spin-slow" style={{ width: 12, height: 12, border: '2px solid #3b82f6', borderTopColor: 'transparent', borderRadius: '50%' }}></div>}
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-
-                {msg.toolCalls && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4, width: '100%' }}>
-                    {msg.toolCalls.map((tool, i) => (
-                      <div key={i} style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: 10, 
-                        padding: '8px 12px', 
-                        borderRadius: 10, 
-                        backgroundColor: '#f8fafc', 
-                        border: '1px solid #e2e8f0',
-                        fontSize: 13
-                      }}>
-                        <Terminal size={14} color="#64748b" />
-                        <span style={{ fontWeight: 500, color: '#334155' }}>Using Tool: {tool.name}</span>
-                        {tool.status === 'running' && <div className="animate-pulse" style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#3b82f6' }}></div>}
-                        {tool.status === 'completed' && <CheckCircle2 size={14} color="#10b981" />}
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             ))}
-            
-            {isLoading && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', marginBottom: 32, gap: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <div style={{ width: 24, height: 24, borderRadius: 6, backgroundColor: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                    <Bot size={14} />
-                  </div>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#888' }}>{selectedAgent.name}</span>
-                </div>
-                <div style={{ padding: '12px 16px', borderRadius: 16, backgroundColor: 'transparent', display: 'flex', gap: 4 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#ddd', animation: 'bounce 1s infinite' }}></div>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#ddd', animation: 'bounce 1s infinite 0.2s' }}></div>
-                  <div style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#ddd', animation: 'bounce 1s infinite 0.4s' }}></div>
-                </div>
-              </div>
-            )}
             <div ref={messagesEndRef} />
           </div>
         </div>
 
-        {/* Input */}
-        <div style={{
-          padding: '20px 0 40px',
-          borderTop: 'none'
+        {/* Input Area */}
+        <div style={{ 
+          padding: '12px 16px', 
+          backgroundColor: '#fff', 
+          borderTop: '1px solid #f0f0f0',
+          flexShrink: 0
         }}>
-          <div style={{ 
-            maxWidth: 800, 
-            margin: '0 auto', 
-            width: '100%', 
-            padding: '0 20px',
-            position: 'relative'
+          <div className="responsive-content" style={{ 
+            backgroundColor: '#fff', 
+            borderRadius: 12, 
+            border: '1px solid #e5e5e5',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box'
           }}>
-            <div style={{
-              backgroundColor: '#f9f9f9',
-              borderRadius: 20,
-              padding: '8px 12px',
-              border: '1px solid #eee',
-              display: 'flex',
-              flexDirection: 'column',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-              transition: 'all 0.3s ease'
-            }}
-            onFocusCapture={e => e.currentTarget.style.borderColor = '#ddd'}
-            onBlurCapture={e => e.currentTarget.style.borderColor = '#eee'}
-            >
-              <textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={`Message ${selectedAgent.name}...`}
-                style={{
-                  width: '100%',
-                  minHeight: 40,
-                  maxHeight: 200,
-                  padding: '10px 8px',
-                  border: 'none',
-                  background: 'transparent',
-                  outline: 'none',
-                  fontSize: 15,
-                  lineHeight: 1.6,
-                  resize: 'none',
-                  fontFamily: 'inherit'
-                }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '4px 8px' }}>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 6, borderRadius: 8, color: '#666' }}>
-                    <Plus size={20} />
-                  </button>
-                  <button style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 6, borderRadius: 8, color: '#666' }}>
-                    <Layers size={20} />
-                  </button>
+            <textarea 
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={`向 ${selectedAgent.name} 发送消息...`}
+              style={{
+                width: '100%',
+                minHeight: 60,
+                maxHeight: 160,
+                padding: '12px 16px',
+                border: 'none',
+                background: 'transparent',
+                resize: 'none',
+                fontSize: 14,
+                lineHeight: 1.5,
+                outline: 'none',
+                color: '#1a1a1a',
+                boxSizing: 'border-box',
+                overflowY: 'auto'
+              }}
+            />
+              <div style={{
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                padding: '8px 12px'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: 12, 
+                  color: '#999',
+                  overflow: 'hidden',
+                  flexShrink: 1 
+                }}>
+                  <Globe size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                  <Box size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                  <Terminal size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
                 </div>
                 {isLoading ? (
                   <button
@@ -731,15 +980,15 @@ export default function AgentApp() {
                     style={{
                       width: 32,
                       height: 32,
-                      borderRadius: 10,
-                      backgroundColor: '#000',
+                      borderRadius: '50%',
+                      backgroundColor: '#ff4d4f',
                       color: '#fff',
                       border: 'none',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transition: 'all 0.2s'
+                      flexShrink: 0
                     }}
                   >
                     <div style={{ width: 12, height: 12, backgroundColor: '#fff', borderRadius: 2 }}></div>
@@ -751,15 +1000,16 @@ export default function AgentApp() {
                     style={{
                       width: 32,
                       height: 32,
-                      borderRadius: 10,
-                      backgroundColor: !input.trim() ? '#eee' : '#000',
+                      borderRadius: '50%',
+                      backgroundColor: !input.trim() ? '#f0f0f0' : '#000',
                       color: '#fff',
                       border: 'none',
                       cursor: !input.trim() ? 'default' : 'pointer',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s'
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      transition: 'all 0.2s',
+                      flexShrink: 0
                     }}
                   >
                     <Send size={16} />
@@ -767,8 +1017,163 @@ export default function AgentApp() {
                 )}
               </div>
             </div>
-            <div style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 12 }}>
-              Agent can make mistakes. Check important info.
+            <div style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 4 }}>
+              AI 可能会产生错误，请核实重要信息。
+            </div>
+          </div>
+        </div>
+
+      {/* Resizer Handle */}
+      {isWorkspaceOpen && (
+        <div 
+          onMouseDown={startResizing}
+          style={{
+            width: RESIZER_WIDTH,
+            cursor: 'col-resize',
+            backgroundColor: isResizing ? '#3b82f6' : '#f0f0f0',
+            transition: 'background-color 0.2s',
+            zIndex: 100,
+            position: 'relative'
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: -4,
+            right: -4,
+            bottom: 0,
+          }} />
+        </div>
+      )}
+
+      {/* Column 3: Workspace (Visualization) */}
+      <div style={{
+        width: isWorkspaceOpen ? workspaceWidth : 0,
+        maxWidth: isWorkspaceOpen ? `calc(100% - ${(isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED)}px - ${CHAT_MIN_WIDTH}px - ${RESIZER_WIDTH}px)` : 0,
+        flexShrink: 0,
+        transition: isResizing ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        backgroundColor: '#fafafa',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        zIndex: 5
+      }}>
+        <div style={{ height: 60, borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', padding: '0 20px', justifyContent: 'space-between', backgroundColor: '#fff' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Sparkles size={18} color="#3b82f6" />
+            <span style={{ fontWeight: 600, fontSize: 15 }}>工作区</span>
+          </div>
+          <button 
+            onClick={() => setIsWorkspaceOpen(false)}
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 4, color: '#999' }}
+          >
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        <div className="custom-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
+          {/* Section: Tasks / TODOs */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px' }}>任务进度</h3>
+              <span style={{ fontSize: 11, backgroundColor: '#eee', padding: '2px 8px', borderRadius: 10, color: '#666' }}>{tasks.filter(t => t.status === 'completed').length}/{tasks.length}</span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {tasks.map(task => (
+                <div key={task.id} style={{
+                  padding: '12px 16px',
+                  backgroundColor: '#fff',
+                  borderRadius: 12,
+                  border: '1px solid #eee',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                }}>
+                  {task.status === 'completed' ? <CheckCircle2 size={18} color="#10b981" /> :
+                   task.status === 'in_progress' ? <Clock size={18} color="#3b82f6" className="animate-spin-slow" /> :
+                   <Circle size={18} color="#ccc" />}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: task.status === 'completed' ? '#999' : '#333', textDecoration: task.status === 'completed' ? 'line-through' : 'none' }}>
+                      {task.title}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Section: Workflow Visualization */}
+          {activeWorkflow ? (
+            <div style={{ marginBottom: 32 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 16 }}>工作流: {activeWorkflow.title}</h3>
+              <div style={{ position: 'relative', paddingLeft: 12 }}>
+                <div style={{ position: 'absolute', left: 4, top: 8, bottom: 8, width: 2, backgroundColor: '#eee' }}></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                  {activeWorkflow.steps.map((step, idx) => (
+                    <div key={step.id} style={{ display: 'flex', alignItems: 'center', gap: 16, position: 'relative' }}>
+                      <div style={{ 
+                        width: 10, 
+                        height: 10, 
+                        borderRadius: '50%', 
+                        backgroundColor: step.status === 'completed' ? '#10b981' : step.status === 'running' ? '#3b82f6' : '#eee',
+                        border: '2px solid #fff',
+                        boxShadow: '0 0 0 2px ' + (step.status === 'completed' ? '#10b981' : step.status === 'running' ? '#3b82f6' : '#eee'),
+                        zIndex: 2
+                      }}></div>
+                      <div style={{
+                        flex: 1,
+                        padding: '12px',
+                        backgroundColor: step.status === 'running' ? '#f0f7ff' : '#fff',
+                        borderRadius: 10,
+                        border: '1px solid',
+                        borderColor: step.status === 'running' ? '#3b82f6' : '#eee',
+                      }}>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: step.status === 'pending' ? '#aaa' : '#333' }}>{step.label}</div>
+                        {step.status === 'running' && <div style={{ fontSize: 11, color: '#3b82f6', marginTop: 4 }}>执行中...</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div style={{ 
+              padding: '40px 20px', 
+              textAlign: 'center', 
+              backgroundColor: '#fff', 
+              borderRadius: 16, 
+              border: '1px dashed #ddd',
+              color: '#999',
+              marginBottom: 32
+            }}>
+              <Workflow size={32} style={{ marginBottom: 12, opacity: 0.5 }} />
+              <div style={{ fontSize: 13 }}>暂无活跃工作流</div>
+            </div>
+          )}
+
+          {/* Section: Tool Terminal */}
+          <div style={{ marginBottom: 32 }}>
+            <h3 style={{ fontSize: 13, fontWeight: 600, color: '#666', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 16 }}>终端输出</h3>
+            <div style={{ 
+              backgroundColor: '#1a1a1a', 
+              borderRadius: 12, 
+              padding: '16px', 
+              fontFamily: 'monospace', 
+              fontSize: 12, 
+              color: '#fff',
+              minHeight: 120,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ color: '#666', marginBottom: 8 }}>$ agent --version</div>
+              <div style={{ color: '#10b981' }}>agent v1.0.0-beta.1 initialized.</div>
+              <div style={{ color: '#666', marginTop: 8, marginBottom: 8 }}>$ ls -la</div>
+              <div style={{ color: '#eee' }}>
+                drwxr-xr-x  2 user  group   64 Feb 12 10:00 .<br/>
+                drwxr-xr-x  5 user  group  160 Feb 12 10:00 ..<br/>
+                -rw-r--r--  1 user  group  428 Feb 12 10:00 index.tsx
+              </div>
+              <div style={{ color: '#3b82f6', marginTop: 8 }}>_</div>
             </div>
           </div>
         </div>
@@ -786,132 +1191,54 @@ export default function AgentApp() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 100,
+          zIndex: 1000,
           backdropFilter: 'blur(4px)'
         }}>
           <div style={{
-            width: 400,
             backgroundColor: '#fff',
             borderRadius: 20,
-            padding: '24px',
-            boxShadow: '0 20px 40px rgba(0,0,0,0.2)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 20
+            width: 480,
+            padding: '32px',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.2)'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Settings size={18} color="#000" />
-              </div>
-              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>API 设置</h3>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: '#666', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Globe size={14} />
-                  Ollama Endpoint
-                </label>
+            <h3 style={{ fontSize: 20, fontWeight: 700, marginBottom: 24 }}>设置</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#666', marginBottom: 8 }}>API Endpoint</label>
                 <input 
                   type="text" 
                   value={apiEndpoint}
-                  onChange={e => setApiEndpoint(e.target.value)}
-                  placeholder="http://127.0.0.1:11434"
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: 10,
-                    border: '1px solid #eee',
-                    outline: 'none',
-                    fontSize: 14,
-                    backgroundColor: '#f9f9f9'
-                  }}
+                  onChange={(e) => setApiEndpoint(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #eee', fontSize: 14, outline: 'none' }}
                 />
               </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 13, fontWeight: 500, color: '#666', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Box size={14} />
-                  Model Name
-                </label>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#666', marginBottom: 8 }}>Model Name</label>
                 <input 
                   type="text" 
                   value={apiModel}
-                  onChange={e => setApiModel(e.target.value)}
-                  placeholder="qwen3:14b"
-                  style={{
-                    padding: '10px 12px',
-                    borderRadius: 10,
-                    border: '1px solid #eee',
-                    outline: 'none',
-                    fontSize: 14,
-                    backgroundColor: '#f9f9f9'
-                  }}
+                  onChange={(e) => setApiModel(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid #eee', fontSize: 14, outline: 'none' }}
                 />
               </div>
             </div>
-
-            <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 40 }}>
               <button 
                 onClick={() => setIsSettingsOpen(false)}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: 10,
-                  border: '1px solid #eee',
-                  background: '#fff',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  fontWeight: 500
-                }}
+                style={{ padding: '10px 20px', borderRadius: 10, border: '1px solid #eee', background: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 500 }}
               >
                 取消
               </button>
               <button 
                 onClick={saveSettings}
-                style={{
-                  flex: 1,
-                  padding: '10px',
-                  borderRadius: 10,
-                  border: 'none',
-                  background: '#000',
-                  color: '#fff',
-                  cursor: 'pointer',
-                  fontSize: 14,
-                  fontWeight: 500,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8
-                }}
+                style={{ padding: '10px 24px', borderRadius: 10, border: 'none', background: '#000', color: '#fff', cursor: 'pointer', fontSize: 14, fontWeight: 600 }}
               >
-                <Save size={16} />
                 保存设置
               </button>
             </div>
           </div>
         </div>
       )}
-
-      <style>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-5px); }
-        }
-        .animate-spin-slow {
-          animation: spin 3s linear infinite;
-        }
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-        .animate-pulse {
-          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: .5; }
-        }
-      `}</style>
     </div>
   )
 }
