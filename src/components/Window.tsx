@@ -238,34 +238,74 @@ export default function Window({
       let nextX = initX
       let nextY = initY
 
+      const screenW = window.innerWidth
+      const screenH = window.innerHeight
+
       if (direction.includes('e')) {
-        nextW = Math.max(minW, initW + dx)
+        nextW = Math.max(minW, Math.min(initW + dx, screenW - initX))
       }
       if (direction.includes('w')) {
-        const diff = Math.min(initW - minW, dx) // Limit shrinking to minW
-        // Better logic: calculate potential new width first
-        const potentialW = initW - dx
-        if (potentialW >= minW) {
-          nextW = potentialW
-          nextX = initX + dx
-        } else {
-            // sticky at min width
-            nextW = minW
-            nextX = initX + (initW - minW)
+        const rightEdge = initX + initW
+        let potentialX = initX + dx
+        let potentialW = initW - dx
+        
+        // 1. Ensure minimum width
+        if (potentialW < minW) {
+          potentialW = minW
+          potentialX = rightEdge - minW
         }
+
+        // 2. Ensure width doesn't exceed screen width
+        if (potentialW > screenW) {
+          potentialW = screenW
+          potentialX = rightEdge - potentialW
+        }
+        
+        // 3. Ensure left boundary doesn't go too far (respect WindowManager's 30px visibility rule)
+        // x >= 30 - w  => x + w >= 30. Since rightEdge = x + w, this is usually true.
+        const limitMinX = 30 - potentialW
+        if (potentialX < limitMinX) {
+          potentialX = limitMinX
+          potentialW = rightEdge - potentialX
+        }
+
+        nextW = potentialW
+        nextX = potentialX
       }
       if (direction.includes('s')) {
-        nextH = Math.max(minH, initH + dy)
+        nextH = Math.max(minH, Math.min(initH + dy, screenH - initY))
       }
       if (direction.includes('n')) {
-        const potentialH = initH - dy
-         if (potentialH >= minH) {
-          nextH = potentialH
-          nextY = initY + dy
-        } else {
-            nextH = minH
-            nextY = initY + (initH - minH)
+        const bottomEdge = initY + initH
+        let potentialY = initY + dy
+        let potentialH = initH - dy
+
+        // 1. Clamp Y to top boundary (-1)
+        if (potentialY < -1) {
+          potentialY = -1
+          potentialH = bottomEdge - potentialY
         }
+
+        // 2. Ensure minimum height
+        if (potentialH < minH) {
+          potentialH = minH
+          potentialY = bottomEdge - minH
+        }
+
+        // 3. Ensure height doesn't exceed screen height
+        if (potentialH > screenH) {
+          potentialH = screenH
+          potentialY = bottomEdge - potentialH
+        }
+
+        // 4. Final safety clamp for Y (if step 3 pushed it too far up)
+        if (potentialY < -1) {
+          potentialY = -1
+          potentialH = bottomEdge - potentialY
+        }
+
+        nextH = potentialH
+        nextY = potentialY
       }
 
       onResize(id, nextW, nextH, nextX !== initX ? nextX : undefined, nextY !== initY ? nextY : undefined)
