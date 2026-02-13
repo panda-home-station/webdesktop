@@ -7,7 +7,7 @@ import { useLayout } from './hooks/useLayout'
 import { useChat } from './hooks/useChat'
 import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, CHAT_MIN_WIDTH, RESIZER_WIDTH } from './constants'
 
-export default function AgentApp() {
+export default function AgentApp({ initialMessages }: { initialMessages?: any[] }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   
   const {
@@ -45,7 +45,7 @@ export default function AgentApp() {
     selectedSessionId,
     loadSession,
     createNewChat
-  } = useChat()
+  } = useChat(initialMessages)
 
   const saveSettings = () => {
     localStorage.setItem('agent_api_endpoint', apiEndpoint)

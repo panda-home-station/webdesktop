@@ -2,8 +2,16 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Message, Agent, AgentWorkflow, AgentTask, ChatSession } from '../types'
 import { MOCK_AGENTS, MOCK_HISTORY } from '../constants'
 
-export function useChat() {
-  const [messages, setMessages] = useState<Message[]>([])
+export function useChat(initialMessages?: any[]) {
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      return initialMessages.map(m => ({
+        ...m,
+        timestamp: m.timestamp ? new Date(m.timestamp) : new Date()
+      }))
+    }
+    return []
+  })
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)

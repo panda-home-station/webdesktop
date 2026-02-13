@@ -26,6 +26,7 @@ type Props = {
   isLauncherOpen?: boolean
   onCloseLauncher?: () => void
   zOrder?: string[]
+  onToggleQuickAgent?: () => void
 }
 
 const GlassTile = memo(({ children, color, active, activeColor = '#2563eb' }: { children: React.ReactNode; color?: string; active?: boolean; activeColor?: string }) => (
@@ -106,7 +107,7 @@ const TaskbarIcon = memo(({
   )
 })
 
-export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [] }: Props) {
+export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [], onToggleQuickAgent }: Props) {
   const apps = listApps()
   
   const byApp = useMemo(() => {
@@ -188,6 +189,14 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
       }
     }
   }
+  const handleAIAssistantClick = () => {
+    if (isRunning('agent')) {
+      focusOrOpen('agent')
+    } else {
+      onToggleQuickAgent?.()
+    }
+  }
+
   return (
     <div
       className="panda-taskbar"
@@ -304,7 +313,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            focusOrOpen('agent')
+            handleAIAssistantClick()
           }}
           onMouseEnter={(e) => showTip('AI助手', e.currentTarget)}
           onMouseLeave={hideTip}

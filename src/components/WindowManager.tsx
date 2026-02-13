@@ -4,6 +4,7 @@ import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
+import { QuickAgentDialog } from './QuickAgentDialog'
 import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher, setAnimating } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
 
@@ -26,6 +27,7 @@ export default function WindowManager() {
   const [wins, setWins] = useState<Win[]>([])
   const winsRef = useRef<Win[]>([])
   const [showLauncher, setShowLauncher] = useState<boolean>(false)
+  const [showQuickAgent, setShowQuickAgent] = useState<boolean>(false)
   const [zOrder, setZOrder] = useState<string[]>([])
   const [persistLoaded, setPersistLoaded] = useState<boolean>(false)
   const apps = listApps()
@@ -235,10 +237,15 @@ export default function WindowManager() {
     setTimeout(() => setAnimating(false), 300)
   }, [bringToFront, clampWin])
 
-  const openById = useCallback(async (id: string) => {
+  const openById = useCallback(async (id: string, args?: any) => {
     const existing = winsRef.current.find(w => w.appId === id)
     if (existing) {
-      setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false } : ww)))
+      if (args) {
+        const Comp = await loadApp(id)
+        setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false, content: <Comp {...args} /> } : ww)))
+      } else {
+        setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false } : ww)))
+      }
       setZOrder(z => [...z.filter(eid => eid !== existing.id), existing.id])
       return
     }
@@ -255,7 +262,7 @@ export default function WindowManager() {
       return
     }
     const Comp = await loadApp(a.id)
-    open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp />, appId: a.id, iconUrl: a.iconUrl })
+    open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp {...args} />, appId: a.id, iconUrl: a.iconUrl })
   }, [apps, open])
 
   React.useEffect(() => {
@@ -456,6 +463,15 @@ export default function WindowManager() {
         isLauncherOpen={showLauncher}
         onCloseLauncher={() => setShowLauncher(false)}
         zOrder={zOrder}
+        onToggleQuickAgent={() => setShowQuickAgent(v => !v)}
+      />
+      <QuickAgentDialog
+        visible={showQuickAgent}
+        onClose={() => setShowQuickAgent(false)}
+        onOpenFullApp={(messages: any[]) => {
+          setShowQuickAgent(false)
+          openById('agent', { initialMessages: messages })
+        }}
       />
     </div>
   )
