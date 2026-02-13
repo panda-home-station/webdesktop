@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, memo, useRef } from 'react'
-import axios from 'axios'
+import { instance as axios } from '../../../src/api/client'
 import { Cpu, HardDrive, Network, MemoryStick as MemoryIcon, Activity, Calendar, Monitor as GpuIcon } from 'lucide-react'
 import { Sidebar } from '../../../src/components/Sidebar'
 import { subscribeDragging, subscribeAnimating, subscribeLauncherOpen } from '../../../src/sdk/desktop'

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Message, Agent, AgentWorkflow, AgentTask, ChatSession } from '../types'
 import { MOCK_AGENTS, MOCK_HISTORY } from '../constants'
-import axios from 'axios'
 
 export function useChat() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -204,7 +203,7 @@ export function useChat() {
       });
 
     } catch (error) {
-      if (!axios.isCancel(error) && !(error instanceof Error && error.name === 'AbortError')) {
+      if (!(error instanceof Error && error.name === 'AbortError')) {
         console.error('Chat error:', error)
         setMessages(prev => [...prev, {
           id: Date.now().toString(),

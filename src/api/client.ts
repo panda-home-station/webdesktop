@@ -35,7 +35,7 @@ try {
 } catch {
   currentUser = null
 }
-const instance = axios.create({
+export const instance = axios.create({
   baseURL: base,
 })
 

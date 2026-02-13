@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
-import axios from 'axios'
+import { instance as axios } from '../../../src/api/client'
 import { 
-  Monitor, 
+  Monitor,
   Users, 
   HardDrive, 
   Network, 
@@ -292,7 +292,18 @@ function DeviceInfo({ info }: { info: any }) {
       <SpecGroup title="硬件规格">
         <SpecRow label="处理器" value={info.hardware.cpu} />
         <SpecRow label="显卡" value={info.hardware.gpu || 'N/A'} />
-        <SpecRow label="内存" value={info.hardware.memory} />
+        <SpecRow label="内存" value={
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div>
+              {info.hardware.memory}
+              {info.hardware.memory_slots && info.hardware.memory_slots.length > 0 && (
+                <span style={{ color: '#6b7280', marginLeft: 8 }}>
+                  - {info.hardware.memory_slots.map((s: any) => `${s.size} ${s.memory_type}`).join(' | ')}
+                </span>
+              )}
+            </div>
+          </div>
+        } />
         <SpecRow label="硬盘" value={
           info.phy_disks && info.phy_disks.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>

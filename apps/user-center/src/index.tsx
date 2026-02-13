@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
-import axios from 'axios'
+import { instance as axios } from '../../../src/api/client'
 import Icon from '@mdi/react'
 import { mdiAccountCircleOutline, mdiImageOutline } from '@mdi/js'
 import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '../../../src/state/desktop'

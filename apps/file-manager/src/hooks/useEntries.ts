@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import axios from 'axios'
+import { instance as axios } from '../../../src/api/client'
 
 export type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
 
