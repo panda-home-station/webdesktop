@@ -18,6 +18,7 @@ export default function AgentApp() {
     toggleWorkspace,
     workspaceWidth,
     isResizing,
+    isInitial,
     containerRef,
     startResizing
   } = useLayout()
@@ -138,6 +139,7 @@ export default function AgentApp() {
         selectedSessionId={selectedSessionId}
         loadSession={loadSession}
         createNewChat={createNewChat}
+        isInitial={isInitial}
       />
 
       {/* Column 2: Chat Area */}
@@ -190,6 +192,7 @@ export default function AgentApp() {
         isResizing={isResizing}
         tasks={tasks}
         activeWorkflow={activeWorkflow}
+        isInitial={isInitial}
       />
 
       {/* Settings Modal */}

@@ -2,11 +2,17 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, CHAT_MIN_WIDTH, WORKSPACE_MIN_THRESHOLD, RESIZER_WIDTH } from '../constants'
 
 export function useLayout() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false)
   const [workspaceWidth, setWorkspaceWidth] = useState(450)
   const [isResizing, setIsResizing] = useState(false)
+  const [isInitial, setIsInitial] = useState(true)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsInitial(false), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
   const prevSidebarOpen = useRef(isSidebarOpen)
 
@@ -106,6 +112,7 @@ export function useLayout() {
     workspaceWidth,
     setWorkspaceWidth,
     isResizing,
+    isInitial,
     containerRef,
     startResizing
   }

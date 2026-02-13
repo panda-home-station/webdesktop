@@ -248,7 +248,6 @@ export default function App() {
             setUser(api.getUser())
             setIsLocked(false)
           }} />
-          <div style={{ textAlign: 'center', fontSize: 12, color: '#6b7280', marginTop: 10 }}>请输入管理员或用户账号登录</div>
         </div>
       </div>
     )

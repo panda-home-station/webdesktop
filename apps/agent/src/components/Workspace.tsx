@@ -11,6 +11,7 @@ interface WorkspaceProps {
   isResizing: boolean
   tasks: AgentTask[]
   activeWorkflow: AgentWorkflow | null
+  isInitial?: boolean
 }
 
 export const Workspace: React.FC<WorkspaceProps> = ({
@@ -20,14 +21,15 @@ export const Workspace: React.FC<WorkspaceProps> = ({
   isSidebarOpen,
   isResizing,
   tasks,
-  activeWorkflow
+  activeWorkflow,
+  isInitial
 }) => {
   return (
     <div style={{
       width: isWorkspaceOpen ? workspaceWidth : 0,
       maxWidth: isWorkspaceOpen ? `calc(100% - ${(isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED)}px - ${CHAT_MIN_WIDTH}px - ${RESIZER_WIDTH}px)` : 0,
       flexShrink: 0,
-      transition: isResizing ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: (isResizing || isInitial) ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       backgroundColor: '#fafafa',
       display: 'flex',
       flexDirection: 'column',

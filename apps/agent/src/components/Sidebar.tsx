@@ -15,6 +15,7 @@ interface SidebarProps {
   selectedSessionId: string | null
   loadSession: (sessionId: string) => void
   createNewChat: () => void
+  isInitial?: boolean
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -28,13 +29,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
   history,
   selectedSessionId,
   loadSession,
-  createNewChat
+  createNewChat,
+  isInitial
 }) => {
   return (
     <div style={{
       width: isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED,
       flexShrink: 0,
-      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      transition: isInitial ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
       overflow: 'hidden',
       borderRight: '1px solid #f0f0f0',
       display: 'flex',

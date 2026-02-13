@@ -115,8 +115,9 @@ export default function LoginForm({ onSuccess, onClose }: Props) {
       >
         {loading ? '正在登录...' : '登录'}
       </button>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#6b7280', marginTop: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 13, color: '#6b7280', marginTop: 4 }}>
         <div style={{ cursor: 'pointer', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}>忘记密码</div>
+        <div style={{ width: 1, height: 12, background: '#e5e7eb', alignSelf: 'center' }}></div>
         <div style={{ cursor: 'pointer', transition: 'color 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.color = '#3b82f6'} onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}>没有账号？</div>
       </div>
     </form>
