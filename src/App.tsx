@@ -195,6 +195,7 @@ export default function App() {
         >
           <InitForm onDone={() => {
             setNeedInit(false)
+            setUser(api.getUser())
           }} />
         </div>
       </div>
