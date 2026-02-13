@@ -448,12 +448,14 @@ export default function WindowManager() {
         wins={wins.map(w => ({ id: w.id, title: w.title, minimized: w.minimized, iconUrl: w.iconUrl, appId: w.appId }))}
         onFocus={bringToFront}
         onRestore={restore}
+        onMinimize={minimize}
         onOpenLauncher={() => {
             setShowLauncher(v => !v)
         }}
         onOpenApp={openById}
         isLauncherOpen={showLauncher}
         onCloseLauncher={() => setShowLauncher(false)}
+        zOrder={zOrder}
       />
     </div>
   )

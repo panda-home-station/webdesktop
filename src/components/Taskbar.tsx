@@ -19,10 +19,12 @@ type Props = {
   wins: WinItem[]
   onFocus: (id: string) => void
   onRestore: (id: string) => void
+  onMinimize: (id: string) => void
   onOpenLauncher: () => void
   onOpenApp: (id: string) => void
   isLauncherOpen?: boolean
   onCloseLauncher?: () => void
+  zOrder?: string[]
 }
 
 const GlassTile = memo(({ children, color, active, activeColor = '#2563eb' }: { children: React.ReactNode; color?: string; active?: boolean; activeColor?: string }) => (
@@ -100,7 +102,7 @@ const TaskbarIcon = memo(({
   )
 })
 
-export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher }: Props) {
+export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [] }: Props) {
   const apps = listApps()
   
   const byApp = useMemo(() => {
@@ -139,13 +141,36 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   
   const focusOrOpen = (appId: string) => {
-    const arr = byApp[appId]
-    if (arr && arr.length > 0) {
-      const w = arr.find(x => !x.minimized) || arr[0]
-      if (w.minimized) onRestore(w.id)
-      else onFocus(w.id)
-    } else {
+    const appWins = byApp[appId] || []
+    if (appWins.length === 0) {
       openApp(appId)
+      return
+    }
+
+    // Find the "topmost" window of this app according to zOrder
+    const sortedWins = [...appWins].sort((a, b) => {
+      const ia = zOrder.indexOf(a.id)
+      const ib = zOrder.indexOf(b.id)
+      return ib - ia
+    })
+    
+    const topWin = sortedWins[0]
+    // The globally active window is the topmost one that is NOT minimized
+    const activeWinId = [...zOrder].reverse().find(id => {
+      const w = wins.find(win => win.id === id)
+      return w && !w.minimized
+    })
+
+    if (topWin.id === activeWinId) {
+      // If the topmost window of this app is the currently active window, minimize it
+      onMinimize(topWin.id)
+    } else {
+      // If not active, or minimized, bring it to focus/restore
+      if (topWin.minimized) {
+        onRestore(topWin.id)
+      } else {
+        onFocus(topWin.id)
+      }
     }
   }
   return (
@@ -235,11 +260,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
               isAppActive={isAppActive}
               onClick={() => {
                 if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-                if (anyMin && anyMin.id) onRestore(anyMin.id)
-                else if (anyWin && anyWin.id) onFocus(anyWin.id)
-                else {
-                  openApp(id)
-                }
+                focusOrOpen(id)
               }}
               onMouseEnter={(e) => showTip(title, e.currentTarget)}
               onMouseLeave={hideTip}
@@ -267,7 +288,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            openApp('agent')
+            focusOrOpen('agent')
           }}
           onMouseEnter={(e) => showTip('AI助手', e.currentTarget)}
           onMouseLeave={hideTip}
@@ -280,7 +301,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            onOpenApp('notifications')
+            focusOrOpen('notifications')
           }}
           onMouseEnter={(e) => showTip('通知', e.currentTarget)}
           onMouseLeave={hideTip}
@@ -312,7 +333,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onOpenLauncher, onOp
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            onOpenApp('system-settings')
+            focusOrOpen('system-settings')
           }}
           onMouseEnter={(e) => showTip('设置', e.currentTarget)}
           onMouseLeave={hideTip}
