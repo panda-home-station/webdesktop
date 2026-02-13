@@ -54,6 +54,7 @@ const TaskbarIcon = memo(({
   title, 
   iconUrl, 
   isAppActive, 
+  isFocused,
   onClick, 
   onMouseEnter, 
   onMouseLeave 
@@ -62,6 +63,7 @@ const TaskbarIcon = memo(({
   title: string, 
   iconUrl?: string, 
   isAppActive: boolean, 
+  isFocused: boolean,
   onClick: () => void,
   onMouseEnter: (e: React.MouseEvent<HTMLElement>) => void,
   onMouseLeave: () => void
@@ -78,11 +80,12 @@ const TaskbarIcon = memo(({
       {isAppActive && (
         <div style={{
           position: 'absolute',
-          left: 3,
-          width: 5,
-          height: 5,
-          borderRadius: '50%',
-          background: '#334155'
+          left: 2,
+          width: 3,
+          height: isFocused ? 20 : 6,
+          borderRadius: 2,
+          background: isFocused ? '#2563eb' : '#64748b',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
         }} />
       )}
       {iconUrl ? (
@@ -117,6 +120,15 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
 
   const runningAppIds = useMemo(() => Object.keys(byApp), [byApp])
   
+  const activeAppId = useMemo(() => {
+    const topWinId = [...zOrder].reverse().find(id => {
+      const w = wins.find(win => win.id === id)
+      return w && !w.minimized
+    })
+    if (!topWinId) return null
+    return wins.find(w => w.id === topWinId)?.appId
+  }, [wins, zOrder])
+
   const isRunning = (id?: string) => !!(id && byApp[id] && byApp[id].length > 0)
   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null)
   const tipTimerRef = React.useRef<any>(null)
@@ -258,6 +270,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
               title={title}
               iconUrl={iconUrl}
               isAppActive={isAppActive}
+              isFocused={activeAppId === id}
               onClick={() => {
                 if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
                 focusOrOpen(id)
