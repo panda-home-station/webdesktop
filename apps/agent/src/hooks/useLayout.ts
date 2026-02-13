@@ -83,11 +83,26 @@ export function useLayout() {
     }
   }, [resize, stopResizing])
 
+  const toggleWorkspace = useCallback(() => {
+    if (!isWorkspaceOpen) {
+      if (containerRef.current) {
+        const containerWidth = containerRef.current.offsetWidth
+        const sidebarWidth = isSidebarOpen ? SIDEBAR_EXPANDED : SIDEBAR_COLLAPSED
+        const availableForWorkspace = containerWidth - sidebarWidth - CHAT_MIN_WIDTH - RESIZER_WIDTH
+        if (availableForWorkspace < WORKSPACE_MIN_THRESHOLD) {
+          return
+        }
+      }
+    }
+    setIsWorkspaceOpen(prev => !prev)
+  }, [isWorkspaceOpen, isSidebarOpen])
+
   return {
     isSidebarOpen,
     setIsSidebarOpen,
     isWorkspaceOpen,
     setIsWorkspaceOpen,
+    toggleWorkspace,
     workspaceWidth,
     setWorkspaceWidth,
     isResizing,

@@ -6,7 +6,7 @@ import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, MOCK_AGENTS } from '../constants'
 interface SidebarProps {
   isSidebarOpen: boolean
   setIsSidebarOpen: (open: boolean) => void
-  setIsWorkspaceOpen: (open: boolean) => void
+  toggleWorkspace: () => void
   setIsSettingsOpen: (open: boolean) => void
   selectedAgent: Agent
   setSelectedAgent: (agent: Agent) => void
@@ -20,7 +20,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({
   isSidebarOpen,
   setIsSidebarOpen,
-  setIsWorkspaceOpen,
+  toggleWorkspace,
   setIsSettingsOpen,
   selectedAgent,
   setSelectedAgent,
@@ -63,7 +63,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }}>
           {[
             { id: 'new-chat', name: '新建会话', icon: <Plus size={16} />, action: createNewChat },
-            { id: 'workspace', name: '工作空间', icon: <Layers size={16} />, action: () => setIsWorkspaceOpen(true) },
+            { id: 'workspace', name: '工作空间', icon: <Layers size={16} />, action: toggleWorkspace },
             { id: 'app-center', name: '应用中心', icon: <Box size={16} />, action: () => {} },
           ].map(item => (
             <div 

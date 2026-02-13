@@ -15,7 +15,7 @@ interface ChatAreaProps {
   isSidebarOpen: boolean
   setIsSidebarOpen: (open: boolean) => void
   isWorkspaceOpen: boolean
-  setIsWorkspaceOpen: (open: boolean) => void
+  toggleWorkspace: () => void
   messagesEndRef: React.RefObject<HTMLDivElement>
 }
 
@@ -31,7 +31,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isSidebarOpen,
   setIsSidebarOpen,
   isWorkspaceOpen,
-  setIsWorkspaceOpen,
+  toggleWorkspace,
   messagesEndRef
 }) => {
   return (
@@ -92,7 +92,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button 
-            onClick={() => setIsWorkspaceOpen(!isWorkspaceOpen)}
+            onClick={toggleWorkspace}
             style={{ 
               border: '1px solid',
               borderColor: isWorkspaceOpen ? '#3b82f6' : '#eee', 

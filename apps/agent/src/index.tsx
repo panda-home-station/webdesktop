@@ -15,6 +15,7 @@ export default function AgentApp() {
     setIsSidebarOpen,
     isWorkspaceOpen,
     setIsWorkspaceOpen,
+    toggleWorkspace,
     workspaceWidth,
     isResizing,
     containerRef,
@@ -128,7 +129,7 @@ export default function AgentApp() {
       <Sidebar 
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
-        setIsWorkspaceOpen={setIsWorkspaceOpen}
+        toggleWorkspace={toggleWorkspace}
         setIsSettingsOpen={setIsSettingsOpen}
         selectedAgent={selectedAgent}
         setSelectedAgent={setSelectedAgent}
@@ -152,7 +153,7 @@ export default function AgentApp() {
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
         isWorkspaceOpen={isWorkspaceOpen}
-        setIsWorkspaceOpen={setIsWorkspaceOpen}
+        toggleWorkspace={toggleWorkspace}
         messagesEndRef={messagesEndRef}
       />
 
