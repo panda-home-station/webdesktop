@@ -142,10 +142,14 @@ export default function App() {
     checkAuth()
 
     api.initState().then(s => {
-      setNeedInit(!s.initialized)
+      if (!s.initialized) {
+        setNeedInit(true)
+        clearPersistState()
+      }
       setInitChecked(true)
     }).catch(() => {
       setNeedInit(true)
+      clearPersistState()
       setInitChecked(true)
     })
 

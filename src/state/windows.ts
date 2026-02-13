@@ -50,5 +50,7 @@ export function clearPersistState() {
   try {
     localStorage.removeItem(KEY_WINS)
     localStorage.removeItem(KEY_Z)
+    localStorage.removeItem('current_wallpaper_path')
+    localStorage.removeItem('wallpaperPath')
   } catch {}
 }

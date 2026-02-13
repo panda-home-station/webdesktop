@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { api } from '../api/client'
+import { clearPersistState } from '../state/windows'
 
 type Props = {
   onDone?: () => void
@@ -28,6 +29,8 @@ export default function InitForm({ onDone }: Props) {
     setError('')
     try {
       await api.initSystem(deviceName, username, password)
+      // 初始化成功后清除本地残留的桌面状态（如打开的应用等）
+      clearPersistState()
       // 初始化成功后自动登录
       await api.login(username, password)
       setOk(true)

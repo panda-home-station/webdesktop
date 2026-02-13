@@ -381,7 +381,7 @@ export const api = {
          throw e
        }
        offline = true
-       return { ok: true }
+       throw e
     }
   },
   fsDownloadUrl(path: string) {
