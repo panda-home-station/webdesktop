@@ -45,3 +45,10 @@ export function setPersistZOrder(z: string[]) {
     localStorage.setItem(KEY_Z, JSON.stringify(z))
   } catch {}
 }
+
+export function clearPersistState() {
+  try {
+    localStorage.removeItem(KEY_WINS)
+    localStorage.removeItem(KEY_Z)
+  } catch {}
+}

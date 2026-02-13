@@ -2,8 +2,11 @@ import React, { useEffect, useMemo, useState, useRef, useCallback } from 'react'
 import Desktop from './components/Desktop'
 import LoginForm from './components/LoginForm'
 import InitForm from './components/InitForm'
+import LockScreen from './components/LockScreen'
 import { getWallpaper } from './state/desktop'
 import { api } from './api/client'
+import { subscribeLogout, subscribeLockScreen } from './sdk/desktop'
+import { clearPersistState } from './state/windows'
 
 function SmoothWallpaper({ src }: { src?: string }) {
   const [cur, setCur] = useState<string | null>(null)
@@ -101,6 +104,7 @@ export default function App() {
   const [initChecked, setInitChecked] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
   const [needInit, setNeedInit] = useState(false)
+  const [isLocked, setIsLocked] = useState(false)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -157,8 +161,20 @@ export default function App() {
       }
     }
     window.addEventListener('desktop:wallpaper', onWp)
+
+    const unSubLogout = subscribeLogout(() => {
+      api.logout()
+      clearPersistState()
+      setUser(null)
+    })
+    const unSubLock = subscribeLockScreen(() => {
+      setIsLocked(true)
+    })
+
     return () => {
       window.removeEventListener('desktop:wallpaper', onWp)
+      unSubLogout()
+      unSubLock()
     }
   }, [])
   const bgStyle = useMemo<React.CSSProperties>(() => {
@@ -224,11 +240,25 @@ export default function App() {
             </div>
             <div style={{ fontWeight: 700, fontSize: 16, color: '#111827' }}>登录到系统</div>
           </div>
-          <LoginForm onSuccess={() => setUser(api.getUser())} />
+          <LoginForm onSuccess={() => {
+            setUser(api.getUser())
+            setIsLocked(false)
+          }} />
           <div style={{ textAlign: 'center', fontSize: 12, color: '#6b7280', marginTop: 10 }}>请输入管理员或用户账号登录</div>
         </div>
       </div>
     )
   }
-  return <Desktop />
+  return (
+    <>
+      <Desktop />
+      {isLocked && (
+        <LockScreen 
+          onUnlock={() => setIsLocked(false)} 
+          wallpaper={wallpaper} 
+          username={user.username}
+        />
+      )}
+    </>
+  )
 }

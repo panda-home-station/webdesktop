@@ -168,3 +168,23 @@ export function subscribeLauncherOpen(handler: (isOpen: boolean) => void) {
   ev.addEventListener('launcherOpen', h as EventListener)
   return () => ev.removeEventListener('launcherOpen', h as EventListener)
 }
+
+export function logout() {
+  ev.dispatchEvent(new CustomEvent('logout'))
+}
+
+export function subscribeLogout(handler: () => void) {
+  const h = () => handler()
+  ev.addEventListener('logout', h as EventListener)
+  return () => ev.removeEventListener('logout', h as EventListener)
+}
+
+export function lockScreen() {
+  ev.dispatchEvent(new CustomEvent('lock'))
+}
+
+export function subscribeLockScreen(handler: () => void) {
+  const h = () => handler()
+  ev.addEventListener('lock', h as EventListener)
+  return () => ev.removeEventListener('lock', h as EventListener)
+}

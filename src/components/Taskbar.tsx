@@ -1,11 +1,12 @@
 import React, { useState, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { listApps } from '../apps/registry'
-import { openApp, showDesktop } from '../sdk/desktop'
+import { openApp, showDesktop, logout, lockScreen } from '../sdk/desktop'
 import { getAppContextMenu } from '../sdk/desktop'
+import { api } from '../api/client'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
-import { Monitor, LayoutGrid } from 'lucide-react'
+import { Monitor, LayoutGrid, User, Lock, LogOut } from 'lucide-react'
 
 type WinItem = {
   id: string
@@ -151,6 +152,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
   }
 
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
+  const [accountMenu, setAccountMenu] = useState<{ x: number; y: number } | null>(null)
+  const user = api.getUser()
   
   const focusOrOpen = (appId: string) => {
     const appWins = byApp[appId] || []
@@ -328,9 +331,10 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
           className="dock-item"
           title="账号"
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
-          onClick={() => {
+          onClick={(e) => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            focusOrOpen('user-center')
+            const r = e.currentTarget.getBoundingClientRect()
+            setAccountMenu({ x: r.right + 12, y: r.top })
           }}
           onMouseEnter={(e) => showTip('我的账号', e.currentTarget)}
           onMouseLeave={hideTip}
@@ -379,7 +383,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
                     } catch {}
                   }}
                   onMouseEnter={e => {
-                    e.currentTarget.style.background = '#e5e7eb'
+                    e.currentTarget.style.background = '#94a3b8'
                   }}
                   onMouseLeave={e => {
                     e.currentTarget.style.background = 'transparent'
@@ -391,6 +395,107 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
             </div>
           </div>
           <div style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10004 }} onMouseDown={() => setMenu(null)} />
+        </div>,
+        document.body
+      )}
+      {accountMenu && createPortal(
+        <div className="semi-portal" style={{ zIndex: 10005 }}>
+          <div tabIndex={-1} className="semi-portal-inner" style={{ 
+            position: 'fixed', 
+            left: accountMenu.x, 
+            bottom: window.innerHeight - accountMenu.y < 300 ? 12 : 'auto',
+            top: window.innerHeight - accountMenu.y < 300 ? 'auto' : accountMenu.y,
+            zIndex: 10006 
+          }}>
+            <div style={{ 
+              minWidth: 220, 
+              padding: '12px 6px', 
+              borderRadius: 12, 
+              background: 'rgba(255,255,255,0.95)', 
+              backdropFilter: 'blur(16px)', 
+              border: '1px solid rgba(255,255,255,0.3)', 
+              boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
+              maxHeight: 'calc(100vh - 24px)',
+              overflowY: 'auto'
+            }}>
+              {/* User Info Section */}
+              <div style={{ padding: '0 12px 12px 12px', borderBottom: '1px solid rgba(0,0,0,0.06)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ 
+                  width: 44, 
+                  height: 44, 
+                  borderRadius: 12, 
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  color: '#fff',
+                  fontSize: 18,
+                  fontWeight: 600,
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+                  flexShrink: 0,
+                  overflow: 'hidden'
+                }}>
+                  {(user as any)?.avatar_url ? (
+                    <img src={(user as any).avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    (user?.username || 'U').charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.username || '未登录'}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: user?.user_id ? '#10b981' : '#94a3b8' }} />
+                    {user?.user_id ? '在线' : '离线'}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Menu Items */}
+              <button
+                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#334155', transition: 'all 0.2s' }}
+                onClick={() => {
+                  setAccountMenu(null)
+                  focusOrOpen('user-center')
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#cbd5e1'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <User size={18} />
+                <span style={{ fontSize: 14 }}>用户中心</span>
+              </button>
+              
+              <button
+                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#334155', transition: 'all 0.2s' }}
+                onClick={() => {
+                  setAccountMenu(null)
+                  lockScreen()
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#cbd5e1'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <Lock size={18} />
+                <span style={{ fontSize: 14 }}>锁定屏幕</span>
+              </button>
+              
+              <div style={{ height: 1, background: 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
+              
+              <button
+                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#ef4444', transition: 'all 0.2s' }}
+                onClick={() => {
+                  setAccountMenu(null)
+                  logout()
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                <LogOut size={18} />
+                <span style={{ fontSize: 14 }}>退出登录</span>
+              </button>
+            </div>
+          </div>
+          <div style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10004 }} onMouseDown={() => setAccountMenu(null)} />
         </div>,
         document.body
       )}
