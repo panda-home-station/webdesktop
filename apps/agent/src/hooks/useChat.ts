@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Message, Agent, AgentWorkflow, AgentTask, ChatSession } from '../types'
-import { MOCK_AGENTS, MOCK_HISTORY } from '../constants'
+import { MOCK_AGENTS } from '../constants'
 
 export function useChat(initialMessages?: any[]) {
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -54,10 +54,6 @@ export function useChat(initialMessages?: any[]) {
   useEffect(() => {
     fetchSessions();
   }, []);
-
-  const scrollToBottom = () => {
-    // 已经通过 MessageList 组件内部处理滚动，这里保持空实现或移除
-  }
 
   const loadSession = async (sessionId: string) => {
     try {
@@ -121,10 +117,6 @@ export function useChat(initialMessages?: any[]) {
         : [...prev, toolId]
     )
   }
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages, isLoading])
 
   useEffect(() => {
     if (initialMessages && initialMessages.length > 0) {

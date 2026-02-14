@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react'
-import { MessageItem, Message } from './MessageItem'
+import { MessageItem } from './MessageItem'
+import { Message } from '../types'
 import { Bot } from 'lucide-react'
 
 interface MessageListProps {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { X, Maximize2, Sparkles, Command, CornerDownLeft } from 'lucide-react'
-import { ChatInput } from '../../apps/agent/src/components/agent/ChatInput'
-import { Message } from '../../apps/agent/src/components/agent/MessageItem'
+import { ChatInput } from '../../apps/agent/src/components/ChatInput'
+import { type Message } from '../../apps/agent/src/types'
 
 interface QuickAgentDialogProps {
   onClose: () => void
@@ -44,7 +44,7 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
       id: Date.now().toString(),
       role: 'user',
       content: finalInput,
-      timestamp: new Date().toISOString()
+      timestamp: new Date()
     }
 
     handleMaximize([userMsg])

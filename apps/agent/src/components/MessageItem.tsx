@@ -1,19 +1,7 @@
 import React from 'react'
 import { Bot, User, Globe, Box, Terminal } from 'lucide-react'
 import { MarkdownContent } from './MarkdownContent'
-
-export interface Message {
-  id: string
-  role: 'user' | 'assistant' | 'system' | 'tool'
-  content: string
-  timestamp?: string | Date
-  toolCalls?: {
-    name: string
-    args: any
-    status: 'running' | 'completed' | 'error'
-    result?: string
-  }[]
-}
+import { Message } from '../types'
 
 interface MessageItemProps {
   message: Message

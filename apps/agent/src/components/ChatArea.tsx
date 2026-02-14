@@ -2,8 +2,8 @@ import React from 'react'
 import { Plus, Bot, Layers, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Message, Agent } from '../types'
 import { AVAILABLE_TOOLS } from '../constants'
-import { MessageList } from './agent/MessageList'
-import { ChatInput } from './agent/ChatInput'
+import { MessageList } from './MessageList'
+import { ChatInput } from './ChatInput'
 
 interface ChatAreaProps {
   messages: Message[]
