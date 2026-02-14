@@ -10,9 +10,11 @@ interface ChatInputProps {
   isCompact?: boolean
   placeholder?: string
   showTools?: boolean
+  showActionBar?: boolean
   onKeyDown?: (e: React.KeyboardEvent) => void
   containerStyles?: React.CSSProperties
   inputStyles?: React.CSSProperties
+  wrapperStyles?: React.CSSProperties
   autoFocus?: boolean
 }
 
@@ -25,15 +27,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isCompact = false,
   placeholder = "输入您的问题...",
   showTools = false,
+  showActionBar = true,
   onKeyDown,
   containerStyles = {},
   inputStyles = {},
+  wrapperStyles = {},
   autoFocus = false
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (onKeyDown) {
       onKeyDown(e)
-    } else if (e.key === 'Enter' && !e.shiftKey) {
+    }
+    
+    if (e.defaultPrevented) return
+
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       onSend()
     }
@@ -62,7 +70,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   }
 
   return (
-    <div style={{ padding: isCompact ? '16px' : '0 24px 24px', backgroundColor: '#fff' }}>
+    <div style={{ 
+      padding: isCompact ? '16px' : '0 24px 24px', 
+      backgroundColor: '#fff',
+      ...wrapperStyles 
+    }}>
       <div style={{ 
         maxWidth: isCompact ? 'none' : 'min(92%, 800px)', 
         margin: '0 auto',
@@ -133,77 +145,74 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 }}
                 rows={Math.min(5, value.split('\n').length || 1)}
               />
-              <div style={{
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center', 
-                padding: '8px 0 0'
-              }}>
-                <div style={{ 
+              {showActionBar && (
+                <div style={{
                   display: 'flex', 
-                  gap: 12, 
-                  color: '#999',
-                  overflow: 'hidden',
-                  flexShrink: 1 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  padding: '8px 0 0'
                 }}>
-                  {showTools && (
-                    <>
-                      <Globe size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
-                      <Box size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
-                      <Terminal size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
-                    </>
+                  <div style={{ 
+                    display: 'flex', 
+                    gap: 12, 
+                    color: '#999',
+                    overflow: 'hidden',
+                    flexShrink: 1 
+                  }}>
+                    {showTools && (
+                      <>
+                        <Globe size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                        <Box size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                        <Terminal size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                      </>
+                    )}
+                  </div>
+                  {isLoading && onStop ? (
+                    <button
+                      onClick={onStop}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        backgroundColor: '#ff4d4f',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}
+                    >
+                      <div style={{ width: 12, height: 12, backgroundColor: '#fff', borderRadius: 2 }}></div>
+                    </button>
+                  ) : (
+                    <button
+                      onClick={onSend}
+                      disabled={!value.trim()}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        backgroundColor: !value.trim() ? '#f0f0f0' : '#000',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: !value.trim() ? 'default' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        transition: 'all 0.2s',
+                        flexShrink: 0
+                      }}
+                    >
+                      <Send size={16} />
+                    </button>
                   )}
                 </div>
-                {isLoading && onStop ? (
-                  <button
-                    onClick={onStop}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      backgroundColor: '#ff4d4f',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0
-                    }}
-                  >
-                    <div style={{ width: 12, height: 12, backgroundColor: '#fff', borderRadius: 2 }}></div>
-                  </button>
-                ) : (
-                  <button
-                    onClick={onSend}
-                    disabled={!value.trim()}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      backgroundColor: !value.trim() ? '#f0f0f0' : '#000',
-                      color: '#fff',
-                      border: 'none',
-                      cursor: !value.trim() ? 'default' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      transition: 'all 0.2s',
-                      flexShrink: 0
-                    }}
-                  >
-                    <Send size={16} />
-                  </button>
-                )}
-              </div>
+              )}
             </>
           )}
         </div>
-        {!isCompact && (
-          <div style={{ fontSize: '11px', color: '#aaa', textAlign: 'center', marginTop: 8 }}>
-            AI 可能会产生错误，请核实重要信息。
-          </div>
-        )}
       </div>
     </div>
   )
