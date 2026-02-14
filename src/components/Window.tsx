@@ -344,9 +344,10 @@ export default function Window({
     >
       {/* Title Bar */}
       <div
-        className="panda-titlebar"
+        className="win-title"
         style={{
-          height: 36,
+          height: 38,
+          flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
           padding: '0 12px',
@@ -428,7 +429,7 @@ export default function Window({
         flex: 1,
         color: 'var(--text)',
         position: 'relative',
-        overflow: 'auto',
+        overflow: 'hidden',
         background: '#ffffff',
         borderBottomLeftRadius: maximized ? 0 : 'var(--win-radius)',
         borderBottomRightRadius: maximized ? 0 : 'var(--win-radius)'

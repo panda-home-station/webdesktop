@@ -1,12 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Send, X, Maximize2, Bot, User, Loader2, PlusCircle } from 'lucide-react'
-
-interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp?: string
-}
+import { MessageList } from './MessageList'
+import { ChatInput } from './ChatInput'
+import { Message } from './MessageItem'
 
 interface QuickAgentDialogProps {
   onClose: () => void
@@ -18,13 +14,8 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const abortControllerRef = useRef<AbortController | null>(null)
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
 
   useEffect(() => {
     if (visible) {
@@ -33,10 +24,6 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
       }, 100)
     }
   }, [visible])
-
-  useEffect(() => {
-    scrollToBottom()
-  }, [messages])
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return
@@ -147,7 +134,8 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        background: '#fcfcfc'
+        background: '#fcfcfc',
+        flexShrink: 0
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{
@@ -233,16 +221,11 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
       </div>
 
       {/* Messages */}
-      <div style={{
-        flex: 1,
-        overflowY: 'auto',
-        padding: '16px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 16,
-        backgroundColor: '#fff'
-      }}>
-        {messages.length === 0 && (
+      <MessageList 
+        messages={messages}
+        isLoading={isLoading}
+        isCompact={true}
+        emptyState={
           <div style={{
             flex: 1,
             display: 'flex',
@@ -251,53 +234,15 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
             justifyContent: 'center',
             color: '#9ca3af',
             gap: 12,
-            padding: '0 32px',
+            padding: '40px 32px',
             textAlign: 'center'
           }}>
             <Bot size={40} strokeWidth={1.5} opacity={0.5} />
             <p style={{ fontSize: 13 }}>有什么我可以帮您的吗？</p>
           </div>
-        )}
-        {messages.map(m => (
-          <div key={m.id} style={{
-            display: 'flex',
-            gap: 10,
-            flexDirection: m.role === 'user' ? 'row-reverse' : 'row',
-            alignItems: 'flex-start'
-          }}>
-            <div style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: m.role === 'user' ? '#3b82f6' : '#f3f4f6',
-              color: m.role === 'user' ? '#fff' : '#3b82f6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              marginTop: 2
-            }}>
-              {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-            </div>
-            <div style={{
-              maxWidth: '80%',
-              padding: '8px 12px',
-              borderRadius: 12,
-              fontSize: 14,
-              lineHeight: 1.5,
-              backgroundColor: m.role === 'user' ? '#3b82f6' : '#f3f4f6',
-              color: m.role === 'user' ? '#fff' : '#1f2937',
-              borderTopRightRadius: m.role === 'user' ? 2 : 12,
-              borderTopLeftRadius: m.role === 'assistant' ? 2 : 12,
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word'
-            }}>
-              {m.content}
-            </div>
-          </div>
-        ))}
-        {isLoading && (
-          <div style={{ display: 'flex', gap: 10 }}>
+        }
+        renderLoading={() => (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
             <div style={{
               width: 28,
               height: 28,
@@ -321,61 +266,17 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
             </div>
           </div>
         )}
-        <div ref={messagesEndRef} />
-      </div>
+      />
 
       {/* Input */}
-      <div style={{
-        padding: '16px',
-        borderTop: '1px solid #f0f0f0',
-        backgroundColor: '#fff'
-      }}>
-        <div style={{
-          display: 'flex',
-          gap: 8,
-          background: '#f9fafb',
-          padding: '4px 4px 4px 12px',
-          borderRadius: 10,
-          border: '1px solid #e5e7eb',
-          alignItems: 'center'
-        }}>
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && handleSend()}
-            placeholder="输入您的问题..."
-            style={{
-              flex: 1,
-              border: 'none',
-              background: 'none',
-              outline: 'none',
-              fontSize: 14,
-              padding: '8px 0',
-              color: '#1f2937'
-            }}
-          />
-          <button
-            onClick={handleSend}
-            disabled={!input.trim() || isLoading}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              background: input.trim() && !isLoading ? '#3b82f6' : '#e5e7eb',
-              color: '#fff',
-              border: 'none',
-              cursor: input.trim() && !isLoading ? 'pointer' : 'default',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
-          >
-            <Send size={16} />
-          </button>
-        </div>
-      </div>
+      <ChatInput
+        value={input}
+        onChange={setInput}
+        onSend={handleSend}
+        isLoading={isLoading}
+        isCompact={true}
+        placeholder="输入您的问题..."
+      />
       <style>{`
         @keyframes slideInRight {
           from { opacity: 0; transform: translateX(-20px); }

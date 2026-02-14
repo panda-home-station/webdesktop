@@ -37,7 +37,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({
       zIndex: 5,
       boxSizing: 'border-box'
     }}>
-      <div style={{ height: 60, borderBottom: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', padding: '0 20px', justifyContent: 'space-between', backgroundColor: '#fff' }}>
+      <div style={{ 
+        height: 60, 
+        borderBottom: '1px solid #f0f0f0', 
+        display: 'flex', 
+        alignItems: 'center', 
+        padding: '0 20px', 
+        justifyContent: 'space-between', 
+        backgroundColor: '#fff',
+        flexShrink: 0
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Sparkles size={18} color="#3b82f6" />
           <span style={{ fontWeight: 600, fontSize: 15 }}>工作区</span>

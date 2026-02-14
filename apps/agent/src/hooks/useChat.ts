@@ -28,18 +28,9 @@ export function useChat(initialMessages?: any[]) {
   const [apiEndpoint, setApiEndpoint] = useState(() => localStorage.getItem('agent_api_endpoint') || 'http://192.168.1.189:11434')
   const [apiModel, setApiModel] = useState(() => localStorage.getItem('agent_api_model') || 'qwen3:14b')
   
-  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
-    if (messagesEndRef.current) {
-      const container = messagesEndRef.current.parentElement?.parentElement
-      if (container) {
-        container.scrollTo({
-          top: container.scrollHeight,
-          behavior: 'smooth'
-        })
-      }
-    }
+    // 已经通过 MessageList 组件内部处理滚动，这里保持空实现或移除
   }
 
   const loadSession = (sessionId: string) => {
@@ -257,7 +248,6 @@ export function useChat(initialMessages?: any[]) {
     setApiEndpoint,
     apiModel,
     setApiModel,
-    messagesEndRef,
     history,
     selectedSessionId,
     loadSession,

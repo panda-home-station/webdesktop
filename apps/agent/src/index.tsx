@@ -40,7 +40,6 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
     setApiEndpoint,
     apiModel,
     setApiModel,
-    messagesEndRef,
     history,
     selectedSessionId,
     loadSession,
@@ -156,7 +155,6 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
         setIsSidebarOpen={setIsSidebarOpen}
         isWorkspaceOpen={isWorkspaceOpen}
         toggleWorkspace={toggleWorkspace}
-        messagesEndRef={messagesEndRef}
       />
 
       {/* Resizer Handle */}

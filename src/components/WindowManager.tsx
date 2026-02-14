@@ -4,7 +4,7 @@ import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
-import { QuickAgentDialog } from './QuickAgentDialog'
+import { QuickAgentDialog } from './agent/QuickAgentDialog'
 import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher, setAnimating } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
 
@@ -238,6 +238,11 @@ export default function WindowManager() {
   }, [bringToFront, clampWin])
 
   const openById = useCallback(async (id: string, args?: any) => {
+    // 如果打开的是 agent app，关闭快捷助手对话框
+    if (id === 'agent') {
+      setShowQuickAgent(false)
+    }
+
     const existing = winsRef.current.find(w => w.appId === id)
     if (existing) {
       if (args) {
@@ -299,6 +304,11 @@ export default function WindowManager() {
     })()
 
     const unsub = subscribeOpenApp(async (id, args) => {
+      // 如果打开的是 agent app，关闭快捷助手对话框
+      if (id === 'agent') {
+        setShowQuickAgent(false)
+      }
+
       const existing = winsRef.current.find(w => w.appId === id)
       if (existing && !args) {
         setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false } : ww)))
@@ -395,8 +405,20 @@ export default function WindowManager() {
   }, [zOrder])
 
   const handleLauncherOpen = useCallback((id: string, title: string, Comp: React.ComponentType<any>, iconUrl?: string) => {
+    // 如果从 Launcher 打开的是 agent app，关闭快捷助手对话框
+    if (id === 'agent') {
+      setShowQuickAgent(false)
+    }
+
+    const existing = winsRef.current.find(w => w.appId === id)
+    if (existing) {
+      setWins(ws => ws.map(ww => (ww.id === existing.id ? { ...ww, minimized: false } : ww)))
+      setZOrder(z => [...z.filter(eid => eid !== existing.id), existing.id])
+      return
+    }
+
     open({ id: `${id}-${Date.now()}`, title, content: <Comp />, appId: id, iconUrl })
-  }, [open])
+  }, [open, apps])
 
   const handleLauncherClose = useCallback(() => {
     setShowLauncher(false)
@@ -463,7 +485,18 @@ export default function WindowManager() {
         isLauncherOpen={showLauncher}
         onCloseLauncher={() => setShowLauncher(false)}
         zOrder={zOrder}
-        onToggleQuickAgent={() => setShowQuickAgent(v => !v)}
+        onToggleQuickAgent={() => {
+          const isAgentOpen = wins.some(w => w.appId === 'agent' && !w.minimized)
+          if (!isAgentOpen) {
+            setShowQuickAgent(v => !v)
+          } else {
+            // 如果 App 已经打开，则聚焦到 App 窗口，而不打开快捷助手
+            const agentWin = wins.find(w => w.appId === 'agent')
+            if (agentWin) {
+              bringToFront(agentWin.id)
+            }
+          }
+        }}
       />
       <QuickAgentDialog
         visible={showQuickAgent}
