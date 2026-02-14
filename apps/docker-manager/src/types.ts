@@ -16,6 +16,9 @@ export type Image = {
   exposed_ports?: number[]
   env?: string[]
   volumes?: string[]
+  status?: string
+  progress?: number
+  error?: string
 }
 
 export type Volume = {

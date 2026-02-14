@@ -13,7 +13,7 @@ import { VolumeList } from './components/VolumeList'
 import { NetworkList } from './components/NetworkList'
 import { CreateContainerModal } from './components/CreateContainerModal'
 import { Modal } from '../../../src/components/Modal'
-import { fmtImageName } from './utils'
+import { fmtImageName, iOSButtonStyle } from './utils'
 
 const btnCancelStyle: React.CSSProperties = {
   padding: '8px 16px',
@@ -43,7 +43,7 @@ const TABS = [
   { id: 'images', label: '镜像', icon: <Icon path={mdiImageFilterNone} size="20px" /> },
   { id: 'volumes', label: '存储卷', icon: <Icon path={mdiHarddisk} size="20px" /> },
   { id: 'networks', label: '网络', icon: <Icon path={mdiNetwork} size="20px" /> },
-  { id: 'registry', label: '仓库', icon: <Icon path={mdiDatabase} size="20px" /> },
+  // { id: 'registry', label: '仓库', icon: <Icon path={mdiDatabase} size="20px" /> },
   { id: 'compose', label: '编排', icon: <Layers size={18} /> },
 ]
 
@@ -95,8 +95,13 @@ export default function DockerManager() {
   const [networkMode, setNetworkMode] = useState('bridge')
   const [cmd, setCmd] = useState('')
 
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false)
+  const [downloadImageName, setDownloadImageName] = useState('')
+  const [pullingImage, setPullingImage] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
   // Confirmation State
-  const [confirmState, setConfirmState] = useState<{ type: 'start' | 'stop' | 'delete' | 'restart', id: string } | null>(null)
+  const [confirmState, setConfirmState] = useState<{ type: 'start' | 'stop' | 'delete' | 'restart' | 'deleteImage', id: string, extra?: any } | null>(null)
 
   const loadAll = async () => {
     setLoading(true)
@@ -122,7 +127,19 @@ export default function DockerManager() {
     loadAll().catch(console.error)
   }, [])
 
+  // Poll for pulling images
+  useEffect(() => {
+    const hasPulling = images.some(img => img.status === 'pulling')
+    if (hasPulling) {
+      const timer = setInterval(() => {
+        podmanApi.listImages().then(setImages).catch(console.error)
+      }, 2000)
+      return () => clearInterval(timer)
+    }
+  }, [images])
+
   // Registry Logic
+  /*
   const onSearchRegistry = async () => {
     const q = registryQ.trim()
     if (!q) {
@@ -188,6 +205,26 @@ export default function DockerManager() {
       setActive('images')
     } finally {
       setPulling(false)
+    }
+  }
+  */
+
+  const onPullImage = async (imageName?: any) => {
+    const ref = (typeof imageName === 'string' ? imageName : downloadImageName).trim()
+    if (!ref) return
+    setPullingImage(true)
+    try {
+      await podmanApi.pull(ref)
+      setDownloadModalOpen(false)
+      setDownloadImageName('')
+      // Immediately refresh to show the pulling item
+      const ims = await podmanApi.listImages()
+      setImages(ims)
+    } catch (e: any) {
+      console.error(e)
+      setErrorMsg('下载镜像失败: ' + (e.response?.data?.message || e.message))
+    } finally {
+      setPullingImage(false)
     }
   }
 
@@ -256,9 +293,9 @@ export default function DockerManager() {
       await loadAll()
       setActive('containers')
     } catch (e: any) {
-      console.error(e)
-      const msg = e.response?.data || e.message || 'Unknown error'
-      alert(`Failed to create container: ${typeof msg === 'object' ? JSON.stringify(msg) : msg}`)
+      console.error('Failed to create container:', e)
+      const msg = e.response?.data?.message || e.message
+      setErrorMsg(`Failed to create container: ${typeof msg === 'object' ? JSON.stringify(msg) : msg}`)
     } finally {
       setCreating(false)
     }
@@ -273,12 +310,14 @@ export default function DockerManager() {
       else if (type === 'start') await podmanApi.start(id)
       else if (type === 'stop') await podmanApi.stop(id)
       else if (type === 'restart') await podmanApi.restart(id)
+      else if (type === 'deleteImage') await podmanApi.removeImage(id)
       
       await loadAll()
       setConfirmState(null)
     } catch (e: any) {
+      console.error(e)
       const msg = e.response?.data?.message || e.message || 'Unknown error'
-      alert(`${type === 'delete' ? 'Remove' : type === 'start' ? 'Start' : type === 'stop' ? 'Stop' : 'Restart'} failed: ${msg}`)
+      setErrorMsg(`${type === 'delete' ? 'Remove' : type === 'deleteImage' ? 'Delete image' : type === 'start' ? 'Start' : type === 'stop' ? 'Stop' : 'Restart'} failed: ${msg}`)
       setConfirmState(null)
     } finally {
       setPerformingAction(false)
@@ -346,11 +385,14 @@ export default function DockerManager() {
             <ImageList
               images={images}
               onRun={onOpenCreateContainer}
-              onDelete={async (img) => { if(confirm('确认删除镜像?')) { await podmanApi.removeImage(img.id); loadAll() } }}
+              onDelete={(img) => setConfirmState({ type: 'deleteImage', id: img.id, extra: (img.repo_tags && img.repo_tags[0]) ? fmtImageName(img.repo_tags[0]) : img.id.slice(0, 12) })}
+              onDownload={() => setDownloadModalOpen(true)}
+              onRetryPull={(imgName) => onPullImage(imgName)}
             />
           )}
           {active === 'volumes' && <VolumeList volumes={volumesList} />}
           {active === 'networks' && <NetworkList networks={networksList} />}
+          {/*
           {active === 'registry' && (
             <RegistryView
               query={registryQ}
@@ -370,6 +412,7 @@ export default function DockerManager() {
               onOpenSettings={() => setSettingsOpen(true)}
             />
           )}
+          */}
           {active === 'compose' && (
             <div style={{ padding: 40, textAlign: 'center', color: '#8e8e93' }}>
               <Icon path={mdiTableColumn} size={2} color="#d1d1d6" />
@@ -381,7 +424,7 @@ export default function DockerManager() {
 
       <Modal
         open={!!confirmState}
-        title={confirmState?.type === 'delete' ? '删除容器' : confirmState?.type === 'start' ? '启动容器' : confirmState?.type === 'stop' ? '停止容器' : '重启容器'}
+        title={confirmState?.type === 'delete' ? '删除容器' : confirmState?.type === 'deleteImage' ? '删除镜像' : confirmState?.type === 'start' ? '启动容器' : confirmState?.type === 'stop' ? '停止容器' : '重启容器'}
         onClose={() => !performingAction && setConfirmState(null)}
         width={320}
         footer={
@@ -396,7 +439,7 @@ export default function DockerManager() {
             <button 
               onClick={performAction} 
               style={{ 
-                ...btnConfirmStyle(confirmState?.type === 'delete' || confirmState?.type === 'stop' || confirmState?.type === 'restart'),
+                ...btnConfirmStyle(confirmState?.type === 'delete' || confirmState?.type === 'deleteImage' || confirmState?.type === 'stop' || confirmState?.type === 'restart'),
                 opacity: performingAction ? 0.7 : 1,
                 cursor: performingAction ? 'not-allowed' : 'pointer',
                 display: 'flex',
@@ -417,11 +460,13 @@ export default function DockerManager() {
                )}
                {performingAction ? (
                  confirmState?.type === 'delete' ? '正在删除容器...' :
+                 confirmState?.type === 'deleteImage' ? '正在删除镜像...' :
                  confirmState?.type === 'start' ? '正在启动容器...' :
                  confirmState?.type === 'stop' ? '正在停止容器...' :
                  '正在重启容器...'
                ) : (
                  confirmState?.type === 'delete' ? '删除' : 
+                 confirmState?.type === 'deleteImage' ? '删除' : 
                  confirmState?.type === 'start' ? '启动' : 
                  confirmState?.type === 'stop' ? '停止' : 
                  '重启'
@@ -434,6 +479,13 @@ export default function DockerManager() {
           {confirmState?.type === 'delete' && (
             <>
               确定要删除此容器吗？
+              <br />
+              <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
+            </>
+          )}
+          {confirmState?.type === 'deleteImage' && (
+            <>
+              确定要删除镜像 <span style={{ fontWeight: 600 }}>{confirmState.extra}</span> 吗？
               <br />
               <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
             </>
@@ -498,6 +550,85 @@ export default function DockerManager() {
         onCreate={onCreateContainer}
         creating={creating}
       />
+
+      <Modal
+        open={downloadModalOpen}
+        title="下载镜像"
+        onClose={() => !pullingImage && setDownloadModalOpen(false)}
+        width={400}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <button 
+              onClick={() => setDownloadModalOpen(false)} 
+              style={{ ...btnCancelStyle, opacity: pullingImage ? 0.5 : 1, cursor: pullingImage ? 'not-allowed' : 'pointer' }}
+              disabled={pullingImage}
+            >
+              取消
+            </button>
+            <button 
+              onClick={() => onPullImage()} 
+              style={{ 
+                ...btnConfirmStyle(),
+                opacity: pullingImage ? 0.7 : 1,
+                cursor: pullingImage ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}
+              disabled={pullingImage || !downloadImageName.trim()}
+            >
+              {pullingImage && (
+                 <div style={{ 
+                   width: 12, 
+                   height: 12, 
+                   border: '2px solid rgba(255,255,255,0.3)', 
+                   borderTopColor: '#fff', 
+                   borderRadius: '50%', 
+                   animation: 'spin 0.8s linear infinite' 
+                 }} />
+               )}
+               {pullingImage ? '正在下载...' : '下载'}
+             </button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 14, color: '#374151' }}>请输入镜像名称或地址 (例如: nginx:latest 或 docker.io/library/nginx:latest)</div>
+          <input
+            autoFocus
+            type="text"
+            value={downloadImageName}
+            onChange={e => setDownloadImageName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && downloadImageName.trim() && onPullImage()}
+            placeholder="镜像名称:标签"
+            style={{
+              width: '100%',
+              padding: '10px 12px',
+              borderRadius: 8,
+              border: '1px solid #d1d5db',
+              fontSize: 14,
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+          />
+        </div>
+      </Modal>
+
+      {/* Error Modal */}
+      <Modal
+        open={!!errorMsg}
+        title="错误"
+        onClose={() => setErrorMsg(null)}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={() => setErrorMsg(null)} style={btnConfirmStyle()}>
+              确定
+            </button>
+          </div>
+        }
+      >
+        <div style={{ color: '#ff3b30', fontSize: 14 }}>{errorMsg}</div>
+      </Modal>
     </div>
   )
 }
