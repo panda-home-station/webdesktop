@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
-import { instance as axios } from '../../../src/api/client'
+import { instance as axios, api } from '../../../src/api/client'
 import Icon from '@mdi/react'
-import { mdiAccountCircleOutline, mdiImageOutline } from '@mdi/js'
+import { mdiAccountCircleOutline, mdiImageOutline, mdiShieldLockOutline } from '@mdi/js'
 import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '../../../src/state/desktop'
 
-type Item = 'profile' | 'wallpapers'
+type Item = 'profile' | 'wallpapers' | 'security'
 
 const WALL_DIR = '/AppData/Wallpapers'
 
@@ -97,7 +97,8 @@ export default function UserCenter() {
         onSelect={(id) => setActive(id as Item)}
         items={[
           { id: 'profile', label: '账户信息', icon: <Icon path={mdiAccountCircleOutline} size="20px" /> },
-          { id: 'wallpapers', label: '主题与壁纸', icon: <Icon path={mdiImageOutline} size="20px" /> }
+          { id: 'wallpapers', label: '主题与壁纸', icon: <Icon path={mdiImageOutline} size="20px" /> },
+          { id: 'security', label: '安全设置', icon: <Icon path={mdiShieldLockOutline} size="20px" /> }
         ]}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 12, gap: 12 }}>
@@ -189,6 +190,118 @@ export default function UserCenter() {
             </div>
           </div>
         )}
+        {active === 'security' && (
+          <SecuritySettings />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function SecuritySettings() {
+  const [idleTimeout, setIdleTimeout] = useState(0)
+  const [idleAction, setIdleAction] = useState('lock')
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.getSecuritySettings().then(settings => {
+      setIdleTimeout(settings.idle_timeout)
+      setIdleAction(settings.idle_action)
+      setLoading(false)
+    })
+  }, [])
+
+  const handleTimeoutChange = async (val: number) => {
+    setIdleTimeout(val)
+    await api.setSecuritySettings({ idle_timeout: val, idle_action: idleAction })
+    window.dispatchEvent(new CustomEvent('pnas:settings-changed'))
+  }
+
+  const handleActionChange = async (val: string) => {
+    setIdleAction(val)
+    await api.setSecuritySettings({ idle_timeout: idleTimeout, idle_action: val })
+    window.dispatchEvent(new CustomEvent('pnas:settings-changed'))
+  }
+
+  if (loading) {
+    return <div style={{ padding: 16, color: 'var(--muted)', fontSize: 13 }}>加载中...</div>
+  }
+
+  return (
+    <div style={{ padding: 16, display: 'grid', gap: 16 }}>
+      <div style={{ fontWeight: 700 }}>安全设置</div>
+      
+      <div style={{ display: 'grid', gap: 12, maxWidth: 400 }}>
+        <div style={{ display: 'grid', gap: 6 }}>
+          <div style={{ fontSize: 14, fontWeight: 500 }}>自动锁定与退出</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>当您在指定时间内没有操作时，系统将自动执行锁定屏幕或退出登录的操作。</div>
+          
+          <div style={{ display: 'grid', gap: 10, padding: 12, background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13 }}>空闲等待时间</span>
+              <select 
+                value={idleTimeout} 
+                onChange={(e) => handleTimeoutChange(parseInt(e.target.value))}
+                style={{ 
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  border: '1px solid var(--button-border)',
+                  background: 'var(--button-bg)',
+                  color: 'var(--text)',
+                  fontSize: 13,
+                  outline: 'none'
+                }}
+              >
+                <option value={0}>从不</option>
+                <option value={1}>1 分钟</option>
+                <option value={5}>5 分钟</option>
+                <option value={15}>15 分钟</option>
+                <option value={30}>30 分钟</option>
+                <option value={60}>1 小时</option>
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: 13 }}>空闲时操作</span>
+              <select 
+                value={idleAction} 
+                onChange={(e) => handleActionChange(e.target.value)}
+                style={{ 
+                  padding: '4px 8px',
+                  borderRadius: 6,
+                  border: '1px solid var(--button-border)',
+                  background: 'var(--button-bg)',
+                  color: 'var(--text)',
+                  fontSize: 13,
+                  outline: 'none'
+                }}
+              >
+                <option value="lock">锁定屏幕</option>
+                <option value="logout">退出登录</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
+          <div style={{ fontSize: 14, fontWeight: 500 }}>登录保护</div>
+          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>为了您的账户安全，建议定期更改密码。</div>
+          <button
+            style={{ 
+              padding: '8px 12px', 
+              borderRadius: 8, 
+              border: '1px solid var(--button-border)', 
+              background: 'var(--button-bg)', 
+              color: 'var(--text)',
+              fontSize: 13,
+              width: 'fit-content',
+              cursor: 'pointer'
+            }}
+            onClick={() => {}}
+          >
+            修改登录密码
+          </button>
+        </div>
       </div>
     </div>
   )

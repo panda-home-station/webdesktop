@@ -174,13 +174,52 @@ export default function App() {
     const unSubLock = subscribeLockScreen(() => {
       setIsLocked(true)
     })
-
     return () => {
       window.removeEventListener('desktop:wallpaper', onWp)
       unSubLogout()
       unSubLock()
     }
   }, [])
+
+  // Idle timer logic
+  useEffect(() => {
+    let idleTimer: any = null
+    const resetIdleTimer = async () => {
+      if (idleTimer) clearTimeout(idleTimer)
+      
+      const settings = await api.getSecuritySettings()
+      const timeoutMinutes = settings.idle_timeout
+      
+      if (timeoutMinutes > 0 && user && !isLocked) {
+        idleTimer = setTimeout(() => {
+          const action = settings.idle_action
+          if (action === 'logout') {
+            api.logout()
+            clearPersistState()
+            setUser(null)
+          } else {
+            setIsLocked(true)
+          }
+        }, timeoutMinutes * 60 * 1000)
+      }
+    }
+
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart']
+    const handleActivity = () => {
+      resetIdleTimer()
+    }
+
+    activityEvents.forEach(ev => window.addEventListener(ev, handleActivity))
+    window.addEventListener('pnas:settings-changed', handleActivity)
+    
+    resetIdleTimer()
+
+    return () => {
+      activityEvents.forEach(ev => window.removeEventListener(ev, handleActivity))
+      window.removeEventListener('pnas:settings-changed', handleActivity)
+      if (idleTimer) clearTimeout(idleTimer)
+    }
+  }, [user, isLocked])
   const bgStyle = useMemo<React.CSSProperties>(() => {
     return {
       width: '100vw',

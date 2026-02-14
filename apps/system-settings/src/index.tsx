@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
-import { instance as axios } from '../../../src/api/client'
+import { instance as axios, api } from '../../../src/api/client'
 import { 
   Monitor,
   Users, 
@@ -16,7 +16,8 @@ import {
   Copy,
   Thermometer,
   Microchip,
-  MemoryStick
+  MemoryStick,
+  Lock,
 } from 'lucide-react'
 
 const TABS = [
@@ -547,3 +548,4 @@ function RemoteAccess() {
     </div>
   )
 }
+

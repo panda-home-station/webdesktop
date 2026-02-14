@@ -279,6 +279,25 @@ export const api = {
       return { ok: false }
     }
   },
+  async getSecuritySettings() {
+    try {
+      const r = await instance.get(`/api/user/security`)
+      return r.data as { idle_timeout: number; idle_action: 'lock' | 'logout' }
+    } catch {
+      return {
+        idle_timeout: Number(localStorage.getItem('pnas_idle_timeout')) || 0,
+        idle_action: (localStorage.getItem('pnas_idle_action') as 'lock' | 'logout') || 'lock'
+      }
+    }
+  },
+  async setSecuritySettings(settings: { idle_timeout: number; idle_action: string }) {
+    try {
+      await instance.post(`/api/user/security`, settings)
+      return { ok: true }
+    } catch {
+      return { ok: false }
+    }
+  },
   async fsList(path: string) {
     try {
       const r = await instance.get(`/api/docs/list`, { params: { path, limit: 200 } })
