@@ -4,7 +4,7 @@ import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
-import { QuickAgentDialog } from './agent/QuickAgentDialog'
+import { QuickAgentDialog } from './QuickAgentDialog'
 import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher, setAnimating } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
 

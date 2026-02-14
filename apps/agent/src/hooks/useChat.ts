@@ -53,20 +53,49 @@ export function useChat(initialMessages?: any[]) {
     scrollToBottom()
   }, [messages, isLoading])
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return
-    
-    abortControllerRef.current = new AbortController()
+  useEffect(() => {
+    if (initialMessages && initialMessages.length > 0) {
+      const lastMsg = initialMessages[initialMessages.length - 1];
+      if (lastMsg.role === 'user') {
+        // 只有当这是新消息时才发送
+        const isAlreadyProcessed = messages.some(m => m.id === lastMsg.id && m.role === 'assistant');
+        if (!isAlreadyProcessed) {
+          const exists = messages.find(m => m.id === lastMsg.id);
+          let userMsg = exists;
+          if (!exists) {
+            userMsg = {
+              ...lastMsg,
+              timestamp: lastMsg.timestamp ? new Date(lastMsg.timestamp) : new Date()
+            };
+            setMessages(prev => [...prev, userMsg!]);
+          }
+          processMessage(lastMsg.content, userMsg!);
+        }
+      }
+    }
+  }, [initialMessages]);
+
+  const handleSend = async (overrideContent?: string) => {
+    const content = overrideContent || input;
+    if (!content.trim() || isLoading) return
     
     const userMsg: Message = { 
       id: Date.now().toString(),
       role: 'user', 
-      content: input,
+      content: content,
       timestamp: new Date()
     }
     
+    if (!overrideContent) {
+      setInput('')
+    }
+    
     setMessages(prev => [...prev, userMsg])
-    setInput('')
+    await processMessage(content, userMsg);
+  }
+
+  const processMessage = async (content: string, userMsg: Message) => {
+    abortControllerRef.current = new AbortController()
     setIsLoading(true)
 
     // Dynamic workflow logic
@@ -94,7 +123,7 @@ export function useChat(initialMessages?: any[]) {
           { id: '4', label: '报告生成', status: 'pending' },
         ]
       })
-    } else if (selectedAgent.id === 'workflow-master' || input.includes('流程')) {
+    } else if (selectedAgent.id === 'workflow-master' || content.includes('流程')) {
       setActiveWorkflow({
         id: 'wf-' + Date.now(),
         title: '自动化分析流程',
@@ -112,12 +141,12 @@ export function useChat(initialMessages?: any[]) {
 
     try {
       let toolCalls: Message['toolCalls'] = undefined
-      if (input.toLowerCase().includes('搜索') || input.toLowerCase().includes('search')) {
-        toolCalls = [{ name: 'web_search', args: { query: input }, status: 'running' }]
-      } else if (input.toLowerCase().includes('文件') || input.toLowerCase().includes('file')) {
+      if (content.toLowerCase().includes('搜索') || content.toLowerCase().includes('search')) {
+        toolCalls = [{ name: 'web_search', args: { query: content }, status: 'running' }]
+      } else if (content.toLowerCase().includes('文件') || content.toLowerCase().includes('file')) {
         toolCalls = [{ name: 'file_system', args: { action: 'read' }, status: 'running' }]
-      } else if (input.toLowerCase().includes('命令') || input.toLowerCase().includes('run')) {
-        toolCalls = [{ name: 'terminal', args: { cmd: input }, status: 'running' }]
+      } else if (content.toLowerCase().includes('命令') || content.toLowerCase().includes('run')) {
+        toolCalls = [{ name: 'terminal', args: { cmd: content }, status: 'running' }]
       }
 
       let isToolExecuting = false;
@@ -134,7 +163,7 @@ export function useChat(initialMessages?: any[]) {
 
       const chatMessages = [
         { role: 'system', content: selectedAgent.systemPrompt },
-        ...messages.map(m => ({ role: m.role, content: m.content })),
+        ...messages.filter(m => m.id !== userMsg.id).map(m => ({ role: m.role, content: m.content })),
         { role: 'user', content: userMsg.content }
       ]
 
@@ -198,22 +227,25 @@ export function useChat(initialMessages?: any[]) {
 
       setActiveWorkflow(prev => {
         if (!prev) return null;
-        return { ...prev, status: 'completed', steps: prev.steps.map(s => ({ ...s, status: 'completed' })) };
+        const newSteps = [...prev.steps];
+        const runningIdx = newSteps.findIndex(s => s.status === 'running');
+        if (runningIdx !== -1) {
+          newSteps[runningIdx].status = 'completed';
+        }
+        return { ...prev, status: 'completed', steps: newSteps };
       });
 
-    } catch (error) {
-      if (!(error instanceof Error && error.name === 'AbortError')) {
-        console.error('Chat error:', error)
-        setMessages(prev => [...prev, {
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: '抱歉，连接服务时出现了点问题，请检查后端配置或稍后再试。',
-          timestamp: new Date()
-        }])
-      }
-    } finally {
-      setIsLoading(false)
-      abortControllerRef.current = null
+    } catch (error: any) {
+      if (error.name === 'AbortError') return;
+      console.error('Chat error:', error);
+      setMessages(prev => [...prev, { 
+        id: 'error-' + Date.now(), 
+        role: 'assistant', 
+        content: '抱歉，处理您的请求时出错了。', 
+        timestamp: new Date() 
+      }]);
+      setIsLoading(false);
+      setActiveWorkflow(prev => prev ? { ...prev, status: 'failed' } : null);
     }
   }
 

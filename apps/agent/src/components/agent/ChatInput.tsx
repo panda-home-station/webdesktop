@@ -13,6 +13,7 @@ interface ChatInputProps {
   onKeyDown?: (e: React.KeyboardEvent) => void
   containerStyles?: React.CSSProperties
   inputStyles?: React.CSSProperties
+  autoFocus?: boolean
 }
 
 export const ChatInput: React.FC<ChatInputProps> = ({
@@ -26,7 +27,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   showTools = false,
   onKeyDown,
   containerStyles = {},
-  inputStyles = {}
+  inputStyles = {},
+  autoFocus = false
 }) => {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (onKeyDown) {
@@ -74,6 +76,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 onChange={e => onChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
+                autoFocus={autoFocus}
                 style={{
                   flex: 1,
                   border: 'none',
@@ -112,6 +115,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 onChange={(e) => onChange(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder={placeholder}
+                autoFocus={autoFocus}
                 style={{
                   width: '100%',
                   border: 'none',
