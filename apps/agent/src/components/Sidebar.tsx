@@ -1,5 +1,5 @@
 import React from 'react'
-import { Plus, Layers, Box, Settings, ChevronLeft, ChevronRight, MessageSquare } from 'lucide-react'
+import { Plus, Layers, Box, Settings, ChevronLeft, ChevronRight, MessageSquare, Trash2 } from 'lucide-react'
 import { Agent, ChatSession } from '../types'
 import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, MOCK_AGENTS } from '../constants'
 
@@ -14,6 +14,7 @@ interface SidebarProps {
   history: ChatSession[]
   selectedSessionId: string | null
   loadSession: (sessionId: string) => void
+  onDeleteSession?: (sessionId: string) => void
   createNewChat: () => void
   isInitial?: boolean
 }
@@ -29,6 +30,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   history,
   selectedSessionId,
   loadSession,
+  onDeleteSession,
   createNewChat,
   isInitial
 }) => {
@@ -172,14 +174,46 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <MessageSquare size={16} />
               </div>
               {isSidebarOpen && (
-                <div style={{ flex: 1, overflow: 'hidden' }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#666', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.title}</div>
-                  <div style={{ fontSize: 11, color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.lastMessage}</div>
+                <div style={{ flex: 1, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: '#666', marginBottom: 2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.title}</div>
+                    <div style={{ fontSize: 11, color: '#aaa', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{session.lastMessage}</div>
+                  </div>
+                  <div 
+                    className="delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteSession?.(session.id);
+                    }}
+                    style={{
+                      padding: 4,
+                      borderRadius: 4,
+                      color: '#999',
+                      opacity: 0,
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.backgroundColor = '#fee2e2';
+                      e.currentTarget.style.color = '#ef4444';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = '#999';
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </div>
                 </div>
               )}
             </div>
           ))}
         </div>
+        <style dangerouslySetInnerHTML={{ __html: `
+          .delete-btn { opacity: 0; }
+          div:hover > .delete-btn { opacity: 1; }
+          /* Ensure the parent div hover triggers the child's opacity */
+          div[style*="cursor: pointer"]:hover .delete-btn { opacity: 1; }
+        `}} />
       </div>
 
       <div style={{ padding: '12px', borderTop: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', gap: 4 }}>

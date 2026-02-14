@@ -43,7 +43,10 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
     history,
     selectedSessionId,
     loadSession,
-    createNewChat
+    deleteSession,
+    createNewChat,
+    selectedTools,
+    toggleTool
   } = useChat(initialMessages)
 
   const saveSettings = () => {
@@ -137,6 +140,7 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
         history={history}
         selectedSessionId={selectedSessionId}
         loadSession={loadSession}
+        onDeleteSession={deleteSession}
         createNewChat={createNewChat}
         isInitial={isInitial}
       />
@@ -155,6 +159,8 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
         setIsSidebarOpen={setIsSidebarOpen}
         isWorkspaceOpen={isWorkspaceOpen}
         toggleWorkspace={toggleWorkspace}
+        selectedTools={selectedTools}
+        onToggleTool={toggleTool}
       />
 
       {/* Resizer Handle */}

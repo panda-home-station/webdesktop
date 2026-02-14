@@ -11,6 +11,8 @@ interface ChatInputProps {
   placeholder?: string
   showTools?: boolean
   showActionBar?: boolean
+  selectedTools?: string[]
+  onToggleTool?: (toolId: string) => void
   onKeyDown?: (e: React.KeyboardEvent) => void
   containerStyles?: React.CSSProperties
   inputStyles?: React.CSSProperties
@@ -28,6 +30,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   placeholder = "输入您的问题...",
   showTools = false,
   showActionBar = true,
+  selectedTools = [],
+  onToggleTool,
   onKeyDown,
   containerStyles = {},
   inputStyles = {},
@@ -161,9 +165,36 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   }}>
                     {showTools && (
                       <>
-                        <Globe size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
-                        <Box size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
-                        <Terminal size={18} style={{ cursor: 'pointer', flexShrink: 0 }} />
+                        <Globe 
+                          size={18} 
+                          style={{ 
+                            cursor: 'pointer', 
+                            flexShrink: 0,
+                            color: selectedTools.includes('web_search') ? '#3b82f6' : '#999' 
+                          }} 
+                          onClick={() => onToggleTool?.('web_search')}
+                          title="联网搜索"
+                        />
+                        <Box 
+                          size={18} 
+                          style={{ 
+                            cursor: 'pointer', 
+                            flexShrink: 0,
+                            color: selectedTools.includes('file_system') ? '#3b82f6' : '#999' 
+                          }} 
+                          onClick={() => onToggleTool?.('file_system')}
+                          title="文件系统"
+                        />
+                        <Terminal 
+                          size={18} 
+                          style={{ 
+                            cursor: 'pointer', 
+                            flexShrink: 0,
+                            color: selectedTools.includes('terminal') ? '#3b82f6' : '#999' 
+                          }} 
+                          onClick={() => onToggleTool?.('terminal')}
+                          title="终端执行"
+                        />
                       </>
                     )}
                   </div>

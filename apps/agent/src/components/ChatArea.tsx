@@ -18,6 +18,8 @@ interface ChatAreaProps {
   setIsSidebarOpen: (open: boolean) => void
   isWorkspaceOpen: boolean
   toggleWorkspace: () => void
+  selectedTools: string[]
+  onToggleTool: (toolId: string) => void
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -32,7 +34,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isSidebarOpen,
   setIsSidebarOpen,
   isWorkspaceOpen,
-  toggleWorkspace
+  toggleWorkspace,
+  selectedTools,
+  onToggleTool
 }) => {
   return (
     <div style={{
@@ -210,6 +214,8 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         isCompact={false}
         placeholder={`给 ${selectedAgent.name} 发送消息...`}
         showTools={true}
+        selectedTools={selectedTools}
+        onToggleTool={onToggleTool}
         onKeyDown={handleKeyDown}
       />
     </div>

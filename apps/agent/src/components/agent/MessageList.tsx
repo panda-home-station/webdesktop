@@ -39,10 +39,6 @@ export const MessageList: React.FC<MessageListProps> = ({
     return () => cancelAnimationFrame(rafId)
   }, [messages, isLoading])
 
-  if (messages.length === 0 && emptyState) {
-    return <>{emptyState}</>
-  }
-
   return (
     <div 
       ref={containerRef}
@@ -54,53 +50,57 @@ export const MessageList: React.FC<MessageListProps> = ({
         flexDirection: 'column',
         backgroundColor: '#fff'
       }} className="custom-scrollbar">
-      <div style={{ 
-        width: '100%', 
-        maxWidth: isCompact ? 'none' : 'min(92%, 800px)',
-        margin: '0 auto'
-      }}>
-        {messages.map(m => (
-          <MessageItem 
-            key={m.id} 
-            message={m} 
-            isCompact={isCompact}
-            {...messageItemProps}
-          />
-        ))}
-        
-        {isLoading && renderLoading && renderLoading()}
-        
-        {isLoading && !renderLoading && (
-          <div style={{ display: 'flex', gap: isCompact ? 10 : 12, marginBottom: isCompact ? 16 : 32 }}>
-            <div style={{
-              width: isCompact ? 28 : 32,
-              height: isCompact ? 28 : 32,
-              borderRadius: isCompact ? 8 : 10,
-              backgroundColor: isCompact ? '#f3f4f6' : '#f0f7ff',
-              color: '#3b82f6',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <Bot size={16} />
+      {messages.length === 0 && emptyState ? (
+        emptyState
+      ) : (
+        <div style={{ 
+          width: '100%', 
+          maxWidth: isCompact ? 'none' : 'min(92%, 800px)',
+          margin: '0 auto'
+        }}>
+          {messages.map(m => (
+            <MessageItem 
+              key={m.id} 
+              message={m} 
+              isCompact={isCompact}
+              {...messageItemProps}
+            />
+          ))}
+          
+          {isLoading && renderLoading && renderLoading()}
+          
+          {isLoading && !renderLoading && (
+            <div style={{ display: 'flex', gap: isCompact ? 10 : 12, marginBottom: isCompact ? 16 : 32 }}>
+              <div style={{
+                width: isCompact ? 28 : 32,
+                height: isCompact ? 28 : 32,
+                borderRadius: isCompact ? 8 : 10,
+                backgroundColor: isCompact ? '#f3f4f6' : '#f0f7ff',
+                color: '#3b82f6',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Bot size={16} />
+              </div>
+              <div style={{ 
+                padding: '8px 12px', 
+                borderRadius: isCompact ? 12 : '4px 16px 16px 16px', 
+                backgroundColor: isCompact ? '#f3f4f6' : '#f9f9f9',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}>
+                <div className="dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#3b82f6', animation: 'bounce 1s infinite 0.1s' }}></div>
+                <div className="dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#3b82f6', animation: 'bounce 1s infinite 0.2s' }}></div>
+                <div className="dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#3b82f6', animation: 'bounce 1s infinite 0.3s' }}></div>
+              </div>
             </div>
-            <div style={{ 
-              padding: '8px 12px', 
-              borderRadius: isCompact ? 12 : '4px 16px 16px 16px', 
-              backgroundColor: isCompact ? '#f3f4f6' : '#f9f9f9',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4
-            }}>
-              <div className="dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#3b82f6', animation: 'bounce 1s infinite 0.1s' }}></div>
-              <div className="dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#3b82f6', animation: 'bounce 1s infinite 0.2s' }}></div>
-              <div className="dot-pulse" style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#3b82f6', animation: 'bounce 1s infinite 0.3s' }}></div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      )}
       <style>{`
         @keyframes bounce {
           0%, 100% { transform: translateY(0); }

@@ -16,9 +16,10 @@ export function useChat(initialMessages?: any[]) {
   const [isLoading, setIsLoading] = useState(false)
   const abortControllerRef = useRef<AbortController | null>(null)
   const [selectedAgent, setSelectedAgent] = useState<Agent>(MOCK_AGENTS[0])
-  const [history, setHistory] = useState<ChatSession[]>(MOCK_HISTORY)
+  const [history, setHistory] = useState<ChatSession[]>([])
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [activeWorkflow, setActiveWorkflow] = useState<AgentWorkflow | null>(null)
+  const [selectedTools, setSelectedTools] = useState<string[]>([])
   const [tasks, setTasks] = useState<AgentTask[]>([
     { id: '1', title: '分析项目结构', status: 'completed', createdAt: new Date() },
     { id: '2', title: '实现三栏布局 UI', status: 'in_progress', createdAt: new Date() },
@@ -28,18 +29,81 @@ export function useChat(initialMessages?: any[]) {
   const [apiEndpoint, setApiEndpoint] = useState(() => localStorage.getItem('agent_api_endpoint') || 'http://192.168.1.189:11434')
   const [apiModel, setApiModel] = useState(() => localStorage.getItem('agent_api_model') || 'qwen3:14b')
   
+  const fetchSessions = async () => {
+    try {
+      const resp = await fetch('/api/agent/sessions', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+        }
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setHistory(data.map((s: any) => ({
+          ...s,
+          timestamp: new Date(s.updated_at),
+          lastMessage: s.last_message, // Map backend last_message to frontend camelCase
+          agentId: s.agent_id,
+          messages: [] 
+        })));
+      }
+    } catch (e) {
+      console.error('Failed to fetch sessions:', e);
+    }
+  }
+
+  useEffect(() => {
+    fetchSessions();
+  }, []);
 
   const scrollToBottom = () => {
     // 已经通过 MessageList 组件内部处理滚动，这里保持空实现或移除
   }
 
-  const loadSession = (sessionId: string) => {
-    const session = history.find(s => s.id === sessionId)
-    if (session) {
-      setMessages(session.messages)
-      setSelectedSessionId(sessionId)
-      const agent = MOCK_AGENTS.find(a => a.id === session.agentId)
-      if (agent) setSelectedAgent(agent)
+  const loadSession = async (sessionId: string) => {
+    try {
+      setIsLoading(true);
+      setMessages([]); // Clear current messages while loading
+      const resp = await fetch(`/api/agent/sessions/${sessionId}/messages`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+        }
+      });
+      if (resp.ok) {
+        const messagesData = await resp.json();
+        const session = history.find(s => s.id === sessionId);
+        const agent = session ? MOCK_AGENTS.find(a => a.id === session.agentId) : MOCK_AGENTS[0];
+        
+        setMessages(messagesData.map((m: any) => ({
+          ...m,
+          timestamp: new Date(m.created_at),
+          toolCalls: m.tool_calls // Map snake_case to camelCase
+        })));
+        setSelectedSessionId(sessionId);
+        if (agent) setSelectedAgent(agent);
+      }
+    } catch (e) {
+      console.error('Failed to load session:', e);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const deleteSession = async (sessionId: string) => {
+    try {
+      const resp = await fetch(`/api/agent/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+        }
+      });
+      if (resp.ok) {
+        setHistory(prev => prev.filter(s => s.id !== sessionId));
+        if (selectedSessionId === sessionId) {
+          createNewChat();
+        }
+      }
+    } catch (e) {
+      console.error('Failed to delete session:', e);
     }
   }
 
@@ -47,6 +111,15 @@ export function useChat(initialMessages?: any[]) {
     setMessages([])
     setSelectedSessionId(null)
     setSelectedAgent(MOCK_AGENTS[0])
+    setSelectedTools([])
+  }
+
+  const toggleTool = (toolId: string) => {
+    setSelectedTools(prev => 
+      prev.includes(toolId) 
+        ? prev.filter(id => id !== toolId) 
+        : [...prev, toolId]
+    )
   }
 
   useEffect(() => {
@@ -79,6 +152,43 @@ export function useChat(initialMessages?: any[]) {
     const content = overrideContent || input;
     if (!content.trim() || isLoading) return
     
+    let sessionId = selectedSessionId;
+    
+    // Create new session if none selected
+    if (!sessionId) {
+      try {
+        const title = content.length > 20 ? content.slice(0, 20) + '...' : content;
+        const resp = await fetch('/api/agent/sessions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+          },
+          body: JSON.stringify({
+            agent_id: selectedAgent.id,
+            title: title
+          })
+        });
+        if (resp.ok) {
+          const session = await resp.json();
+          sessionId = session.id;
+          setSelectedSessionId(sessionId);
+          
+          // Add the new session to history immediately
+          setHistory(prev => [{
+            id: session.id,
+            title: session.title,
+            agentId: session.agent_id,
+            lastMessage: content,
+            timestamp: new Date(session.updated_at),
+            messages: []
+          }, ...prev]);
+        }
+      } catch (e) {
+        console.error('Failed to create session:', e);
+      }
+    }
+
     const userMsg: Message = { 
       id: Date.now().toString(),
       role: 'user', 
@@ -91,10 +201,10 @@ export function useChat(initialMessages?: any[]) {
     }
     
     setMessages(prev => [...prev, userMsg])
-    await processMessage(content, userMsg);
+    await processMessage(content, userMsg, sessionId);
   }
 
-  const processMessage = async (content: string, userMsg: Message) => {
+  const processMessage = async (content: string, userMsg: Message, sessionId: string | null) => {
     abortControllerRef.current = new AbortController()
     setIsLoading(true)
 
@@ -141,28 +251,103 @@ export function useChat(initialMessages?: any[]) {
 
     try {
       let toolCalls: Message['toolCalls'] = undefined
-      if (content.toLowerCase().includes('搜索') || content.toLowerCase().includes('search')) {
-        toolCalls = [{ name: 'web_search', args: { query: content }, status: 'running' }]
-      } else if (content.toLowerCase().includes('文件') || content.toLowerCase().includes('file')) {
+      const isSearchIntent = selectedTools.includes('web_search') || 
+                            content.toLowerCase().includes('搜索') || 
+                            content.toLowerCase().includes('search') || 
+                            content.toLowerCase().includes('联网') ||
+                            selectedAgent.id === 'researcher';
+
+      if (isSearchIntent) {
+        // Try to extract search query if it's a long message, otherwise use the whole thing
+        const query = content.length > 50 ? content.slice(0, 50) : content;
+        toolCalls = [{ name: 'web_search', args: { query }, status: 'running' }]
+      } else if (selectedTools.includes('file_system') || content.toLowerCase().includes('文件') || content.toLowerCase().includes('file')) {
         toolCalls = [{ name: 'file_system', args: { action: 'read' }, status: 'running' }]
-      } else if (content.toLowerCase().includes('命令') || content.toLowerCase().includes('run')) {
+      } else if (selectedTools.includes('terminal') || content.toLowerCase().includes('命令') || content.toLowerCase().includes('run')) {
         toolCalls = [{ name: 'terminal', args: { cmd: content }, status: 'running' }]
       }
 
+      // Reset selected tools after use
+      setSelectedTools([])
+
       let isToolExecuting = false;
+      let searchResults = '';
       if (toolCalls) {
         isToolExecuting = true;
+        const toolMsgId = 'tool-executing';
         setMessages(prev => [...prev, {
-          id: 'tool-executing',
+          id: toolMsgId,
           role: 'assistant',
           content: '正在调用工具处理您的请求...',
           timestamp: new Date(),
           toolCalls
         }])
+
+      // If it's a web search, actually perform it
+      const searchCall = toolCalls.find(tc => tc.name === 'web_search');
+      if (searchCall) {
+        try {
+          const searchResp = await fetch('/api/agent/search', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+            },
+            body: JSON.stringify({ q: searchCall.args.query })
+          });
+          if (searchResp.ok) {
+            const results = await searchResp.json();
+            if (Array.isArray(results) && results.length > 0) {
+              searchResults = results.map((r: any) => `标题: ${r.title}\n链接: ${r.link}\n摘要: ${r.snippet}`).join('\n\n');
+              
+              const assistantContent = `已为您找到以下搜索结果：\n\n${searchResults.slice(0, 500)}...`;
+              
+              setMessages(prev => prev.map(m => 
+                m.id === toolMsgId ? { 
+                  ...m, 
+                  content: assistantContent,
+                  toolCalls: m.toolCalls?.map(tc => tc.name === 'web_search' ? { ...tc, status: 'completed', result: JSON.stringify(results) } : tc)
+                } : m
+              ));
+
+              // Save tool result to history
+              if (sessionId) {
+                fetch(`/api/agent/sessions/${sessionId}/messages`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                  },
+                  body: JSON.stringify({
+                    role: 'assistant',
+                    content: assistantContent,
+                    tool_calls: toolCalls?.map(tc => tc.name === 'web_search' ? { ...tc, status: 'completed', result: JSON.stringify(results) } : tc)
+                  })
+                }).then(() => {
+                  // 更新侧边栏预览
+                  setHistory(prev => prev.map(s => 
+                    s.id === sessionId ? { ...s, lastMessage: assistantContent, timestamp: new Date() } : s
+                  ));
+                }).catch(e => console.error('Failed to save tool message:', e));
+              }
+            } else {
+                setMessages(prev => prev.map(m => 
+                  m.id === toolMsgId ? { 
+                    ...m, 
+                    content: '未找到相关搜索结果。',
+                    toolCalls: m.toolCalls?.map(tc => tc.name === 'web_search' ? { ...tc, status: 'completed', result: '[]' } : tc)
+                  } : m
+                ));
+              }
+            }
+          } catch (e) {
+            console.error('Search failed:', e);
+          }
+        }
       }
 
       const chatMessages = [
-        { role: 'system', content: selectedAgent.systemPrompt },
+        { role: 'system', content: selectedAgent.systemPrompt + (searchResults ? `\n\n以下是相关的搜索结果，请参考这些信息回答用户的问题：\n${searchResults}` : '') },
         ...messages.filter(m => m.id !== userMsg.id).map(m => ({ role: m.role, content: m.content })),
         { role: 'user', content: userMsg.content }
       ]
@@ -176,7 +361,8 @@ export function useChat(initialMessages?: any[]) {
         body: JSON.stringify({
           messages: chatMessages,
           model: apiModel,
-          endpoint: apiEndpoint
+          endpoint: apiEndpoint,
+          session_id: sessionId
         }),
         signal: abortControllerRef.current?.signal
       });
@@ -187,7 +373,8 @@ export function useChat(initialMessages?: any[]) {
       if (!reader) throw new Error('No reader available');
 
       if (isToolExecuting) {
-        setMessages(prev => prev.filter(m => m.id !== 'tool-executing'))
+        // Keep search results in history by giving it a unique ID
+        setMessages(prev => prev.map(m => m.id === 'tool-executing' ? { ...m, id: 'tool-' + Date.now() } : m))
         setIsLoading(false)
         setActiveWorkflow(prev => {
           if (!prev) return null;
@@ -210,7 +397,28 @@ export function useChat(initialMessages?: any[]) {
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          // Save assistant message to history if session exists
+    if (sessionId && fullContent) {
+      fetch(`/api/agent/sessions/${sessionId}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+        },
+        body: JSON.stringify({
+          role: 'assistant',
+          content: fullContent
+        })
+      }).then(() => {
+        // 更新侧边栏预览
+        setHistory(prev => prev.map(s => 
+          s.id === sessionId ? { ...s, lastMessage: fullContent, timestamp: new Date() } : s
+        ));
+      }).catch(e => console.error('Failed to save assistant message:', e));
+    }
+          break;
+        }
 
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
@@ -283,6 +491,8 @@ export function useChat(initialMessages?: any[]) {
     history,
     selectedSessionId,
     loadSession,
-    createNewChat
+    createNewChat,
+    selectedTools,
+    toggleTool
   }
 }
