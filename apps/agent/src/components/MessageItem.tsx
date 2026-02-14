@@ -25,13 +25,14 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   const isUser = message.role === 'user'
   
   const defaultUserStyles: React.CSSProperties = {
-    backgroundColor: '#3b82f6',
-    color: '#fff',
+    backgroundColor: '#e3f2fd',
+    color: '#1a73e8',
     borderRadius: '12px 2px 12px 12px',
     padding: '8px 12px',
-    fontSize: '14px',
-    lineHeight: 1.5,
+    fontSize: '15px',
+    lineHeight: '1.5',
     wordBreak: 'break-word',
+    border: '1px solid #bbdefb',
     ...userStyles
   }
 
@@ -40,8 +41,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
     color: '#1f2937',
     borderRadius: '2px 12px 12px 12px',
     padding: '8px 12px',
-    fontSize: '14px',
-    lineHeight: 1.5,
+    fontSize: '15px',
+    lineHeight: '1.5',
     wordBreak: 'break-word',
     ...assistantStyles
   }
@@ -78,7 +79,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         flexDirection: 'column', 
         gap: 8, 
         maxWidth: isCompact ? '80%' : '85%',
-        alignItems: isUser ? 'flex-end' : 'flex-start' 
+        alignItems: isUser ? 'flex-end' : 'flex-start',
+        lineHeight: '1.5'
       }}>
         <div style={currentStyles}>
           <MarkdownContent content={message.content} color={currentStyles.color as string} />

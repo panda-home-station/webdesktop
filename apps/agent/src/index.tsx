@@ -92,21 +92,25 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
           transform: translateX(4px);
         }
         .custom-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .custom-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
+          width: 12px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e0e0e0;
+          background: #d1d5db;
           border-radius: 10px;
+          border: 2px solid transparent;
+          background-clip: content-box;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #d0d0d0;
+          background: #9ca3af;
+          border: 2px solid transparent;
+          background-clip: content-box;
+        }
+        .custom-scrollbar {
+          scrollbar-width: auto;
+          scrollbar-color: #d1d5db transparent;
         }
         .responsive-content {
           width: 100%;

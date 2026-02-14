@@ -57,7 +57,8 @@ export const MessageList: React.FC<MessageListProps> = ({
         <div style={{ 
           width: '100%', 
           maxWidth: isCompact ? 'none' : 'min(92%, 800px)',
-          margin: '0 auto'
+          margin: '0 auto',
+          lineHeight: '1.5'
         }}>
           {messages.map(m => (
             <MessageItem 

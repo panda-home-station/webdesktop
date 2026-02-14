@@ -386,38 +386,53 @@ export function useChat(initialMessages?: any[]) {
 
       const decoder = new TextDecoder();
       let fullContent = '';
+      let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
           // Save assistant message to history if session exists
-    if (sessionId && fullContent) {
-      fetch(`/api/agent/sessions/${sessionId}/messages`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-        },
-        body: JSON.stringify({
-          role: 'assistant',
-          content: fullContent
-        })
-      }).then(() => {
-        // 更新侧边栏预览
-        setHistory(prev => prev.map(s => 
-          s.id === sessionId ? { ...s, lastMessage: fullContent, timestamp: new Date() } : s
-        ));
-      }).catch(e => console.error('Failed to save assistant message:', e));
-    }
+          if (sessionId && fullContent) {
+            fetch(`/api/agent/sessions/${sessionId}/messages`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+              },
+              body: JSON.stringify({
+                role: 'assistant',
+                content: fullContent
+              })
+            }).then(() => {
+              // 更新侧边栏预览
+              setHistory(prev => prev.map(s => 
+                s.id === sessionId ? { ...s, lastMessage: fullContent, timestamp: new Date() } : s
+              ));
+            }).catch(e => console.error('Failed to save assistant message:', e));
+          }
           break;
         }
 
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const content = line.slice(6);
-            fullContent += content;
+            const dataStr = line.slice(6);
+            try {
+              // 尝试解析 JSON 格式的内容（新后端格式）
+              const data = JSON.parse(dataStr);
+              if (data && typeof data.content === 'string') {
+                fullContent += data.content;
+              } else {
+                fullContent += dataStr;
+              }
+            } catch (e) {
+              // 如果不是 JSON，回退到原始字符串解析（兼容旧后端或非标准 SSE）
+              fullContent += dataStr;
+            }
+            
             setMessages(prev => prev.map(m => 
               m.id === assistantMsgId ? { ...m, content: fullContent } : m
             ));

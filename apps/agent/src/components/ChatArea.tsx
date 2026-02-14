@@ -135,17 +135,19 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         isCompact={false}
         messageItemProps={{
           userStyles: {
-            backgroundColor: '#000',
-            color: '#fff',
+            backgroundColor: '#e3f2fd',
+            color: '#1a73e8',
             borderRadius: '16px 4px 16px 16px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-            border: 'none'
+            border: '1px solid #bbdefb',
+            lineHeight: '1.5'
           },
           assistantStyles: {
             backgroundColor: '#f9f9f9',
             color: '#1a1a1a',
             borderRadius: '4px 16px 16px 16px',
-            border: '1px solid #f0f0f0'
+            border: '1px solid #f0f0f0',
+            lineHeight: '1.5',
+            width: '100%'
           },
           availableTools: AVAILABLE_TOOLS
         }}
