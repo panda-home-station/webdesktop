@@ -5,7 +5,7 @@ import InitForm from './components/InitForm'
 import LockScreen from './components/LockScreen'
 import { getWallpaper } from './state/desktop'
 import { api } from './api/client'
-import { subscribeLogout, subscribeLockScreen } from './sdk/desktop'
+import { subscribeLogout, subscribeLockScreen, getFileTasks } from './sdk/desktop'
 import { clearPersistState } from './state/windows'
 
 function SmoothWallpaper({ src }: { src?: string }) {
@@ -184,39 +184,82 @@ export default function App() {
   // Idle timer logic
   useEffect(() => {
     let idleTimer: any = null
-    const resetIdleTimer = async () => {
-      if (idleTimer) clearTimeout(idleTimer)
-      
-      const settings = await api.getSecuritySettings()
-      const timeoutMinutes = settings.idle_timeout
-      
-      if (timeoutMinutes > 0 && user && !isLocked) {
-        idleTimer = setTimeout(() => {
-          const action = settings.idle_action
-          if (action === 'logout') {
-            api.logout()
-            clearPersistState()
-            setUser(null)
-          } else {
-            setIsLocked(true)
-          }
-        }, timeoutMinutes * 60 * 1000)
+    let settings: { idle_timeout: number; idle_action: 'lock' | 'logout' } | null = null
+    
+    const fetchSettings = async () => {
+      try {
+        settings = await api.getSecuritySettings()
+      } catch (e) {
+        console.error('Failed to fetch security settings', e)
       }
     }
 
-    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart']
-    const handleActivity = () => {
-      resetIdleTimer()
+    const checkAndPerformAction = async () => {
+      if (!settings || settings.idle_timeout <= 0 || !user || isLocked) return
+
+      // Check for active foreground tasks
+      // 1. Local file tasks (upload/download/delete/mkdir)
+      const localTasks = getFileTasks()
+      const hasActiveLocalTasks = localTasks.some(t => t.status === 'running' || t.status === 'pending')
+      
+      if (hasActiveLocalTasks) {
+        restartTimer()
+        return
+      }
+
+      // 2. Remote download tasks
+      try {
+        const remoteTasks = await api.listDownloads()
+        const hasActiveRemoteTasks = remoteTasks.some((t: any) => t.status === 'downloading' || t.status === 'pending')
+        
+        if (hasActiveRemoteTasks) {
+          restartTimer()
+          return
+        }
+      } catch (e) {
+        // If API fails, we continue with the idle action for security, 
+        // but we've already checked local tasks which covers most "foreground" activity.
+      }
+
+      // No active tasks, perform idle action
+      const action = settings.idle_action
+      if (action === 'logout') {
+        api.logout()
+        clearPersistState()
+        setUser(null)
+      } else {
+        setIsLocked(true)
+      }
     }
 
-    activityEvents.forEach(ev => window.addEventListener(ev, handleActivity))
-    window.addEventListener('pnas:settings-changed', handleActivity)
-    
-    resetIdleTimer()
+    const restartTimer = () => {
+      if (idleTimer) clearTimeout(idleTimer)
+      if (settings && settings.idle_timeout > 0 && user && !isLocked) {
+        idleTimer = setTimeout(checkAndPerformAction, settings.idle_timeout * 60 * 1000)
+      }
+    }
 
+    const onActivity = () => {
+      restartTimer()
+    }
+
+    const onSettingsChanged = async () => {
+      await fetchSettings()
+      restartTimer()
+    }
+
+    const activityEvents = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart']
+    
+    fetchSettings().then(() => {
+      restartTimer()
+    })
+
+    activityEvents.forEach(ev => window.addEventListener(ev, onActivity))
+    window.addEventListener('pnas:settings-changed', onSettingsChanged)
+    
     return () => {
-      activityEvents.forEach(ev => window.removeEventListener(ev, handleActivity))
-      window.removeEventListener('pnas:settings-changed', handleActivity)
+      activityEvents.forEach(ev => window.removeEventListener(ev, onActivity))
+      window.removeEventListener('pnas:settings-changed', onSettingsChanged)
       if (idleTimer) clearTimeout(idleTimer)
     }
   }, [user, isLocked])
