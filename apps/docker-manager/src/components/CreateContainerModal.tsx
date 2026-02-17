@@ -131,6 +131,8 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
   const [activeTab, setActiveTab] = useState('ports')
   const [editingVolumeIndex, setEditingVolumeIndex] = useState<number | null>(null)
   const [portResults, setPortResults] = useState<Record<string, { in_use: boolean, error?: string }>>({})
+  const [showParseCommandModal, setShowParseCommandModal] = useState(false)
+  const [commandInput, setCommandInput] = useState('')
 
   useEffect(() => {
     if (props.step === 3 && props.ports.length > 0) {
@@ -149,6 +151,95 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
     }
   }, [props.step, props.ports])
 
+  const parseCommandLine = () => {
+    const command = commandInput.trim()
+    if (!command) return
+
+    const newPorts: { host: string, container: string }[] = []
+    const newVolumes: { host: string, container: string, perm: string }[] = []
+    const newEnvVars: { key: string, value: string }[] = []
+
+    // Regex to find -p, -v, -e flags and their values
+    // Matches -p 80:80, -v /host:/container, -e KEY=VALUE
+    const portRegex = /-p\s+([0-9.]+\:)?[0-9.]+(\/tcp|\/udp)?/g
+    const volumeRegex = /-v\s+(\S+):(\S+)(?::(ro|rw))?/g
+    const envRegex = /-e\s+([^=\s]+=[^\s]+)/g
+
+    let match
+
+    // Parse ports
+    while ((match = portRegex.exec(command)) !== null) {
+      const portMapping = match[0].substring(3).trim()
+      const parts = portMapping.split(':')
+      if (parts.length === 2) {
+        newPorts.push({ host: parts[0].split('/')[0], container: parts[1].split('/')[0] })
+      } else if (parts.length === 1) {
+        newPorts.push({ host: parts[0].split('/')[0], container: parts[0].split('/')[0] })
+      }
+    }
+
+    // Parse volumes
+    while ((match = volumeRegex.exec(command)) !== null) {
+      const [, host, container, perm] = match
+      newVolumes.push({ host, container, perm: perm || 'rw' })
+    }
+
+    // Parse environment variables
+    while ((match = envRegex.exec(command)) !== null) {
+      const envVar = match[1]
+      const parts = envVar.split('=')
+      if (parts.length >= 2) {
+        const key = parts[0]
+        const value = parts.slice(1).join('=')
+        newEnvVars.push({ key, value })
+      }
+    }
+
+    // Merge ports
+    if (newPorts.length > 0) {
+      const mergedPorts = [...props.ports]
+      newPorts.forEach(parsedPort => {
+        const existingPortIndex = mergedPorts.findIndex(p => p.container === parsedPort.container)
+        if (existingPortIndex !== -1) {
+          mergedPorts[existingPortIndex] = parsedPort // Override existing port
+        } else {
+          mergedPorts.push(parsedPort) // Add new port
+        }
+      })
+      props.setPorts(mergedPorts)
+    }
+
+    // Merge volumes
+    if (newVolumes.length > 0) {
+      const mergedVolumes = [...props.volumes]
+      newVolumes.forEach(parsedVolume => {
+        const existingVolumeIndex = mergedVolumes.findIndex(v => v.container === parsedVolume.container)
+        if (existingVolumeIndex !== -1) {
+          mergedVolumes[existingVolumeIndex] = parsedVolume // Override existing volume
+        } else {
+          mergedVolumes.push(parsedVolume) // Add new volume
+        }
+      })
+      props.setVolumes(mergedVolumes)
+    }
+
+    // Merge environment variables
+    if (newEnvVars.length > 0) {
+      const mergedEnvVars = [...props.envVars]
+      newEnvVars.forEach(parsedEnv => {
+        const existingEnvIndex = mergedEnvVars.findIndex(env => env.key === parsedEnv.key)
+        if (existingEnvIndex !== -1) {
+          mergedEnvVars[existingEnvIndex] = parsedEnv // Override existing env var
+        } else {
+          mergedEnvVars.push(parsedEnv) // Add new env var
+        }
+      })
+      props.setEnvVars(mergedEnvVars)
+    }
+    setShowParseCommandModal(false)
+    setCommandInput('') // Clear input after parsing
+  }
+
   if (!props.image) return null
 
   const footer = (
@@ -161,7 +252,15 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
          >
            上一步
          </button>
-       ) : <div />}
+       ) : (
+         <button
+           onClick={() => setShowParseCommandModal(true)}
+           style={{ ...iOSButtonStyle('default'), opacity: props.creating ? 0.5 : 1, cursor: props.creating ? 'not-allowed' : 'pointer' }}
+           disabled={props.creating}
+         >
+           从命令行解析
+         </button>
+       )}
        
        <div style={{ display: 'flex', gap: 12 }}>
          <button 
@@ -764,6 +863,40 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
         }}
       />
       
+      <Modal
+        open={showParseCommandModal}
+        onClose={() => setShowParseCommandModal(false)}
+        title="从命令行解析参数"
+        width={500}
+        footer={(
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12, width: '100%' }}>
+            <button
+              onClick={() => {
+                setShowParseCommandModal(false)
+                setCommandInput('')
+              }}
+              style={iOSButtonStyle('default')}
+            >
+              取消
+            </button>
+            <button
+              onClick={parseCommandLine}
+              style={iOSButtonStyle('primary')}
+            >
+              解析
+            </button>
+          </div>
+        )}
+      >
+        <div style={{ padding: '10px 0' }}>
+          <textarea
+            style={{ ...inputStyle, height: 120, resize: 'none', padding: '8px 12px' }}
+            placeholder="粘贴 Docker 或 Podman 命令行，例如：docker run -p 80:80 -v /host:/container -e KEY=VALUE image_name"
+            value={commandInput}
+            onChange={e => setCommandInput(e.target.value)}
+          />
+        </div>
+      </Modal>
     </Modal>
   )
 }
