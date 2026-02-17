@@ -83,7 +83,7 @@ export default function DockerManager() {
   const [ports, setPorts] = useState<{ host: string, container: string }[]>([])
   const [newHostPort, setNewHostPort] = useState('')
   const [newContainerPort, setNewContainerPort] = useState('')
-  const [volumes, setVolumes] = useState<{ host: string, container: string }[]>([])
+  const [volumes, setVolumes] = useState<{ host: string, container: string, perm: string }[]>([])
   const [newHostPath, setNewHostPath] = useState('')
   const [newContainerPath, setNewContainerPath] = useState('')
   const [envVars, setEnvVars] = useState<{ key: string, value: string }[]>([])
@@ -245,7 +245,7 @@ export default function DockerManager() {
     setPorts(initialPorts)
 
     // Pre-fill volumes from image
-    const initialVolumes = img.volumes?.map(v => ({ host: '', container: v })) || []
+    const initialVolumes = img.volumes?.map(v => ({ host: '', container: v, perm: '' })) || []
     setVolumes(initialVolumes)
 
     // Pre-fill env vars from image
@@ -279,7 +279,7 @@ export default function DockerManager() {
       memory_limit: enableResourceLimit ? memoryLimit : undefined,
       auto_start: autoStart,
       ports: ports.length > 0 ? ports : undefined,
-      volumes: volumes.length > 0 ? volumes.map(v => `${v.host}:${v.container}`) : undefined,
+      volumes: volumes.length > 0 ? volumes.map(v => `${v.host}:${v.container}${v.perm ? ':' + v.perm : ''}`) : undefined,
       env: envVars.length > 0 ? envVars.map(v => `${v.key}=${v.value}`) : undefined,
       gpu_id: selectedGpu || undefined,
       privileged: privileged,
@@ -335,7 +335,7 @@ export default function DockerManager() {
   }
 
   const onAddVolume = () => {
-    setVolumes([...volumes, { host: '', container: '' }])
+    setVolumes([...volumes, { host: '', container: '', perm: '' }])
   }
 
   const onRemoveVolume = (i: number) => {

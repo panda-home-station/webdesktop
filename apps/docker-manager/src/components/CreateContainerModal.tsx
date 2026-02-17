@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Image } from '../types'
-import { iOSButtonStyle, fmtImageName } from '../utils'
+import { fmtImageName, iOSButtonStyle } from '../utils'
 import { Modal } from '../../../../src/components/Modal'
 import { PathSelector } from './PathSelector'
 import { podmanApi } from '../api'
@@ -17,6 +17,7 @@ import {
   mdiHarddisk,
   mdiFormatListBulleted,
   mdiShieldAccount,
+
   mdiIpNetwork,
   mdiConsoleLine
 } from '@mdi/js'
@@ -45,7 +46,7 @@ interface CreateContainerModalProps {
   setNewContainerPort: (s: string) => void
   onAddPort: () => void
   onRemovePort: (i: number) => void
-  volumes: { host: string, container: string }[]
+  volumes: { host: string, container: string, perm: string }[]
   setVolumes: (v: any[]) => void
   newHostPath: string
   setNewHostPath: (s: string) => void
@@ -370,6 +371,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
                                     }}
                                     list={`exposed-ports-${i}`}
                                  />
+
                                  <datalist id={`exposed-ports-${i}`}>
                                    {exposedPorts.map(ep => <option key={ep} value={ep} />)}
                                  </datalist>
@@ -439,16 +441,17 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
                                     <Icon path={mdiFolderOutline} size={0.7} color="#8e8e93" />
                                   </button>
                                </div>
-                               <input 
-                                  style={{ ...inputStyle, height: 32, padding: '0 8px' }} 
-                                  placeholder="Container Path" 
-                                  value={v.container} 
-                                  onChange={e => {
-                                     const newVols = [...props.volumes]
-                                     newVols[i].container = e.target.value
-                                     props.setVolumes(newVols)
-                                  }}
-                               />
+              <input
+                style={{ ...inputStyle, height: 32, padding: '0 8px' }}
+                placeholder="Container Path"
+                value={v.container}
+                onChange={e => {
+                  const newVols = [...props.volumes]
+                  newVols[i].container = e.target.value
+                  props.setVolumes(newVols)
+                }}
+              />
+
                                <button onClick={() => props.onRemoveVolume(i)} style={{ color: '#8e8e93', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                   <Icon path={mdiClose} size="0.65" />
                                </button>
@@ -698,12 +701,11 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
                    </div>
                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
                       {props.volumes.map((v, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontFamily: 'monospace', background: '#eee', padding: '2px 6px', borderRadius: 4 }}>
-                            {v.host || <span style={{ fontStyle: 'italic', color: '#ccc' }}>未设置</span>}
-                          </span>
-                          <span style={{ color: '#8e8e93' }}>→</span>
-                          <span style={{ fontFamily: 'monospace' }}>{v.container}</span>
+                        <div key={i} style={{ ...itemRowStyle, borderBottom: i === props.volumes.length - 1 ? 'none' : '1px solid #f2f2f7' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Icon path={mdiHarddisk} size={0.7} color="#8e8e93" />
+                            <span style={{ fontFamily: 'monospace' }}>{`${v.host}:${v.container}${v.perm ? ':' + v.perm : ''}`}</span>
+                          </div>
                         </div>
                       ))}
                    </div>
@@ -761,6 +763,7 @@ export function CreateContainerModal(props: CreateContainerModalProps) {
           }
         }}
       />
+      
     </Modal>
   )
 }
