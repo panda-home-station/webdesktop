@@ -101,7 +101,13 @@ export default function DockerManager() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   // Confirmation State
-  const [confirmState, setConfirmState] = useState<{ type: 'start' | 'stop' | 'delete' | 'restart' | 'deleteImage', id: string, extra?: any } | null>(null)
+  const [confirmState, setConfirmState] = useState<{ type: 'start' | 'stop' | 'delete' | 'restart' | 'deleteImage' | 'deleteVolume', id: string, extra?: any } | null>(null)
+
+  const [createVolumeOpen, setCreateVolumeOpen] = useState(false)
+  const [newVolumeName, setNewVolumeName] = useState('')
+  const [newVolumeDriver, setNewVolumeDriver] = useState('')
+  const [newVolumeLabels, setNewVolumeLabels] = useState('') // JSON string
+  const [creatingVolume, setCreatingVolume] = useState(false)
 
   const loadAll = async () => {
     setLoading(true)
@@ -228,6 +234,45 @@ export default function DockerManager() {
     }
   }
 
+  const onCreateVolume = async () => {
+    if (!newVolumeName) {
+      setErrorMsg('存储卷名称不能为空')
+      return
+    }
+    setCreatingVolume(true)
+    try {
+      let labels: { [key: string]: string } | undefined
+      if (newVolumeLabels) {
+        try {
+          labels = JSON.parse(newVolumeLabels)
+          if (typeof labels !== 'object' || Array.isArray(labels)) {
+            throw new Error('Labels must be a JSON object')
+          }
+        } catch (e: any) {
+          setErrorMsg('Labels 必须是有效的 JSON 对象: ' + e.message)
+          return
+        }
+      }
+      await podmanApi.createVolume(newVolumeName, newVolumeDriver || undefined, labels)
+      setCreateVolumeOpen(false)
+      setNewVolumeName('')
+      setNewVolumeDriver('')
+      setNewVolumeLabels('')
+      await loadAll()
+      setActive('volumes')
+    } catch (e: any) {
+      console.error('Failed to create volume:', e)
+      const msg = e.response?.data?.message || e.message
+      setErrorMsg(`创建存储卷失败: ${typeof msg === 'object' ? JSON.stringify(msg) : msg}`)
+    } finally {
+      setCreatingVolume(false)
+    }
+  }
+
+  const onRemoveVolume = (name: string) => {
+    setConfirmState({ type: 'deleteVolume', id: name, extra: name })
+  }
+
   // Create Container Logic
   const onOpenCreateContainer = (img: Image) => {
     setSelectedImage(img)
@@ -311,13 +356,14 @@ export default function DockerManager() {
       else if (type === 'stop') await podmanApi.stop(id)
       else if (type === 'restart') await podmanApi.restart(id)
       else if (type === 'deleteImage') await podmanApi.removeImage(id)
+      else if (type === 'deleteVolume') await podmanApi.removeVolume(id)
       
       await loadAll()
       setConfirmState(null)
     } catch (e: any) {
       console.error(e)
       const msg = e.response?.data?.message || e.message || 'Unknown error'
-      setErrorMsg(`${type === 'delete' ? 'Remove' : type === 'deleteImage' ? 'Delete image' : type === 'start' ? 'Start' : type === 'stop' ? 'Stop' : 'Restart'} failed: ${msg}`)
+      setErrorMsg(`${type === 'delete' ? 'Remove' : type === 'deleteImage' ? 'Delete image' : type === 'deleteVolume' ? 'Delete volume' : type === 'start' ? 'Start' : type === 'stop' ? 'Stop' : 'Restart'} failed: ${msg}`)
       setConfirmState(null)
     } finally {
       setPerformingAction(false)
@@ -338,7 +384,7 @@ export default function DockerManager() {
     setVolumes([...volumes, { host: '', container: '', perm: '' }])
   }
 
-  const onRemoveVolume = (i: number) => {
+  const onRemoveContainerVolume = (i: number) => {
     const newVolumes = [...volumes]
     newVolumes.splice(i, 1)
     setVolumes(newVolumes)
@@ -390,7 +436,7 @@ export default function DockerManager() {
               onRetryPull={(imgName) => onPullImage(imgName)}
             />
           )}
-          {active === 'volumes' && <VolumeList volumes={volumesList} />}
+          {active === 'volumes' && <VolumeList volumes={volumesList} onCreate={() => setCreateVolumeOpen(true)} onRemove={onRemoveVolume} />}
           {active === 'networks' && <NetworkList networks={networksList} />}
           {/*
           {active === 'registry' && (
@@ -424,7 +470,7 @@ export default function DockerManager() {
 
       <Modal
         open={!!confirmState}
-        title={confirmState?.type === 'delete' ? '删除容器' : confirmState?.type === 'deleteImage' ? '删除镜像' : confirmState?.type === 'start' ? '启动容器' : confirmState?.type === 'stop' ? '停止容器' : '重启容器'}
+        title={confirmState?.type === 'delete' ? '删除容器' : confirmState?.type === 'deleteImage' ? '删除镜像' : confirmState?.type === 'deleteVolume' ? '删除存储卷' : confirmState?.type === 'start' ? '启动容器' : confirmState?.type === 'stop' ? '停止容器' : '重启容器'}
         onClose={() => !performingAction && setConfirmState(null)}
         width={320}
         footer={
@@ -439,7 +485,7 @@ export default function DockerManager() {
             <button 
               onClick={performAction} 
               style={{ 
-                ...btnConfirmStyle(confirmState?.type === 'delete' || confirmState?.type === 'deleteImage' || confirmState?.type === 'stop' || confirmState?.type === 'restart'),
+                ...btnConfirmStyle(confirmState?.type === 'delete' || confirmState?.type === 'deleteImage' || confirmState?.type === 'deleteVolume' || confirmState?.type === 'stop' || confirmState?.type === 'restart'),
                 opacity: performingAction ? 0.7 : 1,
                 cursor: performingAction ? 'not-allowed' : 'pointer',
                 display: 'flex',
@@ -461,12 +507,14 @@ export default function DockerManager() {
                {performingAction ? (
                  confirmState?.type === 'delete' ? '正在删除容器...' :
                  confirmState?.type === 'deleteImage' ? '正在删除镜像...' :
+                 confirmState?.type === 'deleteVolume' ? '正在删除存储卷...' :
                  confirmState?.type === 'start' ? '正在启动容器...' :
                  confirmState?.type === 'stop' ? '正在停止容器...' :
                  '正在重启容器...'
                ) : (
                  confirmState?.type === 'delete' ? '删除' : 
                  confirmState?.type === 'deleteImage' ? '删除' : 
+                 confirmState?.type === 'deleteVolume' ? '删除' : 
                  confirmState?.type === 'start' ? '启动' : 
                  confirmState?.type === 'stop' ? '停止' : 
                  '重启'
@@ -490,10 +538,95 @@ export default function DockerManager() {
               <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
             </>
           )}
+          {confirmState?.type === 'deleteVolume' && (
+            <>
+              确定要删除存储卷 <span style={{ fontWeight: 600 }}>{confirmState.extra}</span> 吗？
+              <br />
+              <span style={{ fontSize: 13, color: '#6b7280' }}>此操作无法撤销。</span>
+            </>
+          )}
           {confirmState?.type === 'start' && '确定要启动此容器吗？'}
           {confirmState?.type === 'stop' && '确定要停止此容器吗？'}
           {confirmState?.type === 'restart' && '确定要重启此容器吗？'}
         </p>
+      </Modal>
+
+      <Modal
+        open={createVolumeOpen}
+        title="创建存储卷"
+        onClose={() => !creatingVolume && setCreateVolumeOpen(false)}
+        width={500}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+            <button
+              onClick={() => setCreateVolumeOpen(false)}
+              style={{ ...btnCancelStyle, opacity: creatingVolume ? 0.5 : 1, cursor: creatingVolume ? 'not-allowed' : 'pointer' }}
+              disabled={creatingVolume}
+            >
+              取消
+            </button>
+            <button
+              onClick={onCreateVolume}
+              style={{
+                ...btnConfirmStyle(),
+                opacity: creatingVolume ? 0.7 : 1,
+                cursor: creatingVolume ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8
+              }}
+              disabled={creatingVolume}
+            >
+              {creatingVolume && (
+                <div style={{
+                  width: 12,
+                  height: 12,
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  borderTopColor: '#fff',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite'
+                }} />
+              )}
+              {creatingVolume ? '正在创建...' : '创建'}
+            </button>
+          </div>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block' }}>名称</label>
+            <input
+              type="text"
+              value={newVolumeName}
+              onChange={(e) => setNewVolumeName(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, boxSizing: 'border-box' }}
+              placeholder="例如: my-volume"
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block' }}>驱动 (可选)</label>
+            <input
+              type="text"
+              value={newVolumeDriver}
+              onChange={(e) => setNewVolumeDriver(e.target.value)}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, boxSizing: 'border-box' }}
+              placeholder="例如: local (默认)"
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 14, fontWeight: 500, marginBottom: 8, display: 'block' }}>标签 (JSON, 可选)</label>
+            <textarea
+              value={newVolumeLabels}
+              onChange={(e) => setNewVolumeLabels(e.target.value)}
+              rows={3}
+              style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14, resize: 'none', boxSizing: 'border-box' }}
+              placeholder="例如: {'key': 'value'}"
+            ></textarea>
+            {errorMsg && errorMsg.includes('Labels') && (
+              <p style={{ color: '#ef4444', fontSize: 12, marginTop: 4 }}>{errorMsg}</p>
+            )}
+          </div>
+        </div>
       </Modal>
 
       <CreateContainerModal
@@ -527,7 +660,7 @@ export default function DockerManager() {
         newContainerPath={newContainerPath}
         setNewContainerPath={setNewContainerPath}
         onAddVolume={onAddVolume}
-        onRemoveVolume={onRemoveVolume}
+        onRemoveVolume={onRemoveContainerVolume}
         envVars={envVars}
         setEnvVars={setEnvVars}
         newEnvKey={newEnvKey}

@@ -58,6 +58,12 @@ export const podmanApi = {
   async createContainer(payload: any) {
     await axios.post('/api/podman/container/create', payload)
   },
+  async createVolume(name: string, driver?: string, labels?: { [key: string]: string }) {
+    await axios.post('/api/podman/volume/create', { name, driver, labels })
+  },
+  async removeVolume(name: string) {
+    await axios.post('/api/podman/volume/remove', { name })
+  },
   async mirrorsGet() {
     const r = await axios.get('/api/podman/mirrors')
     return (Array.isArray(r.data) ? r.data : []) as Mirror[]

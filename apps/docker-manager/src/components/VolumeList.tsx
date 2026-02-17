@@ -2,17 +2,23 @@ import React from 'react'
 import { Volume } from '../types'
 import { iOSButtonStyle } from '../utils'
 import Icon from '@mdi/react'
-import { mdiDelete } from '@mdi/js'
+import { mdiDelete, mdiPlus } from '@mdi/js'
 
 interface VolumeListProps {
   volumes: Volume[]
-  // onRemove: (name: string) => void // Assuming we add remove capability later
+  onCreate: () => void
+  onRemove: (name: string) => void
 }
 
-export function VolumeList({ volumes }: VolumeListProps) {
+export function VolumeList({ volumes, onCreate, onRemove }: VolumeListProps) {
   return (
     <div style={{ padding: 20 }}>
-      <h2 style={{ margin: '0 0 20px 0', fontSize: 28, fontWeight: 700, letterSpacing: -0.5 }}>存储卷</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '0 0 20px 0' }}>
+        <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, letterSpacing: -0.5 }}>存储卷</h2>
+        <button onClick={onCreate} style={iOSButtonStyle('primary')} title="创建存储卷">
+          <Icon path={mdiPlus} size={0.8} /> 创建存储卷
+        </button>
+      </div>
       
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {volumes.map((v, i) => (
@@ -27,16 +33,16 @@ export function VolumeList({ volumes }: VolumeListProps) {
             justifyContent: 'space-between'
           }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ fontSize: 16, fontWeight: 600 }}>{v.Name}</div>
+              <div style={{ fontSize: 16, fontWeight: 600 }}>{v.name}</div>
               <div style={{ fontSize: 13, color: '#8e8e93' }}>
-                {v.Driver} · {v.Mountpoint}
+                {v.driver} · {v.mountpoint}
               </div>
             </div>
 
             <div style={{ display: 'flex', gap: 8 }}>
-              {/* <button onClick={() => onRemove(v.Name)} style={iOSButtonStyle('danger')} title="删除">
+              <button onClick={() => onRemove(v.name)} style={iOSButtonStyle('danger')} title="删除">
                 <Icon path={mdiDelete} size={0.8} />
-              </button> */}
+              </button>
             </div>
           </div>
         ))}
