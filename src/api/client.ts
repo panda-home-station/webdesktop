@@ -368,7 +368,7 @@ export const api = {
       return { ok: true }
     }
   },
-  async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal) {
+  async fsUploadLegacy(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal) {
     try {
       const fd = new FormData()
       fd.append('path', path)
@@ -402,6 +402,55 @@ export const api = {
        offline = true
        throw e
     }
+  },
+
+  async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal) {
+    const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+
+    if (file.size < CHUNK_SIZE) {
+      return this.fsUploadLegacy(path, file, onProgress, signal);
+    }
+
+    // 1. Initiate Multipart Upload
+    const initiateResponse = await instance.post('/api/docs/upload/initiate', {
+      path: path,
+      name: file.name,
+    });
+    const uploadId = initiateResponse.data.upload_id;
+
+    // 2. Upload parts
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const parts: { part_number: number; etag: string }[] = [];
+    let uploadedSize = 0;
+
+    for (let i = 0; i < totalChunks; i++) {
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
+      const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      const partNumber = i + 1;
+
+      const partResponse = await instance.put(`/api/docs/upload/part?upload_id=${uploadId}&part_number=${partNumber}`, chunk, {
+        headers: { 'Content-Type': 'application/octet-stream' },
+        signal,
+      });
+
+      parts.push({ part_number: partNumber, etag: partResponse.data.etag });
+      uploadedSize += chunk.size;
+
+      if (onProgress) {
+        const percent = Math.round((uploadedSize / file.size) * 100);
+        onProgress({ percent, loaded: uploadedSize, total: file.size });
+      }
+    }
+
+    // 3. Complete Multipart Upload
+    await instance.post('/api/docs/upload/complete', {
+      upload_id: uploadId,
+      parts: parts,
+    });
+
+    return { ok: true };
   },
   fsDownloadUrl(path: string) {
     const u = new URL(`/api/docs/download`, window.location.origin)
