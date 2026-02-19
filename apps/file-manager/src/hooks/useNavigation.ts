@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState, useMemo } from 'react'
 
 export function useNavigation(initialPath: string = '/') {
   const [path, setPath] = useState<string>(initialPath)

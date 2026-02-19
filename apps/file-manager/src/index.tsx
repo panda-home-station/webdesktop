@@ -28,6 +28,12 @@ import ContextMenu, { ContextMenuItem } from './components/ContextMenu'
 import { Modal } from '../../../src/components/Modal'
 
 import { api } from '../../../src/api/client'
+import { useNavigation } from './hooks/useNavigation'
+import { useSelection } from './hooks/useSelection'
+import { useTrash } from './hooks/useTrash'
+import { useTrashOperations } from './hooks/useTrashOperations'
+import { joinPath, fmtTime, fmtSize, getUniqueName, filterSystemEntries } from './utils'
+import { FileEntry, TrashMetadata, ClipboardItem, DragSelection, SortKey, SortOrder, ViewMode, ColumnWidths } from './types'
 
 const btnCancelStyle: React.CSSProperties = {
   padding: '8px 16px',
@@ -53,71 +59,23 @@ const btnConfirmStyle = (danger?: boolean): React.CSSProperties => ({
  
 const fmApi = api
 
-function useNavigation(initialPath: string = '/') {
-  const [path, setPath] = useState<string>(initialPath)
-  const [navHist, setNavHist] = useState<string[]>([initialPath])
-  const [navIndex, setNavIndex] = useState<number>(0)
-  const navigate = (to: string) => {
-    const target = to || '/'
-    if (navHist[navIndex] !== target) {
-      const nextHist = [...navHist.slice(0, navIndex + 1), target]
-      setNavHist(nextHist)
-      setNavIndex(nextHist.length - 1)
-    }
-    setPath(target)
-  }
-  const back = () => {
-    if (navIndex > 0) {
-      const i = navIndex - 1
-      setNavIndex(i)
-      setPath(navHist[i])
-    }
-  }
-  const forward = () => {
-    if (navIndex < navHist.length - 1) {
-      const i = navIndex + 1
-      setNavIndex(i)
-      setPath(navHist[i])
-    }
-  }
-  const up = useMemo(() => {
-    if (path === '/' || path === '') return '/'
-    const parts = path.split('/').filter(Boolean)
-    parts.pop()
-    return '/' + parts.join('/')
-  }, [path])
-  const crumbs = useMemo(() => {
-    const parts = path.split('/').filter(Boolean)
-    const acc: { label: string; to: string }[] = [{ label: '根目录', to: '/' }]
-    let cur = ''
-    for (const p of parts) {
-      cur = cur ? `${cur}/${p}` : `/${p}`
-      acc.push({ label: p, to: cur })
-    }
-    return acc
-  }, [path])
-  return { path, setPath, navHist, navIndex, navigate, back, forward, up, crumbs }
-}
-
 export default function FileManager({ initialPath }: { initialPath?: string }) {
   const { path, setPath, navHist, navIndex, navigate, back, forward, crumbs } = useNavigation(initialPath || '/')
-  const [entries, setEntries] = useState<
-    { name: string; is_dir: boolean; size: number; modified_ts: number }[]
-  >([])
+  const [entries, setEntries] = useState<FileEntry[]>([])
   const [tasks, setTasks] = useState<FileTask[]>([])
   const [loading, setLoading] = useState<boolean>(false)
   const [active, setActive] = useState<string>('home')
-  const [view, setView] = useState<'list' | 'grid'>('list')
-  const [sortKey, setSortKey] = useState<'name' | 'size' | 'modified_ts'>('name')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [view, setView] = useState<ViewMode>('list')
+  const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [showSortMenu, setShowSortMenu] = useState<boolean>(false)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; name: string } | null>(null)
   const [q, setQ] = useState<string>('')
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const { selected, setSelected, toggleSelect, clearSelection, selectAll, isSelected } = useSelection()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
   const [transferTab, setTransferTab] = useState<'upload' | 'download'>('upload')
-  const [colWidths, setColWidths] = useState<Record<string, number>>({
+  const [colWidths, setColWidths] = useState<ColumnWidths>({
     name: 172,
     modified: 149,
     type: 60,
@@ -128,13 +86,13 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   })
   
   // New State
-  const [clipboard, setClipboard] = useState<{ items: string[], action: 'copy' | 'move', sourcePath: string } | null>(null)
-  const [dragSelect, setDragSelect] = useState<{ startX: number, startY: number, curX: number, curY: number } | null>(null)
+  const [clipboard, setClipboard] = useState<ClipboardItem | null>(null)
+  const [dragSelect, setDragSelect] = useState<DragSelection | null>(null)
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   
   // Expandable dirs state
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
-  const [dirCache, setDirCache] = useState<Record<string, { name: string; is_dir: boolean; size: number; modified_ts: number }[]>>({})
+  const [dirCache, setDirCache] = useState<Record<string, FileEntry[]>>({})
 
   const listContainerRef = useRef<HTMLDivElement>(null)
   const dragItemsRef = useRef<{ name: string, rect: DOMRect }[]>([])
@@ -222,30 +180,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [newFolderName, setNewFolderName] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemsToDelete, setItemsToDelete] = useState<string[]>([])
-  const [trashMetadata, setTrashMetadata] = useState<Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }>>({})
-
-  const loadTrashMetadata = async () => {
-    try {
-      const blob = await api.fsDownloadBlob('/Trash/.trashinfo')
-      const text = await blob.text()
-      const data = JSON.parse(text)
-      setTrashMetadata(data)
-      return data
-    } catch (e) {
-      setTrashMetadata({})
-      return {}
-    }
-  }
-  
-  const saveTrashMetadata = async (data: Record<string, { originalPath: string, deletionTime: number }>) => {
-    try {
-      const file = new File([JSON.stringify(data)], '.trashinfo', { type: 'application/json' })
-      await api.fsUpload('/Trash', file)
-      setTrashMetadata(data)
-    } catch (e) {
-      console.error("Failed to save trash metadata", e)
-    }
-  }
+  const { trashMetadata, setTrashMetadata, loadTrashMetadata, saveTrashMetadata } = useTrash()
   
   const [showEmptyTrashModal, setShowEmptyTrashModal] = useState(false)
   
@@ -268,15 +203,23 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const joinPath = (dir: string, name: string) => (dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`)
   const reloadCurrentDir = async () => {
     const rs = await fmApi.fsList(path)
-    let entries = rs.entries
-    if (path === '/') {
-       entries = entries.filter(e => e.name !== 'Trash')
-    }
-    if (path === '/Trash') {
-       entries = entries.filter(e => e.name !== '.trashinfo')
-    }
+    let entries = rs.entries as FileEntry[]
+    entries = filterSystemEntries(entries, path) as FileEntry[]
     setEntries(entries)
   }
+
+  const { handleDelete: deleteItems, restoreItems, emptyTrash } = useTrashOperations({
+    trashMetadata,
+    setTrashMetadata,
+    loadTrashMetadata,
+    saveTrashMetadata,
+    reloadCurrentDir,
+    clearSelection,
+    setDirCache,
+    expandedDirs,
+    entries,
+    currentPath: path
+  })
 
   const startUpload = async (id: string, file: File, dir: string, offset: number = 0) => {
     const controller = new AbortController()
@@ -349,12 +292,10 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         console.time('fm:first-page')
         const r = await fmApi.fsList(path)
         if (!mounted) return
-        let entries = r.entries
-        if (path === '/') {
-           entries = entries.filter(e => e.name !== 'Trash')
-        }
+        let entries = r.entries as FileEntry[]
+        entries = filterSystemEntries(entries, path) as FileEntry[]
+
         if (path.startsWith('/Trash')) {
-           entries = entries.filter(e => e.name !== '.trashinfo')
            loadTrashMetadata()
         }
         setEntries(entries)
@@ -369,13 +310,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             if (rr.entries && rr.entries.length > 0) {
               setEntries(prev => {
                 const seen = new Set(prev.map(e => e.name))
-                let appended = rr.entries.filter(e => !seen.has(e.name))
-                if (path === '/') {
-                   appended = appended.filter(e => e.name !== 'Trash')
-                }
-                if (path.startsWith('/Trash')) {
-                   appended = appended.filter(e => e.name !== '.trashinfo')
-                }
+                let appended = rr.entries.filter(e => !seen.has(e.name)) as FileEntry[]
+                appended = filterSystemEntries(appended, path) as FileEntry[]
                 return appended.length > 0 ? [...prev, ...appended] : prev
               })
             }
@@ -625,33 +561,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     setShowRenameModal(false)
   }
 
-  const getUniqueName = (baseName: string, isFile: boolean = false) => {
-    const names = new Set(entries.map(e => e.name))
-    if (!names.has(baseName)) return baseName
-
-    let name = baseName
-    let ext = ''
-    if (isFile) {
-      const parts = baseName.split('.')
-      if (parts.length > 1) {
-        ext = '.' + parts.pop()
-        name = parts.join('.')
-      }
-    }
-
-    let i = 1
-    while (true) {
-      const candidate = `${name} (${i})${ext}`
-      if (!names.has(candidate)) return candidate
-      i++
-    }
-  }
-
   const [newFolderError, setNewFolderError] = useState('')
   const [newFileError, setNewFileError] = useState('')
 
   const handleNewFolder = () => {
-    setNewFolderName(getUniqueName('新建文件夹'))
+    setNewFolderName(getUniqueName('新建文件夹', new Set(entries.map(e => e.name))))
     setNewFolderError('')
     setShowNewFolderModal(true)
   }
@@ -675,7 +589,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   }
 
   const handleNewFile = () => {
-    setNewFileName(getUniqueName('新建文本文件.txt', true))
+    setNewFileName(getUniqueName('新建文本文件.txt', new Set(entries.map(e => e.name)), true))
     setNewFileError('')
     setShowNewFileModal(true)
   }
@@ -701,96 +615,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   }
 
   const confirmDelete = async () => {
-      const names = itemsToDelete
-      
-      let currentMetadata: Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }> = {}
-      
-      if (path !== '/Trash') {
-         try {
-             // Ensure Trash exists
-             await api.fsMkdir('/Trash')
-         } catch (e) {}
-         
-         try {
-             currentMetadata = await loadTrashMetadata() as any
-         } catch (e) {
-             console.error("Failed to load trash metadata", e)
-         }
-      } else {
-         currentMetadata = { ...trashMetadata } as any
-      }
-
-      for (const n of names) {
-        const fullPath = n.startsWith('/') ? n : joinPath(path, n)
-        const name = fullPath.split('/').pop() || ''
-        if (!name) continue
-
-        const id = `del-${name}-${Date.now()}`
-        pushFileTask({ id, kind: 'delete', name, dir: path, status: 'running' })
-        try {
-          if (path.startsWith('/Trash')) {
-             // Permanent delete from Trash
-             // n is the UUID (filename in Trash)
-             await api.fsDelete(fullPath)
-             if (currentMetadata[name]) {
-                 delete currentMetadata[name]
-             }
-          } else {
-             // Move to Trash
-             const from = fullPath
-             
-             // Generate UUID for the trash item
-             const uuid = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
-             const to = `/Trash/${uuid}`
-             
-             await api.fsRename(from, to)
-             
-             // Find entry to get metadata
-             const entry = entries.find(e => e.name === name)
-             
-             currentMetadata[uuid] = {
-                 originalPath: from,
-                 deletionTime: Date.now(),
-                 name: name,
-                 is_dir: entry ? entry.is_dir : false,
-                 size: entry ? entry.size : 0
-             }
-          }
-          updateFileTask(id, { status: 'done' })
-      } catch (e) {
-          console.error('Delete operation failed for:', n, e)
-          updateFileTask(id, { status: 'error' })
-        }
-      }
-      
-      await saveTrashMetadata(currentMetadata)
-      
-      await reloadCurrentDir()
-      
-      // Refresh parent directories for nested items if they are expanded
-      if (path !== '/Trash') {
-        const uniqueParents = new Set<string>()
-        for (const n of names) {
-            const fullPath = n.startsWith('/') ? n : joinPath(path, n)
-            const parent = fullPath.substring(0, fullPath.lastIndexOf('/')) || '/'
-            if (parent !== path && expandedDirs.has(parent)) {
-                uniqueParents.add(parent)
-            }
-        }
-        
-        for (const p of uniqueParents) {
-            try {
-                const res = await api.fsList(p)
-                if (res && res.entries) {
-                    setDirCache(prev => ({ ...prev, [p]: res.entries }))
-                }
-            } catch (e) {
-                console.error(`Failed to refresh parent dir ${p}`, e)
-            }
-        }
-      }
-
-      clearSelection()
+      await deleteItems(itemsToDelete)
       setShowDeleteModal(false)
   }
 
@@ -812,149 +637,14 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }
 
-  const ensureParentDir = async (targetPath: string) => {
-    const parent = targetPath.substring(0, targetPath.lastIndexOf('/')) || '/'
-    if (parent === '/' || parent === '') return
-    
-    const parts = parent.split('/').filter(Boolean)
-    let current = ''
-    for (const p of parts) {
-      current = `${current}/${p}`
-      try {
-         // Try to list first to see if it exists (and is a dir)
-         await fmApi.fsList(current)
-      } catch {
-         // Doesn't exist or is not a dir, try to create
-         try {
-            await fmApi.fsMkdir(current)
-         } catch (e) {
-            // Ignore if it failed, but log it
-            // console.log(`Failed to mkdir ${current}`, e)
-         }
-      }
-    }
-  }
-
-  const restoreItems = async (names: string[]) => {
-    let currentMetadata: Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }> = {}
-    try {
-        if (path.startsWith('/Trash')) {
-            currentMetadata = await loadTrashMetadata() as any
-        } else {
-            currentMetadata = { ...trashMetadata } as any
-        }
-    } catch (e) {
-        console.error('Failed to load trash metadata', e)
-        currentMetadata = { ...trashMetadata } as any
-    }
-
-    const targetParentsToRefresh = new Set<string>()
-
-    for (const n of names) {
-        const name = n.startsWith('/') ? n.split('/').pop() || '' : n
-        
-        const meta = currentMetadata[name]
-        if (!meta) {
-            console.warn(`No metadata found for ${name}`)
-            continue
-        }
-
-        const sourcePath = `/Trash/${name}`
-        const originalPath = meta.originalPath
-        
-        await ensureParentDir(originalPath)
-
-        let finalPath = originalPath
-        try {
-            const parent = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
-            const baseName = originalPath.split('/').pop() || ''
-            
-            const res = await api.fsList(parent)
-            const existing = new Set(res.entries.map(e => e.name))
-            
-            if (existing.has(baseName)) {
-                let attempt = 1
-                const parts = baseName.split('.')
-                let nameBase = baseName
-                let nameExt = ''
-                if (parts.length > 1 && !baseName.startsWith('.')) {
-                    nameExt = '.' + parts.pop()
-                    nameBase = parts.join('.')
-                }
-                
-                let newName = `${nameBase} (${attempt})${nameExt}`
-                while (existing.has(newName)) {
-                    attempt++
-                    newName = `${nameBase} (${attempt})${nameExt}`
-                }
-                finalPath = parent === '/' ? `/${newName}` : `${parent}/${newName}`
-            }
-        } catch (e) {
-            console.warn(`Collision check failed for ${originalPath}`, e)
-        }
-
-        try {
-            await api.fsRename(sourcePath, finalPath)
-            if (currentMetadata[name]) {
-                delete currentMetadata[name]
-            }
-            
-            const parent = finalPath.substring(0, finalPath.lastIndexOf('/')) || '/'
-            targetParentsToRefresh.add(parent)
-        } catch (e) {
-            console.error(`Failed to restore ${sourcePath} to ${finalPath}`, e)
-        }
-    }
-    
-    await saveTrashMetadata(currentMetadata)
-    await reloadCurrentDir()
-    
-    for (const p of targetParentsToRefresh) {
-        try {
-            const res = await api.fsList(p)
-            setDirCache(prev => ({ ...prev, [p]: res.entries }))
-        } catch (e) {
-            console.error(`Failed to refresh target parent dir ${p}`, e)
-        }
-    }
-    
-    clearSelection()
-  }
-
-  const onRestoreSelected = async () => {
-    await restoreItems([...selected])
-  }
-
-  const onDeleteSelected = async () => {
-    handleDelete([...selected])
-  }
-  
   const onEmptyTrash = () => {
     if (entries.length === 0) return
     setShowEmptyTrashModal(true)
   }
 
   const confirmEmptyTrash = async () => {
-    const names = entries.map(e => e.name)
-    for (const n of names) {
-      const p = `/Trash/${n}`
-      await fmApi.fsDelete(p)
-    }
-    try {
-        await api.fsDelete('/Trash/.trashinfo')
-    } catch {}
-    setTrashMetadata({})
-    
-    const rs = await fmApi.fsList(path)
-    setEntries([]) // Trash is empty
-    clearSelection()
+    await emptyTrash()
     setShowEmptyTrashModal(false)
-  }
-  const onRestoreOne = async (name: string) => {
-    await restoreItems([name])
-  }
-  const onDeleteOne = async (name: string) => {
-    handleDelete([name])
   }
 
   const contextMenuItems: ContextMenuItem[] = useMemo(() => {
@@ -1021,21 +711,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       ]
     }
   }, [contextMenu, clipboard, selected, path, entries])
-
-  const fmtTime = (ts: number) => {
-    if (!ts) return '-'
-    return new Date(ts * 1000).toLocaleString()
-  }
-  const fmtSize = (bytes: number) => {
-    if (bytes === undefined || bytes === null) return '-'
-    if (bytes < 1024) return `${bytes} B`
-    const kb = bytes / 1024
-    if (kb < 1024) return `${Math.round(kb)} KB`
-    const mb = kb / 1024
-    if (mb < 1024) return `${mb >= 10 ? Math.round(mb) : Math.round(mb * 10) / 10} MB`
-    const gb = mb / 1024
-    return `${gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10} GB`
-  }
 
   const goto = async (to: string, key: string) => {
     setActive(key)
@@ -1164,15 +839,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     return result
   }, [entries, sortKey, sortOrder, q, expandedDirs, dirCache, path])
 
-  const toggleSelect = (name: string) => {
-    setSelected(prev => {
-      const next = new Set([...prev])
-      if (next.has(name)) next.delete(name)
-      else next.add(name)
-      return next
-    })
-  }
-  const clearSelection = () => setSelected(new Set())
   useEffect(() => {
     try {
       const s = localStorage.getItem('fm:colWidths')
@@ -1464,11 +1130,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             toggleSelect={toggleSelect}
             fmtTime={fmtTime}
             fmtSize={fmtSize}
-            onRestoreSelected={onRestoreSelected}
-            onDeleteSelected={onDeleteSelected}
+            onRestoreSelected={() => restoreItems([...selected])}
+            onDeleteSelected={() => handleDelete([...selected])}
             onEmptyTrash={onEmptyTrash}
-            onRestoreOne={onRestoreOne}
-            onDeleteOne={onDeleteOne}
+            onRestoreOne={(name) => restoreItems([name])}
+            onDeleteOne={(name) => handleDelete([name])}
             colWidths={colWidths}
             startResize={startResize}
             headerCheckboxRef={headerCheckboxRef}

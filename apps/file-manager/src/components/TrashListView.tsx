@@ -1,13 +1,6 @@
 import React, { useEffect } from 'react'
 import { Folder, FileText } from 'lucide-react'
-
-type TrashMetadata = {
-  originalPath: string
-  deletionTime: number
-  name: string
-  is_dir: boolean
-  size: number
-}
+import { FileEntry, TrashMetadata } from '../types'
 
 export default function TrashListView({
   filtered,
@@ -25,7 +18,7 @@ export default function TrashListView({
   headerCheckboxRef,
   resizingKey,
 }: {
-  filtered: { name: string; is_dir: boolean; size: number; modified_ts: number; path?: string }[]
+  filtered: FileEntry[]
   selected: Set<string>
   setSelected: (s: Set<string>) => void
   clearSelection: () => void

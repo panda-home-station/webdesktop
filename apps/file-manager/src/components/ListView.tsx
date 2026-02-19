@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react'
 import { Folder, FileText, ChevronRight, ChevronDown } from 'lucide-react'
+import { FileEntry, DragItem } from '../types'
 
 export default function ListView({
   path,
@@ -24,7 +25,7 @@ export default function ListView({
   dragOverItem
 }: {
   path: string
-  filtered: { name: string; is_dir: boolean; size: number; modified_ts: number; level?: number; expanded?: boolean; path?: string }[]
+  filtered: FileEntry[]
   selected: Set<string>
   setSelected: (s: Set<string>) => void
   clearSelection: () => void
@@ -38,9 +39,9 @@ export default function ListView({
   onOpenDir: (name: string) => void
   onContextMenu: (e: React.MouseEvent, name: string) => void
   onToggleExpand?: (name: string) => void
-  onDragStart: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
-  onDragOver: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
-  onDrop: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
+  onDragStart: (e: React.DragEvent, item: DragItem) => void
+  onDragOver: (e: React.DragEvent, item: DragItem) => void
+  onDrop: (e: React.DragEvent, item: DragItem) => void
   onDragLeave: (e: React.DragEvent) => void
   dragOverItem: string | null
 }) {

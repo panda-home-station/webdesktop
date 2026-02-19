@@ -1,12 +1,11 @@
 import React, { useRef, useEffect } from 'react'
 import { Folder, FileText, Trash2, RotateCcw, Ban, CheckSquare } from 'lucide-react'
 import TrashListView from './TrashListView'
-
-type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
+import { FileEntry, TrashMetadata } from '../types'
 
 type Props = {
-  entries: Entry[]
-  filtered: Entry[]
+  entries: FileEntry[]
+  filtered: FileEntry[]
   selected: Set<string>
   setSelected: (s: Set<string>) => void
   clearSelection: () => void
@@ -27,7 +26,7 @@ type Props = {
   onContextMenu: (e: React.MouseEvent, name: string) => void
   onOpenDir: (name: string) => void
   onToggleExpand?: (name: string) => void
-  trashMetadata: Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }>
+  trashMetadata: Record<string, TrashMetadata>
 }
 
 export default function TrashPane({
