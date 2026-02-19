@@ -78,6 +78,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const { selected, setSelected, toggleSelect, clearSelection, selectAll, isSelected } = useSelection()
   const { dragSelect, handleContainerMouseDown } = useDragSelection({ path, view, selected, setSelected })
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const headerCheckboxRef = useRef<HTMLInputElement>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
   const [transferTab, setTransferTab] = useState<'upload' | 'download'>('upload')
   const [colWidths, setColWidths] = useState<ColumnWidths>({
@@ -89,6 +90,13 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     owner: 120,
     originalPath: 200,
   })
+
+  const reloadCurrentDir = async () => {
+    const rs = await fmApi.fsList(path)
+    let entries = rs.entries as FileEntry[]
+    entries = filterSystemEntries(entries, path) as FileEntry[]
+    setEntries(entries)
+  }
 
   const {
     startUpload,
@@ -141,14 +149,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [showCancelTaskModal, setShowCancelTaskModal] = useState(false)
   const [taskToCancel, setTaskToCancel] = useState<FileTask | null>(null)
 
-
-  const reloadCurrentDir = async () => {
-    const rs = await fmApi.fsList(path)
-    let entries = rs.entries as FileEntry[]
-    entries = filterSystemEntries(entries, path) as FileEntry[]
-    setEntries(entries)
-  }
-
   const { handleDelete: deleteItems, restoreItems, emptyTrash } = useTrashOperations({
     trashMetadata,
     setTrashMetadata,
@@ -161,7 +161,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     entries,
     currentPath: path
   })
-
 
 
   useEffect(() => {
@@ -549,7 +548,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     
     process(entries, path, 0)
     return result
-  }, [entries, sortKey, sortOrder, q, expandedDirs, dirCache, path])
+  }, [entries, sortKey, sortOrder, q, expandedDirs, dirCache, path, trashMetadata])
 
   useEffect(() => {
     try {
@@ -1186,3 +1185,4 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     </div>
   )
 }
+
