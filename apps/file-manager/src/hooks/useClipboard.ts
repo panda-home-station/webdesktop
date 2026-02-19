@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { api } from '../../../src/api/client'
+import { api } from '../../../../src/api/client'
 import { ClipboardItem } from '../types'
 import { joinPath } from '../utils'
-import { pushFileTask } from '../../../src/sdk/desktop'
+import { pushFileTask } from '../../../../src/sdk/desktop'
 
 interface UseClipboardProps {
   path: string
