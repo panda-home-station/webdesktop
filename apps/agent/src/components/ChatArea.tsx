@@ -61,37 +61,6 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         flexShrink: 0 
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            title={isSidebarOpen ? "收起目录" : "展开目录"}
-            style={{
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#666',
-              width: 32,
-              height: 32,
-              borderRadius: '8px',
-              transition: 'all 0.2s',
-              flexShrink: 0
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.backgroundColor = '#f5f5f5'
-              e.currentTarget.style.color = '#3b82f6'
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.backgroundColor = 'transparent'
-              e.currentTarget.style.color = '#666'
-            }}
-          >
-            {isSidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-          </button>
-          
-          <div style={{ width: 1, height: 16, backgroundColor: '#eee', margin: '0 4px' }}></div>
-
           <div style={{ width: 32, height: 32, borderRadius: 10, background: '#f0f7ff', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {selectedAgent.icon}
           </div>

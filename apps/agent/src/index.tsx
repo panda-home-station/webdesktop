@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
 import { Workspace } from './components/Workspace'
-import { SettingsModal } from './components/SettingsModal'
+import { SettingsPage } from './components/SettingsPage'
 import { useLayout } from './hooks/useLayout'
 import { useChat } from './hooks/useChat'
 import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, CHAT_MIN_WIDTH, RESIZER_WIDTH } from './constants'
@@ -52,6 +52,21 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
   const saveSettings = () => {
     localStorage.setItem('agent_api_endpoint', apiEndpoint)
     localStorage.setItem('agent_api_model', apiModel)
+    setIsSettingsOpen(false)
+  }
+
+  const handleCreateNewChat = () => {
+    createNewChat()
+    setIsSettingsOpen(false)
+  }
+
+  const handleLoadSession = (sessionId: string) => {
+    loadSession(sessionId)
+    setIsSettingsOpen(false)
+  }
+
+  const handleToggleWorkspace = () => {
+    toggleWorkspace()
     setIsSettingsOpen(false)
   }
 
@@ -136,83 +151,85 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
       <Sidebar 
         isSidebarOpen={isSidebarOpen}
         setIsSidebarOpen={setIsSidebarOpen}
-        toggleWorkspace={toggleWorkspace}
+        toggleWorkspace={handleToggleWorkspace}
         setIsSettingsOpen={setIsSettingsOpen}
         selectedAgent={selectedAgent}
         setSelectedAgent={setSelectedAgent}
         setMessages={setMessages}
         history={history}
         selectedSessionId={selectedSessionId}
-        loadSession={loadSession}
+        loadSession={handleLoadSession}
         onDeleteSession={deleteSession}
-        createNewChat={createNewChat}
+        createNewChat={handleCreateNewChat}
         isInitial={isInitial}
       />
 
-      {/* Column 2: Chat Area */}
-      <ChatArea 
-        messages={messages}
-        input={input}
-        setInput={setInput}
-        isLoading={isLoading}
-        handleSend={handleSend}
-        handleStop={handleStop}
-        handleKeyDown={handleKeyDown}
-        selectedAgent={selectedAgent}
-        isSidebarOpen={isSidebarOpen}
-        setIsSidebarOpen={setIsSidebarOpen}
-        isWorkspaceOpen={isWorkspaceOpen}
-        toggleWorkspace={toggleWorkspace}
-        selectedTools={selectedTools}
-        onToggleTool={toggleTool}
-      />
+      {isSettingsOpen ? (
+        <SettingsPage 
+          apiEndpoint={apiEndpoint}
+          setApiEndpoint={setApiEndpoint}
+          apiModel={apiModel}
+          setApiModel={setApiModel}
+          saveSettings={saveSettings}
+          onCancel={() => setIsSettingsOpen(false)}
+        />
+      ) : (
+        <>
+          {/* Column 2: Chat Area */}
+          <ChatArea 
+            messages={messages}
+            input={input}
+            setInput={setInput}
+            isLoading={isLoading}
+            handleSend={handleSend}
+            handleStop={handleStop}
+            handleKeyDown={handleKeyDown}
+            selectedAgent={selectedAgent}
+            isSidebarOpen={isSidebarOpen}
+            setIsSidebarOpen={setIsSidebarOpen}
+            isWorkspaceOpen={isWorkspaceOpen}
+            toggleWorkspace={toggleWorkspace}
+            selectedTools={selectedTools}
+            onToggleTool={toggleTool}
+          />
 
-      {/* Resizer Handle */}
-      {isWorkspaceOpen && (
-        <div 
-          onMouseDown={startResizing}
-          style={{
-            width: RESIZER_WIDTH,
-            cursor: 'col-resize',
-            backgroundColor: isResizing ? '#3b82f6' : '#f0f0f0',
-            transition: 'background-color 0.2s',
-            zIndex: 100,
-            position: 'relative',
-            userSelect: 'none'
-          }}
-        >
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: -4,
-            right: -4,
-            bottom: 0,
-          }} />
-        </div>
+          {/* Resizer Handle */}
+          {isWorkspaceOpen && (
+            <div 
+              onMouseDown={startResizing}
+              style={{
+                width: RESIZER_WIDTH,
+                cursor: 'col-resize',
+                backgroundColor: isResizing ? '#3b82f6' : '#f0f0f0',
+                transition: 'background-color 0.2s',
+                zIndex: 100,
+                position: 'relative',
+                userSelect: 'none'
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: -4,
+                right: -4,
+                bottom: 0,
+              }} />
+            </div>
+          )}
+
+          {/* Column 3: Workspace (Visualization) */}
+          <Workspace 
+            isWorkspaceOpen={isWorkspaceOpen}
+            setIsWorkspaceOpen={setIsWorkspaceOpen}
+            workspaceWidth={workspaceWidth}
+            isSidebarOpen={isSidebarOpen}
+            isResizing={isResizing}
+            tasks={tasks}
+            activeWorkflow={activeWorkflow}
+            isInitial={isInitial}
+          />
+        </>
       )}
-
-      {/* Column 3: Workspace (Visualization) */}
-      <Workspace 
-        isWorkspaceOpen={isWorkspaceOpen}
-        setIsWorkspaceOpen={setIsWorkspaceOpen}
-        workspaceWidth={workspaceWidth}
-        isSidebarOpen={isSidebarOpen}
-        isResizing={isResizing}
-        tasks={tasks}
-        activeWorkflow={activeWorkflow}
-        isInitial={isInitial}
-      />
-
-      {/* Settings Modal */}
-      <SettingsModal 
-        isOpen={isSettingsOpen}
-        setIsOpen={setIsSettingsOpen}
-        apiEndpoint={apiEndpoint}
-        setApiEndpoint={setApiEndpoint}
-        apiModel={apiModel}
-        setApiModel={setApiModel}
-        saveSettings={saveSettings}
-      />
     </div>
   )
 }
