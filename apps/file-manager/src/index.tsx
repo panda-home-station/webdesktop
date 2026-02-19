@@ -190,6 +190,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     if (path === '/') {
        entries = entries.filter(e => e.name !== 'Trash')
     }
+    if (path === '/Trash') {
+       entries = entries.filter(e => e.name !== '.trashinfo')
+    }
     setEntries(entries)
   }
 
@@ -268,6 +271,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         if (path === '/') {
            entries = entries.filter(e => e.name !== 'Trash')
         }
+        if (path === '/Trash') {
+           entries = entries.filter(e => e.name !== '.trashinfo')
+        }
         setEntries(entries)
         console.timeEnd('fm:first-page')
         if (r.has_more && r.next_offset != null) {
@@ -283,6 +289,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                 let appended = rr.entries.filter(e => !seen.has(e.name))
                 if (path === '/') {
                    appended = appended.filter(e => e.name !== 'Trash')
+                }
+                if (path === '/Trash') {
+                   appended = appended.filter(e => e.name !== '.trashinfo')
                 }
                 return appended.length > 0 ? [...prev, ...appended] : prev
               })

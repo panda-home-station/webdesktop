@@ -377,19 +377,25 @@ export const api = {
 
       let lastLoaded = 0
       let lastTs = Date.now()
+      let currentBps = 0
       
       const r = await instance.post(`/api/docs/upload`, fd, {
         signal,
         onUploadProgress: (e) => {
           if (onProgress && e.loaded != null && e.total != null) {
              const now = Date.now()
-             const dt = Math.max(1, now - lastTs)
-             const dbytes = Math.max(0, e.loaded - lastLoaded)
-             const bps = (dbytes / dt) * 1000
-             lastLoaded = e.loaded
-             lastTs = now
+             const dt = now - lastTs
+             
+             // Update speed every 1s
+             if (dt >= 1000) {
+               const dbytes = Math.max(0, e.loaded - lastLoaded)
+               currentBps = (dbytes / dt) * 1000
+               lastLoaded = e.loaded
+               lastTs = now
+             }
+             
              const pct = Math.round((e.loaded / e.total) * 100)
-             onProgress({ percent: pct, loaded: e.loaded, total: e.total, bps })
+             onProgress({ percent: pct, loaded: e.loaded, total: e.total, bps: currentBps })
           }
         }
       })
@@ -422,6 +428,11 @@ export const api = {
     const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
     const parts: { part_number: number; etag: string }[] = [];
     let uploadedSize = 0;
+    
+    // Speed calculation state
+    let lastLoaded = 0;
+    let lastTs = Date.now();
+    let currentBps = 0;
 
     for (let i = 0; i < totalChunks; i++) {
       if (signal?.aborted) {
@@ -433,15 +444,28 @@ export const api = {
       const partResponse = await instance.put(`/api/docs/upload/part?upload_id=${uploadId}&part_number=${partNumber}`, chunk, {
         headers: { 'Content-Type': 'application/octet-stream' },
         signal,
+        onUploadProgress: (e) => {
+          if (onProgress && e.loaded != null) {
+            const currentTotalLoaded = uploadedSize + e.loaded
+            const now = Date.now()
+            const dt = now - lastTs
+            
+            // Update speed every 1s
+            if (dt >= 1000) {
+              const dbytes = Math.max(0, currentTotalLoaded - lastLoaded)
+              currentBps = (dbytes / dt) * 1000
+              lastLoaded = currentTotalLoaded
+              lastTs = now
+            }
+
+            const percent = Math.round((currentTotalLoaded / file.size) * 100)
+            onProgress({ percent, loaded: currentTotalLoaded, total: file.size, bps: currentBps })
+          }
+        }
       });
 
       parts.push({ part_number: partNumber, etag: partResponse.data.etag });
       uploadedSize += chunk.size;
-
-      if (onProgress) {
-        const percent = Math.round((uploadedSize / file.size) * 100);
-        onProgress({ percent, loaded: uploadedSize, total: file.size });
-      }
     }
 
     // 3. Complete Multipart Upload
