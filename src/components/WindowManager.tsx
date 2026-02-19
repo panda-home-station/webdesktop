@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react'
+import React, { useCallback, useRef, useState, useEffect } from 'react'
 import { listApps, loadApp } from '../apps/registry'
 import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
@@ -7,6 +7,7 @@ import Window from './Window'
 import { QuickAgentDialog } from './QuickAgentDialog'
 import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher, setAnimating } from '../sdk/desktop'
 import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
+import { Loader2 } from 'lucide-react'
 
 type Win = {
   id: string
@@ -21,6 +22,45 @@ type Win = {
   minimized?: boolean
   maximized?: boolean
   prev?: { x: number; y: number; w: number; h: number }
+}
+
+const AppLoader = ({ appId, args, onLoaded }: { appId: string, args?: any, onLoaded?: () => void }) => {
+  const [Comp, setComp] = useState<React.ComponentType<any> | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    loadApp(appId)
+      .then((C) => {
+        if (mounted) {
+          setComp(() => C)
+          onLoaded?.()
+        }
+      })
+      .catch((err) => {
+        console.error(`Failed to load app ${appId}:`, err)
+        if (mounted) setError(err.message)
+      })
+    return () => { mounted = false }
+  }, [appId])
+
+  if (error) {
+    return (
+      <div style={{ padding: 20, color: 'red', display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        应用加载失败: {error}
+      </div>
+    )
+  }
+
+  if (!Comp) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', width: '100%', background: 'rgba(255,255,255,0.5)' }}>
+        <Loader2 className="animate-spin" size={32} color="#2563eb" style={{ animation: 'spin 1s linear infinite' }} />
+      </div>
+    )
+  }
+
+  return <Comp {...args} />
 }
 
 export default function WindowManager() {
@@ -303,6 +343,8 @@ export default function WindowManager() {
       setPersistLoaded(true)
     })()
 
+    const loadingApps = new Set<string>()
+
     const unsub = subscribeOpenApp(async (id, args) => {
       // 如果打开的是 agent app，关闭快捷助手对话框
       if (id === 'agent') {
@@ -315,17 +357,34 @@ export default function WindowManager() {
         setZOrder(z => [...z.filter(eid => eid !== existing.id), existing.id])
         return
       }
-      const a = apps.find(x => x.id === id)
-      if (!a) return
-      const caps = (a as any).capabilities as string[] | undefined
-      if (Array.isArray(caps)) {
-        for (const cap of caps) {
-          const ok = requestPermission(a.id, cap)
-          if (!ok) return
+
+      if (loadingApps.has(id)) return
+      // 使用同步锁防止极短时间内的双击，但在窗口创建后立即释放
+      loadingApps.add(id)
+
+      try {
+        const a = apps.find(x => x.id === id)
+        if (!a) return
+        const caps = (a as any).capabilities as string[] | undefined
+        if (Array.isArray(caps)) {
+          for (const cap of caps) {
+            const ok = requestPermission(a.id, cap)
+            if (!ok) return
+          }
         }
+        
+        // 立即打开窗口，使用 AppLoader 异步加载内容
+        open({ 
+          id: `${a.id}-${Date.now()}`, 
+          title: a.title, 
+          content: <AppLoader appId={a.id} args={args} />, 
+          appId: a.id, 
+          iconUrl: a.iconUrl 
+        })
+      } finally {
+        // 窗口已创建，释放锁
+        loadingApps.delete(id)
       }
-      const Comp = await loadApp(a.id)
-      open({ id: `${a.id}-${Date.now()}`, title: a.title, content: <Comp {...args} />, appId: a.id, iconUrl: a.iconUrl })
     })
 
     const onKey = (e: KeyboardEvent) => {
@@ -404,7 +463,7 @@ export default function WindowManager() {
     setPersistZOrder(zOrder)
   }, [zOrder])
 
-  const handleLauncherOpen = useCallback((id: string, title: string, Comp: React.ComponentType<any>, iconUrl?: string) => {
+  const handleLauncherOpen = useCallback((id: string, title: string, Comp: React.ComponentType<any> | undefined, iconUrl?: string) => {
     // 如果从 Launcher 打开的是 agent app，关闭快捷助手对话框
     if (id === 'agent') {
       setShowQuickAgent(false)
@@ -417,7 +476,8 @@ export default function WindowManager() {
       return
     }
 
-    open({ id: `${id}-${Date.now()}`, title, content: <Comp />, appId: id, iconUrl })
+    const content = Comp ? <Comp /> : <AppLoader appId={id} />
+    open({ id: `${id}-${Date.now()}`, title, content, appId: id, iconUrl })
   }, [open, apps])
 
   const handleLauncherClose = useCallback(() => {

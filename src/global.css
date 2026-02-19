@@ -34,6 +34,11 @@ html, body {
   to { opacity: 1; }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* 移除浏览器自动填充导致的黄色背景 */
 input:-webkit-autofill,
 input:-webkit-autofill:hover,

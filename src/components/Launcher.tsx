@@ -1,19 +1,24 @@
 import React, { useEffect, useMemo, useState, memo } from 'react'
-import { listApps, loadApp } from '../apps/registry'
+import { listApps } from '../apps/registry'
 import { requestPermission } from '../sdk/permissions'
 import { setAnimating, setLauncherOpen } from '../sdk/desktop'
 
 type Props = {
-  onOpen: (id: string, title: string, Comp: React.ComponentType<any>, iconUrl?: string) => void
+  onOpen: (id: string, title: string, Comp?: React.ComponentType<any>, iconUrl?: string) => void
   onClose: () => void
 }
 
-const AppItem = memo(({ a, onOpen, onClose }: { a: any, onOpen: Props['onOpen'], onClose: Props['onClose'] }) => {
+const AppItem = memo(({ a, onOpen, onClose }: { 
+  a: any, 
+  onOpen: Props['onOpen'], 
+  onClose: Props['onClose']
+}) => {
   return (
     <button
       key={a.id}
       title={a.title}
       onClick={async () => {
+        // 权限检查
         const caps = (a as any).capabilities as string[] | undefined
         if (Array.isArray(caps)) {
           for (const cap of caps) {
@@ -21,8 +26,8 @@ const AppItem = memo(({ a, onOpen, onClose }: { a: any, onOpen: Props['onOpen'],
             if (!ok) return
           }
         }
-        const Comp = await loadApp(a.id)
-        onOpen(a.id, a.title, Comp, a.iconUrl)
+        // 直接触发打开，WindowManager 会处理异步加载
+        onOpen(a.id, a.title, undefined, a.iconUrl)
         onClose()
       }}
       className="launcher-app-item"
@@ -38,7 +43,7 @@ const AppItem = memo(({ a, onOpen, onClose }: { a: any, onOpen: Props['onOpen'],
          borderRadius: 20,
          background: 'transparent',
          color: '#000',
-          cursor: 'pointer',
+         cursor: 'pointer',
         }}
       >
         <div 
@@ -54,6 +59,7 @@ const AppItem = memo(({ a, onOpen, onClose }: { a: any, onOpen: Props['onOpen'],
             overflow: 'hidden',
             boxShadow: '0 4px 14px rgba(0,0,0,0.08)',
             border: '1px solid rgba(255,255,255,0.5)',
+            position: 'relative'
         }}>
             {a.iconUrl ? (
               <img src={a.iconUrl} alt="" style={{ width: '65%', height: '65%', objectFit: 'contain' }} />
@@ -185,7 +191,12 @@ export default function Launcher({ isOpen, onOpen, onClose }: Props & { isOpen: 
         }}
       >
         {filtered.map(a => (
-          <AppItem key={a.id} a={a} onOpen={onOpen} onClose={onClose} />
+          <AppItem 
+            key={a.id} 
+            a={a} 
+            onOpen={onOpen} 
+            onClose={onClose} 
+          />
         ))}
       </div>
     </div>
