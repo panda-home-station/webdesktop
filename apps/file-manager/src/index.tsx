@@ -271,8 +271,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         if (path === '/') {
            entries = entries.filter(e => e.name !== 'Trash')
         }
-        if (path === '/Trash') {
+        if (path.startsWith('/Trash')) {
            entries = entries.filter(e => e.name !== '.trashinfo')
+           loadTrashMetadata()
         }
         setEntries(entries)
         console.timeEnd('fm:first-page')
@@ -290,7 +291,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                 if (path === '/') {
                    appended = appended.filter(e => e.name !== 'Trash')
                 }
-                if (path === '/Trash') {
+                if (path.startsWith('/Trash')) {
                    appended = appended.filter(e => e.name !== '.trashinfo')
                 }
                 return appended.length > 0 ? [...prev, ...appended] : prev
@@ -703,34 +704,127 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }
 
-  const onRestoreSelected = async () => {
-    const names = [...selected]
-    const currentMetadata = { ...trashMetadata }
-    for (const n of names) {
-      const from = `/Trash/${n}`
-      let to = `/${n}`
-      if (currentMetadata[n]?.originalPath) {
-          to = currentMetadata[n].originalPath
-      }
+  const ensureParentDir = async (targetPath: string) => {
+    const parent = targetPath.substring(0, targetPath.lastIndexOf('/')) || '/'
+    if (parent === '/' || parent === '') return
+    
+    const parts = parent.split('/').filter(Boolean)
+    let current = ''
+    for (const p of parts) {
+      current = `${current}/${p}`
       try {
-        await fmApi.fsRename(from, to)
-        if (currentMetadata[n]) delete currentMetadata[n]
+         await fmApi.fsMkdir(current)
       } catch (e) {
-         try {
-            await fmApi.fsRename(from, `/${n}`)
-            if (currentMetadata[n]) delete currentMetadata[n]
-         } catch (e2) {}
+         // ignore
       }
+    }
+  }
+
+  const restoreItems = async (names: string[]) => {
+    let currentMetadata = { ...trashMetadata }
+    // Always try to reload metadata if we are in Trash to ensure we have the latest info
+    if (path.startsWith('/Trash')) {
+        try {
+           const meta = await loadTrashMetadata()
+           currentMetadata = { ...currentMetadata, ...meta }
+        } catch (e) {
+           console.error('Failed to load trash metadata', e)
+        }
+    }
+
+    const processEntry = async (sourcePath: string, targetPath: string, isRoot: boolean, rootName: string) => {
+       // 1. Check if target exists
+       let targetExists = false
+       const targetParent = targetPath.substring(0, targetPath.lastIndexOf('/')) || '/'
+       const targetName = targetPath.split('/').pop() || ''
+       
+       try {
+           const list = await fmApi.fsList(targetParent)
+           if (list.entries.some(e => e.name === targetName)) {
+               targetExists = true
+           }
+       } catch {
+           targetExists = false
+       }
+       
+       if (!targetExists) {
+           await ensureParentDir(targetPath)
+           try {
+               await fmApi.fsRename(sourcePath, targetPath)
+               if (isRoot && currentMetadata[rootName]) {
+                   delete currentMetadata[rootName]
+               }
+           } catch (e) {
+               console.error(`Failed to restore ${sourcePath}`, e)
+           }
+           return
+       }
+       
+       // Target exists: Try to merge if source is a directory
+       try {
+           // Try to list source. If it succeeds, it's a directory.
+           const list = await fmApi.fsList(sourcePath)
+           
+           // Recursively restore children
+           for (const child of list.entries) {
+               await processEntry(
+                   `${sourcePath}/${child.name}`,
+                   `${targetPath}/${child.name}`,
+                   false, // Children are never root metadata items
+                   rootName
+               )
+           }
+           
+           // Check if source directory is now empty
+           const remaining = await fmApi.fsList(sourcePath)
+           if (remaining.entries.length === 0) {
+               // Delete the empty source directory
+               const srcParent = sourcePath.substring(0, sourcePath.lastIndexOf('/')) || '/'
+               const srcName = sourcePath.split('/').pop() || ''
+               await fmApi.fsDelete(srcParent, [srcName])
+               
+               if (isRoot && currentMetadata[rootName]) {
+                   delete currentMetadata[rootName]
+               }
+           }
+       } catch (e) {
+           // sourcePath is likely a file (fsList failed) or permission error
+           // If it's a file and target exists, we skip (do nothing)
+       }
+    }
+
+    for (const n of names) {
+      const from = joinPath(path, n)
+      const parts = from.split('/').filter(Boolean)
+      if (parts.length < 2) continue
+      
+      const rootItemName = parts[1]
+      let targetPath = ''
+      
+      if (currentMetadata[rootItemName]) {
+         const originalRoot = currentMetadata[rootItemName].originalPath
+         const rel = parts.slice(2).join('/')
+         if (rel) {
+            targetPath = originalRoot.endsWith('/') ? originalRoot + rel : originalRoot + '/' + rel
+         } else {
+            targetPath = originalRoot
+         }
+      } else {
+         // Fallback: restore to root if no metadata found
+         targetPath = '/' + parts.slice(1).join('/')
+      }
+      
+      await processEntry(from, targetPath, parts.length === 2, rootItemName)
     }
     await saveTrashMetadata(currentMetadata)
-    const rs = await fmApi.fsList(path)
-    let entries = rs.entries
-    if (path === '/Trash') {
-       entries = entries.filter(e => e.name !== '.trashinfo')
-    }
-    setEntries(entries)
+    await reloadCurrentDir()
     clearSelection()
   }
+
+  const onRestoreSelected = async () => {
+    await restoreItems([...selected])
+  }
+
   const onDeleteSelected = async () => {
     handleDelete([...selected])
   }
@@ -757,21 +851,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     setShowEmptyTrashModal(false)
   }
   const onRestoreOne = async (name: string) => {
-    const from = `/Trash/${name}`
-    let to = `/${name}`
-    const currentMetadata = { ...trashMetadata }
-    if (currentMetadata[name]?.originalPath) {
-        to = currentMetadata[name].originalPath
-    }
-    try {
-        await fmApi.fsRename(from, to)
-        if (currentMetadata[name]) delete currentMetadata[name]
-    } catch {
-        await fmApi.fsRename(from, `/${name}`)
-        if (currentMetadata[name]) delete currentMetadata[name]
-    }
-    await saveTrashMetadata(currentMetadata)
-    await reloadCurrentDir()
+    await restoreItems([name])
   }
   const onDeleteOne = async (name: string) => {
     handleDelete([name])
@@ -781,7 +861,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     if (!contextMenu) return []
     const { name } = contextMenu
 
-    if (path === '/Trash') {
+    if (path.startsWith('/Trash')) {
       if (name) {
          return [
             { label: '还原', onClick: () => onRestoreOne(name) },
@@ -1141,7 +1221,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             onClearCompleted={clearCompletedFileTasks}
             navigate={navigate}
           />
-        ) : path === '/Trash' ? (
+        ) : path.startsWith('/Trash') ? (
           <TrashPane
             entries={entries}
             filtered={filtered}
@@ -1161,7 +1241,10 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             headerCheckboxRef={headerCheckboxRef}
             resizingKey={resizingKey}
             onContextMenu={handleContextMenu}
-            onOpenDir={() => {}}
+            onOpenDir={(name) => {
+               setSelected(new Set())
+               navigate(joinPath(path, name))
+            }}
             trashMetadata={trashMetadata}
           />
         ) : (
