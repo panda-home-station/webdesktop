@@ -104,7 +104,15 @@ export default function App() {
   const [initChecked, setInitChecked] = useState(false)
   const [authChecked, setAuthChecked] = useState(false)
   const [needInit, setNeedInit] = useState(false)
-  const [isLocked, setIsLocked] = useState(false)
+  const [isLocked, setIsLocked] = useState(() => {
+    // Initialize lock state from localStorage
+    return localStorage.getItem('isLocked') === 'true'
+  })
+
+  // Sync isLocked state to localStorage
+  useEffect(() => {
+    localStorage.setItem('isLocked', String(isLocked))
+  }, [isLocked])
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -340,6 +348,12 @@ export default function App() {
       {isLocked && (
         <LockScreen 
           onUnlock={() => setIsLocked(false)} 
+          onLogout={() => {
+            api.logout()
+            clearPersistState()
+            setUser(null)
+            setIsLocked(false)
+          }}
           wallpaper={wallpaper} 
           username={user.username}
         />
