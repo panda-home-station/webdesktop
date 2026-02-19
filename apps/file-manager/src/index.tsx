@@ -531,7 +531,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         
         result.push({
           ...item,
-          name: displayName, // Override name for display
+          name: item.name, // Keep original name (UUID for trash)
+          displayName: displayName, // Pass display name separately if needed
           realName: item.name, // Keep real name for logic
           is_dir: isDir,
           size: size,

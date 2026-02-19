@@ -17,6 +17,57 @@ interface UseTrashOperationsProps {
   currentPath: string
 }
 
+// Helper to ensure parent directories exist
+const ensureParentDir = async (targetPath: string) => {
+  const parent = targetPath.substring(0, targetPath.lastIndexOf('/')) || '/'
+  if (parent === '/' || parent === '') return
+  
+  const parts = parent.split('/').filter(Boolean)
+  let current = ''
+  for (const p of parts) {
+    current = `${current}/${p}`
+    try {
+       await api.fsList(current)
+    } catch {
+       try {
+          await api.fsMkdir(current)
+       } catch (e) {}
+    }
+  }
+}
+
+// Helper to find a non-conflicting path
+const getNonConflictingPath = async (parentDir: string, originalName: string): Promise<string> => {
+    try {
+        const res = await api.fsList(parentDir)
+        const existing = new Set(res.entries.map((e: any) => e.name))
+        
+        if (!existing.has(originalName)) {
+            return parentDir === '/' ? `/${originalName}` : `${parentDir}/${originalName}`
+        }
+        
+        let attempt = 1
+        const parts = originalName.split('.')
+        let nameBase = originalName
+        let nameExt = ''
+        if (parts.length > 1 && !originalName.startsWith('.')) {
+            nameExt = '.' + parts.pop()
+            nameBase = parts.join('.')
+        }
+        
+        let newName = `${nameBase} (${attempt})${nameExt}`
+        while (existing.has(newName)) {
+            attempt++
+            newName = `${nameBase} (${attempt})${nameExt}`
+        }
+        return parentDir === '/' ? `/${newName}` : `${parentDir}/${newName}`
+    } catch (e) {
+        console.warn(`Collision check failed for ${parentDir}/${originalName}`, e)
+        // Fallback to original path if listing fails
+        return parentDir === '/' ? `/${originalName}` : `${parentDir}/${originalName}`
+    }
+}
+
 export function useTrashOperations({
   trashMetadata,
   setTrashMetadata,
@@ -29,24 +80,6 @@ export function useTrashOperations({
   entries,
   currentPath
 }: UseTrashOperationsProps) {
-
-  const ensureParentDir = async (targetPath: string) => {
-    const parent = targetPath.substring(0, targetPath.lastIndexOf('/')) || '/'
-    if (parent === '/' || parent === '') return
-    
-    const parts = parent.split('/').filter(Boolean)
-    let current = ''
-    for (const p of parts) {
-      current = `${current}/${p}`
-      try {
-         await api.fsList(current)
-      } catch {
-         try {
-            await api.fsMkdir(current)
-         } catch (e) {}
-      }
-    }
-  }
 
   const handleDelete = useCallback(async (names: string[]) => {
       let currentMetadata: Record<string, TrashMetadata> = {}
@@ -78,8 +111,6 @@ export function useTrashOperations({
         try {
           if (currentPath.startsWith('/Trash')) {
              // Permanent delete from Trash
-             // n is the UUID (filename in Trash) or name if nested?
-             // In Trash view, entries are flattened. name is the UUID.
              await api.fsDelete(fullPath)
              if (currentMetadata[name]) {
                  delete currentMetadata[name]
@@ -104,15 +135,16 @@ export function useTrashOperations({
                  is_dir: entry ? entry.is_dir : false,
                  size: entry ? entry.size : 0
              }
+             
+             // Track parent for refresh if we are deleting from a regular dir
+             if (currentPath !== '/Trash') {
+                const parent = fullPath.substring(0, fullPath.lastIndexOf('/')) || '/'
+                if (parent !== currentPath && expandedDirs.has(parent)) {
+                    targetParentsToRefresh.add(parent)
+                }
+             }
           }
           updateFileTask(id, { status: 'done' })
-          
-          if (currentPath !== '/Trash') {
-            const parent = fullPath.substring(0, fullPath.lastIndexOf('/')) || '/'
-            if (parent !== currentPath && expandedDirs.has(parent)) {
-                targetParentsToRefresh.add(parent)
-            }
-          }
 
         } catch (e) {
           console.error('Delete operation failed for:', n, e)
@@ -167,34 +199,10 @@ export function useTrashOperations({
         
         await ensureParentDir(originalPath)
 
-        let finalPath = originalPath
-        try {
-            const parent = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
-            const baseName = originalPath.split('/').pop() || ''
-            
-            const res = await api.fsList(parent)
-            const existing = new Set(res.entries.map(e => e.name))
-            
-            if (existing.has(baseName)) {
-                let attempt = 1
-                const parts = baseName.split('.')
-                let nameBase = baseName
-                let nameExt = ''
-                if (parts.length > 1 && !baseName.startsWith('.')) {
-                    nameExt = '.' + parts.pop()
-                    nameBase = parts.join('.')
-                }
-                
-                let newName = `${nameBase} (${attempt})${nameExt}`
-                while (existing.has(newName)) {
-                    attempt++
-                    newName = `${nameBase} (${attempt})${nameExt}`
-                }
-                finalPath = parent === '/' ? `/${newName}` : `${parent}/${newName}`
-            }
-        } catch (e) {
-            console.warn(`Collision check failed for ${originalPath}`, e)
-        }
+        const parent = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
+        const baseName = originalPath.split('/').pop() || ''
+        
+        const finalPath = await getNonConflictingPath(parent, baseName)
 
         try {
             await api.fsRename(sourcePath, finalPath)
@@ -202,7 +210,6 @@ export function useTrashOperations({
                 delete currentMetadata[name]
             }
             
-            const parent = finalPath.substring(0, finalPath.lastIndexOf('/')) || '/'
             targetParentsToRefresh.add(parent)
         } catch (e) {
             console.error(`Failed to restore ${sourcePath} to ${finalPath}`, e)
@@ -237,16 +244,8 @@ export function useTrashOperations({
     } catch {}
     setTrashMetadata({})
     
-    // We are in trash view if calling emptyTrash, usually.
-    // If not, we should probably check path.
-    // But usually empty trash button is only available in Trash view.
-    // Assuming we are in trash view or want to empty it anyway.
-    
-    // reloadCurrentDir will clear entries if we are in Trash
     if (currentPath.startsWith('/Trash')) {
         await reloadCurrentDir()
-    } else {
-        // If we are outside trash, just clear metadata
     }
     clearSelection()
   }, [saveTrashMetadata, reloadCurrentDir, clearSelection, entries, currentPath, setTrashMetadata])
