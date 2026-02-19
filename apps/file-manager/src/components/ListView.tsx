@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Folder, FileText } from 'lucide-react'
+import { Folder, FileText, ChevronRight, ChevronDown } from 'lucide-react'
 
 export default function ListView({
   path,
@@ -15,10 +15,11 @@ export default function ListView({
   fmtSize,
   resizingKey,
   onOpenDir,
-  onContextMenu
+  onContextMenu,
+  onToggleExpand
 }: {
   path: string
-  filtered: { name: string; is_dir: boolean; size: number; modified_ts: number }[]
+  filtered: { name: string; is_dir: boolean; size: number; modified_ts: number; level?: number; expanded?: boolean; path?: string }[]
   selected: Set<string>
   setSelected: (s: Set<string>) => void
   clearSelection: () => void
@@ -31,11 +32,12 @@ export default function ListView({
   resizingKey: string | null
   onOpenDir: (name: string) => void
   onContextMenu: (e: React.MouseEvent, name: string) => void
+  onToggleExpand?: (name: string) => void
 }) {
   const totalWidth = Object.values(colWidths).reduce((a, b) => a + b, 0)
   
-  const isAllSelected = filtered.length > 0 && filtered.every(f => selected.has(f.name))
-  const isIndeterminate = !isAllSelected && filtered.some(f => selected.has(f.name))
+  const isAllSelected = filtered.length > 0 && filtered.every(f => selected.has(f.path || f.name))
+  const isIndeterminate = !isAllSelected && filtered.some(f => selected.has(f.path || f.name))
 
   useEffect(() => {
     if (headerCheckboxRef.current) {
@@ -74,7 +76,7 @@ export default function ListView({
                     if (isAllSelected) {
                       clearSelection()
                     } else {
-                      setSelected(new Set(filtered.map(f => f.name)))
+                      setSelected(new Set(filtered.map(f => f.path || f.name)))
                     }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -136,57 +138,63 @@ export default function ListView({
       <tbody>
         {filtered.map((e) => (
           <tr
-            key={e.name}
-            data-name={e.name}
-            className={`list-row ${selected.has(e.name) ? 'selected' : ''}`}
+            key={e.path || e.name}
+            data-name={e.path || e.name}
+            className={`list-row ${selected.has(e.path || e.name) ? 'selected' : ''}`}
             style={{
               height: 44,
               cursor: 'default',
               transition: 'background-color 0.1s',
-              backgroundColor: selected.has(e.name) ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
+              backgroundColor: selected.has(e.path || e.name) ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
             }}
             onClick={(ev) => {
                // If control/cmd key is pressed, toggle. Otherwise set selected.
                // But usually file managers allow simple click to select one.
                if (ev.metaKey || ev.ctrlKey) {
-                 toggleSelect(e.name)
+                 toggleSelect(e.path || e.name)
                } else if (ev.shiftKey) {
                  // Shift select logic could be added here, but simple for now
-                 toggleSelect(e.name)
+                 toggleSelect(e.path || e.name)
                } else {
-                 setSelected(new Set([e.name]))
+                 setSelected(new Set([e.path || e.name]))
                }
                ev.stopPropagation()
             }}
             onDoubleClick={() => {
               if (e.is_dir) {
-                onOpenDir(e.name)
+                onOpenDir(e.path || e.name)
               }
             }}
-            onContextMenu={(ev) => onContextMenu(ev, e.name)}
+            onContextMenu={(ev) => onContextMenu(ev, e.path || e.name)}
           >
             <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <input
-                  type="checkbox"
-                  checked={selected.has(e.name)}
-                  onChange={() => toggleSelect(e.name)}
-                  onClick={(ev) => ev.stopPropagation()}
-                  style={{
-                    appearance: 'none',
-                    width: 16,
-                    height: 16,
-                    border: '1px solid #c7c7cc',
-                    borderRadius: 4,
-                    display: 'grid',
-                    placeContent: 'center',
-                    margin: 0,
-                    flexShrink: 0,
-                    backgroundColor: selected.has(e.name) ? '#007aff' : 'transparent',
-                    borderColor: selected.has(e.name) ? '#007aff' : '#c7c7cc'
-                  }}
-                />
-                <div style={{ display: 'flex', flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: (e.level || 0) * 20, flexShrink: 0 }} />
+                {e.is_dir && onToggleExpand ? (
+                  <div 
+                    onClick={(ev) => {
+                      ev.stopPropagation()
+                      onToggleExpand(e.path || e.name)
+                    }}
+                    style={{ 
+                      cursor: 'pointer', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      width: 16,
+                      height: 16,
+                      borderRadius: 4,
+                      flexShrink: 0,
+                      marginRight: 12,
+                    }}
+                    onMouseEnter={(ev) => ev.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                    onMouseLeave={(ev) => ev.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    {e.expanded ? <ChevronDown size={14} color="#8e8e93" /> : <ChevronRight size={14} color="#8e8e93" />}
+                  </div>
+                ) : <div style={{ width: 16, flexShrink: 0, marginRight: 12 }} />}
+                
+                <div style={{ display: 'flex', flexShrink: 0, marginRight: 12 }}>
                   {e.is_dir ? (
                     <Folder size={20} fill="#FFC107" stroke="none" />
                   ) : (

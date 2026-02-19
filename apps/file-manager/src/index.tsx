@@ -131,6 +131,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [clipboard, setClipboard] = useState<{ items: string[], action: 'copy' | 'move', sourcePath: string } | null>(null)
   const [dragSelect, setDragSelect] = useState<{ startX: number, startY: number, curX: number, curY: number } | null>(null)
   const [resizingKey, setResizingKey] = useState<string | null>(null)
+  
+  // Expandable dirs state
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
+  const [dirCache, setDirCache] = useState<Record<string, { name: string; is_dir: boolean; size: number; modified_ts: number }[]>>({})
+
   const listContainerRef = useRef<HTMLDivElement>(null)
   const dragItemsRef = useRef<{ name: string, rect: DOMRect }[]>([])
   const isDragOperation = useRef(false)
@@ -313,6 +318,16 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }, [path])
 
+  // Sync current entries to dirCache
+  useEffect(() => {
+    if (!loading) {
+      setDirCache(prev => {
+        if (prev[path] === entries) return prev
+        return { ...prev, [path]: entries }
+      })
+    }
+  }, [entries, path, loading])
+
   // 处理点击外部区域关闭排序菜单
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -451,8 +466,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     if (!clipboard) return
     const { items, action, sourcePath } = clipboard
     if (action === 'move') {
-      for (const name of items) {
-        const from = joinPath(sourcePath, name)
+      for (const itemPath of items) {
+        const name = itemPath.split('/').pop() || ''
+        const from = itemPath
         const to = joinPath(path, name)
         if (from !== to) {
           await fmApi.fsRename(from, to)
@@ -461,8 +477,9 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       await reloadCurrentDir()
       setClipboard(null) // Move clears clipboard
     } else if (action === 'copy') {
-       for (const name of items) {
-         const from = joinPath(sourcePath, name)
+       for (const itemPath of items) {
+         const name = itemPath.split('/').pop() || ''
+         const from = itemPath
          // Determine new name to avoid collision? Or just overwrite/fail?
          // For now simple copy
          const to = joinPath(path, name)
@@ -472,13 +489,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             const ext = parts.length > 1 ? parts.pop() : ''
             const base = parts.join('.')
             const newName = `${base} copy${ext ? '.' + ext : ''}`
-            const toNew = joinPath(path, newName)
             
             // We need to handle directory copy differently? 
             // fsDownloadBlob only works for files usually?
             // If it's a directory, we can't easily copy it with blob download.
             // Check if it's a directory
-            const entry = entries.find(e => e.name === name) // This checks current dir, but source might be elsewhere
             // We don't have easy check for source file type if it's not in current dir entries.
             // But we can try download blob.
             try {
@@ -512,14 +527,18 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
 
   const handleRename = (name: string) => {
     setRenameTarget(name)
-    setRenameNewName(name)
+    setRenameNewName(name.split('/').pop() || name)
     setShowRenameModal(true)
   }
 
   const confirmRename = async () => {
-    if (renameNewName && renameNewName !== renameTarget) {
+    const currentName = renameTarget.split('/').pop() || renameTarget
+    if (renameNewName && renameNewName !== currentName) {
       try {
-        await fmApi.fsRename(joinPath(path, renameTarget), joinPath(path, renameNewName))
+        const parent = renameTarget.substring(0, renameTarget.lastIndexOf('/')) || '/'
+        const p = parent === '' ? '/' : parent // Handle case where renameTarget was /foo
+        const to = p === '/' ? `/${renameNewName}` : `${p}/${renameNewName}`
+        await fmApi.fsRename(renameTarget, to)
         await reloadCurrentDir()
       } catch (e) {
         console.error(e)
@@ -633,25 +652,26 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       }
 
       for (const n of names) {
+        const name = n.split('/').pop() || n
         const id = `del-${n}-${Date.now()}`
-        pushFileTask({ id, kind: 'delete', name: n, dir: path, status: 'running' })
+        pushFileTask({ id, kind: 'delete', name, dir: path, status: 'running' })
         try {
           if (path === '/Trash') {
              // Permanent delete
-             const p = joinPath(path, n)
+             const p = n
              await api.fsDelete(p)
-             if (currentMetadata[n]) delete currentMetadata[n]
+             if (currentMetadata[name]) delete currentMetadata[name]
           } else {
              // Move to Trash
-             const from = joinPath(path, n)
+             const from = n
              
              // Calculate unique name in Trash
-             let targetName = n
+             let targetName = name
              if (trashEntries.has(targetName)) {
                  let i = 1
-                 const parts = n.split('.')
+                 const parts = name.split('.')
                  let ext = ''
-                 let base = n
+                 let base = name
                  if (parts.length > 1) {
                     ext = '.' + parts.pop()
                     base = parts.join('.')
@@ -794,7 +814,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
 
     for (const n of names) {
-      const from = joinPath(path, n)
+      const from = n.startsWith('/') ? n : joinPath(path, n)
       const parts = from.split('/').filter(Boolean)
       if (parts.length < 2) continue
       
@@ -961,9 +981,27 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     await reloadCurrentDir()
   }
 
+  const toggleExpand = async (entryName: string) => {
+    const fullPath = entryName.startsWith('/') ? entryName : joinPath(path, entryName)
+    const next = new Set(expandedDirs)
+    if (next.has(fullPath)) {
+      next.delete(fullPath)
+    } else {
+      next.add(fullPath)
+      if (!dirCache[fullPath]) {
+        try {
+          const res = await fmApi.fsList(fullPath)
+          setDirCache(prev => ({ ...prev, [fullPath]: res.entries }))
+        } catch (e) {
+          console.error("Failed to list dir", fullPath, e)
+        }
+      }
+    }
+    setExpandedDirs(next)
+  }
+
   const filtered = useMemo(() => {
-    const base = [...entries]
-    base.sort((a, b) => {
+    const sortFn = (a: { name: string; size: number; modified_ts: number }, b: { name: string; size: number; modified_ts: number }) => {
       let comparison = 0;
       if (sortKey === 'name') {
         comparison = a.name.localeCompare(b.name)
@@ -972,12 +1010,39 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       } else {
         comparison = (a.modified_ts || 0) - (b.modified_ts || 0)
       }
-      
       return sortOrder === 'asc' ? comparison : -comparison
-    })
+    }
+
     const qq = q.trim().toLowerCase()
-    return qq ? base.filter(e => e.name.toLowerCase().includes(qq)) : base
-  }, [entries, sortKey, sortOrder, q])
+    if (qq) {
+      const base = [...entries].sort(sortFn)
+      return base.filter(e => e.name.toLowerCase().includes(qq)).map(e => ({...e, level: 0, path: joinPath(path, e.name)}))
+    }
+
+    const result: any[] = []
+    
+    const process = (items: typeof entries, parentPath: string, level: number) => {
+      const sorted = [...items].sort(sortFn)
+      for (const item of sorted) {
+        const fullPath = joinPath(parentPath, item.name)
+        const isExpanded = expandedDirs.has(fullPath)
+        
+        result.push({
+          ...item,
+          level,
+          expanded: isExpanded,
+          path: fullPath
+        })
+        
+        if (item.is_dir && isExpanded && dirCache[fullPath]) {
+          process(dirCache[fullPath], fullPath, level + 1)
+        }
+      }
+    }
+    
+    process(entries, path, 0)
+    return result
+  }, [entries, sortKey, sortOrder, q, expandedDirs, dirCache, path])
 
   const toggleSelect = (name: string) => {
     setSelected(prev => {
@@ -1243,7 +1308,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             onContextMenu={handleContextMenu}
             onOpenDir={(name) => {
                setSelected(new Set())
-               navigate(joinPath(path, name))
+               const target = name.startsWith('/') ? name : joinPath(path, name)
+               navigate(target)
             }}
             trashMetadata={trashMetadata}
           />
@@ -1262,14 +1328,16 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
               onUploadFiles={handleUploadFiles}
               onCreateFolder={handleNewFolder}
               onDownloadSelected={async () => {
-                const names = [...selected].filter(n => !entries.find(e => e.name === n)?.is_dir)
+                const names = [...selected].filter(n => !filtered.find(f => (f.path || f.name) === n)?.is_dir)
                 if (names.length === 0) return
                 const first = names[0]
-                const fullPath = joinPath(path, first)
+                const fullPath = first
                 const url = api.fsDownloadUrl(fullPath)
                 window.open(url, '_blank')
-                const id = `dl-${first}-${Date.now()}`
-                pushFileTask({ id, kind: 'download', name: first, dir: path, progress: 100, status: 'done' })
+                const name = first.split('/').pop() || first
+                const parent = first.substring(0, first.lastIndexOf('/')) || '/'
+                const id = `dl-${name}-${Date.now()}`
+                pushFileTask({ id, kind: 'download', name: name, dir: parent, progress: 100, status: 'done' })
               }}
               onDeleteSelected={async () => handleDelete([...selected])}
               sortKey={sortKey}
@@ -1306,9 +1374,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                     resizingKey={resizingKey}
                     onOpenDir={(name) => {
                       setSelected(new Set())
-                      navigate(joinPath(path, name))
+                      const target = name.startsWith('/') ? name : joinPath(path, name)
+                      navigate(target)
                     }}
                     onContextMenu={handleContextMenu}
+                    onToggleExpand={toggleExpand}
                   />
                 </>
               ) : (
@@ -1321,9 +1391,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                   toggleSelect={toggleSelect}
                   onOpenDir={(name) => {
                     setSelected(new Set())
-                    navigate(joinPath(path, name))
+                    const target = name.startsWith('/') ? name : joinPath(path, name)
+                    navigate(target)
                   }}
                   onContextMenu={handleContextMenu}
+                  onToggleExpand={toggleExpand}
                 />
               )}
               {dragSelect && createPortal(

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Folder, FileText } from 'lucide-react'
+import { Folder, FileText, ChevronRight, ChevronDown } from 'lucide-react'
 
 export default function GridView({
   path,
@@ -9,16 +9,18 @@ export default function GridView({
   clearSelection,
   toggleSelect,
   onOpenDir,
-  onContextMenu
+  onContextMenu,
+  onToggleExpand
 }: {
   path: string
-  filtered: { name: string; is_dir: boolean }[]
+  filtered: { name: string; is_dir: boolean; path?: string; expanded?: boolean; level?: number }[]
   selected: Set<string>
   setSelected: (s: Set<string>) => void
   clearSelection: () => void
   toggleSelect: (name: string) => void
   onOpenDir: (name: string) => void
   onContextMenu: (e: React.MouseEvent, name: string) => void
+  onToggleExpand?: (name: string) => void
 }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 16, padding: 16 }}>
@@ -28,11 +30,12 @@ export default function GridView({
         </div>
       ) : null}
       {filtered.map(e => {
-        const isSelected = selected.has(e.name)
+        const itemPath = e.path || e.name
+        const isSelected = selected.has(itemPath)
         return (
           <div
-            key={`${path}/grid-${e.name}`}
-            data-name={e.name}
+            key={itemPath}
+            data-name={itemPath}
             className="grid-item"
             style={{
               display: 'flex',
@@ -48,20 +51,20 @@ export default function GridView({
             }}
             onClick={(ev) => {
                if (ev.metaKey || ev.ctrlKey) {
-                 toggleSelect(e.name)
+                 toggleSelect(itemPath)
                } else if (ev.shiftKey) {
-                 toggleSelect(e.name)
+                 toggleSelect(itemPath)
                } else {
-                 setSelected(new Set([e.name]))
+                 setSelected(new Set([itemPath]))
                }
                ev.stopPropagation()
             }}
             onDoubleClick={() => {
               if (e.is_dir) {
-                onOpenDir(e.name)
+                onOpenDir(e.path || e.name)
               }
             }}
-            onContextMenu={(ev) => onContextMenu(ev, e.name)}
+            onContextMenu={(ev) => onContextMenu(ev, itemPath)}
           >
             <style>{`
               .grid-item:hover {
@@ -78,8 +81,37 @@ export default function GridView({
               alignItems: 'center', 
               justifyContent: 'center', 
               marginBottom: 8,
-              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.05))'
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.05))',
+              position: 'relative'
             }}>
+              {e.is_dir && onToggleExpand && (
+                <div
+                  onClick={(ev) => {
+                    ev.stopPropagation()
+                    onToggleExpand(itemPath)
+                  }}
+                  style={{
+                    position: 'absolute',
+                    left: -8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: 'white',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 10
+                  }}
+                  onMouseEnter={(ev) => ev.currentTarget.style.backgroundColor = '#f2f2f7'}
+                  onMouseLeave={(ev) => ev.currentTarget.style.backgroundColor = 'white'}
+                >
+                  {e.expanded ? <ChevronDown size={14} color="#8e8e93" /> : <ChevronRight size={14} color="#8e8e93" />}
+                </div>
+              )}
               {e.is_dir ? (
                 <Folder size={64} color="#F59E0B" fill="#FFC107" strokeWidth={1} />
               ) : (
