@@ -51,7 +51,7 @@ export default function ListView({
         <tr style={{ height: 44, color: '#8e8e93', fontSize: 13, fontWeight: 500 }}>
           <th style={{ textAlign: 'left', width: colWidths.name, position: 'relative', borderBottom: '1px solid #e5e5ea', paddingLeft: 8, paddingBottom: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 <input
                   ref={headerCheckboxRef}
                   type="checkbox"
@@ -169,7 +169,7 @@ export default function ListView({
           >
             <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: (e.level || 0) * 20, flexShrink: 0 }} />
+                <div style={{ width: (e.level || 0) * 22, flexShrink: 0 }} />
                 {e.is_dir && onToggleExpand ? (
                   <div 
                     onClick={(ev) => {
@@ -185,16 +185,16 @@ export default function ListView({
                       height: 16,
                       borderRadius: 4,
                       flexShrink: 0,
-                      marginRight: 12,
+                      marginRight: 6,
                     }}
                     onMouseEnter={(ev) => ev.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
                     onMouseLeave={(ev) => ev.currentTarget.style.backgroundColor = 'transparent'}
                   >
                     {e.expanded ? <ChevronDown size={14} color="#8e8e93" /> : <ChevronRight size={14} color="#8e8e93" />}
                   </div>
-                ) : <div style={{ width: 16, flexShrink: 0, marginRight: 12 }} />}
+                ) : <div style={{ width: 16, flexShrink: 0, marginRight: 6 }} />}
                 
-                <div style={{ display: 'flex', flexShrink: 0, marginRight: 12 }}>
+                <div style={{ display: 'flex', flexShrink: 0, marginRight: 6 }}>
                   {e.is_dir ? (
                     <Folder size={20} fill="#FFC107" stroke="none" />
                   ) : (
