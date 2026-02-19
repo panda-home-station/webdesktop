@@ -10,7 +10,12 @@ export default function GridView({
   toggleSelect,
   onOpenDir,
   onContextMenu,
-  onToggleExpand
+  onToggleExpand,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragLeave,
+  dragOverItem
 }: {
   path: string
   filtered: { name: string; is_dir: boolean; path?: string; expanded?: boolean; level?: number }[]
@@ -21,6 +26,11 @@ export default function GridView({
   onOpenDir: (name: string) => void
   onContextMenu: (e: React.MouseEvent, name: string) => void
   onToggleExpand?: (name: string) => void
+  onDragStart: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
+  onDragOver: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
+  onDrop: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
+  onDragLeave: (e: React.DragEvent) => void
+  dragOverItem: string | null
 }) {
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 16, padding: 16 }}>
@@ -37,6 +47,23 @@ export default function GridView({
             key={itemPath}
             data-name={itemPath}
             className="grid-item"
+            draggable={true}
+            onDragStart={(ev) => onDragStart(ev, e)}
+            onDragOver={(ev) => {
+              if (e.is_dir) {
+                onDragOver(ev, e)
+              }
+            }}
+            onDrop={(ev) => {
+              if (e.is_dir) {
+                onDrop(ev, e)
+              }
+            }}
+            onDragLeave={(ev) => {
+              if (e.is_dir) {
+                onDragLeave(ev)
+              }
+            }}
             style={{
               display: 'flex',
               flexDirection: 'column',
@@ -46,7 +73,11 @@ export default function GridView({
               borderRadius: 12,
               cursor: 'pointer',
               transition: 'background-color 0.2s, transform 0.1s',
-              background: isSelected ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
+              background: (dragOverItem === itemPath && e.is_dir)
+                ? 'rgba(0, 122, 255, 0.2)'
+                : isSelected 
+                  ? 'rgba(0, 122, 255, 0.1)' 
+                  : 'transparent',
               position: 'relative'
             }}
             onClick={(ev) => {

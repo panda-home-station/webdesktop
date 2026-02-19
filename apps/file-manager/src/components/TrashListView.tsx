@@ -4,6 +4,9 @@ import { Folder, FileText } from 'lucide-react'
 type TrashMetadata = {
   originalPath: string
   deletionTime: number
+  name: string
+  is_dir: boolean
+  size: number
 }
 
 export default function TrashListView({
@@ -20,7 +23,7 @@ export default function TrashListView({
   colWidths,
   startResize,
   headerCheckboxRef,
-  resizingKey
+  resizingKey,
 }: {
   filtered: { name: string; is_dir: boolean; size: number; modified_ts: number; path?: string }[]
   selected: Set<string>
@@ -36,9 +39,10 @@ export default function TrashListView({
   startResize: (key: string, nextKey: string | null, e: React.MouseEvent) => void
   headerCheckboxRef: React.RefObject<HTMLInputElement>
   resizingKey: string | null
+  onToggleExpand?: (name: string) => void
 }) {
-  const isAllSelected = filtered.length > 0 && filtered.every(f => selected.has(f.path || f.name))
-  const isIndeterminate = !isAllSelected && filtered.some(f => selected.has(f.path || f.name))
+  const isAllSelected = filtered.length > 0 && filtered.every(f => selected.has(f.name))
+  const isIndeterminate = !isAllSelected && filtered.some(f => selected.has(f.name))
 
   useEffect(() => {
     if (headerCheckboxRef.current) {
@@ -46,24 +50,13 @@ export default function TrashListView({
     }
   }, [isIndeterminate, headerCheckboxRef])
 
-  // Calculate remaining time
-  const getRemainingTime = (deletionTime: number) => {
-    if (!deletionTime) return '-'
-    const now = Date.now()
-    const diff = now - deletionTime
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-    const remaining = 30 - days
-    if (remaining <= 0) return '即将删除'
-    return `${remaining}天`
-  }
-
   return (
     <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'separate', borderSpacing: 0 }}>
       <thead>
         <tr style={{ height: 44, color: '#8e8e93', fontSize: 13, fontWeight: 500 }}>
           <th style={{ textAlign: 'left', width: colWidths.name, position: 'relative', borderBottom: '1px solid #e5e5ea', paddingLeft: 8, paddingBottom: 1 }}>
             <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 <input
                   ref={headerCheckboxRef}
                   type="checkbox"
@@ -74,7 +67,7 @@ export default function TrashListView({
                     if (isAllSelected) {
                       clearSelection()
                     } else {
-                      setSelected(new Set(filtered.map(f => f.path || f.name)))
+                      setSelected(new Set(filtered.map(f => f.name)))
                     }
                   }}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -148,74 +141,59 @@ export default function TrashListView({
       <tbody>
         {filtered.map((e) => {
           const meta = trashMetadata[e.name] || {}
+          const displayName = meta.name || e.name
+          const isDir = meta.is_dir !== undefined ? meta.is_dir : e.is_dir
+          
           return (
             <tr
-              key={e.path || e.name}
-              data-name={e.path || e.name}
-              className={`list-row ${selected.has(e.path || e.name) ? 'selected' : ''}`}
+              key={e.name}
+              data-name={e.name}
+              className={`list-row ${selected.has(e.name) ? 'selected' : ''}`}
               style={{
                 height: 44,
                 cursor: 'default',
                 transition: 'background-color 0.1s',
-                backgroundColor: selected.has(e.path || e.name) ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
+                backgroundColor: selected.has(e.name) ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
               }}
               onClick={(ev) => {
-                if (ev.metaKey || ev.ctrlKey) {
-                  toggleSelect(e.path || e.name)
-                } else if (ev.shiftKey) {
-                  toggleSelect(e.path || e.name)
-                } else {
-                  setSelected(new Set([e.path || e.name]))
-                }
-                ev.stopPropagation()
+                 const id = e.name
+                 if (ev.metaKey || ev.ctrlKey) {
+                   toggleSelect(id)
+                 } else if (ev.shiftKey) {
+                   toggleSelect(id)
+                 } else {
+                   setSelected(new Set([id]))
+                 }
+                 ev.stopPropagation()
               }}
-              onDoubleClick={() => {
-                if (e.is_dir) {
-                  onOpenDir(e.name)
-                }
-              }}
-              onContextMenu={(ev) => onContextMenu(ev, e.path || e.name)}
+              onContextMenu={(ev) => onContextMenu(ev, e.name)}
             >
               <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <input
-                    type="checkbox"
-                    checked={selected.has(e.path || e.name)}
-                    onChange={() => toggleSelect(e.path || e.name)}
-                    onClick={(ev) => ev.stopPropagation()}
-                    style={{
-                      appearance: 'none',
-                      width: 16,
-                      height: 16,
-                      border: '1px solid #c7c7cc',
-                      borderRadius: 4,
-                      display: 'grid',
-                      placeContent: 'center',
-                      margin: 0,
-                      flexShrink: 0,
-                      backgroundColor: selected.has(e.path || e.name) ? '#007aff' : 'transparent',
-                      borderColor: selected.has(e.path || e.name) ? '#007aff' : '#c7c7cc'
-                    }}
-                  />
-                  <div style={{ display: 'flex', flexShrink: 0 }}>
-                    {e.is_dir ? (
-                      <Folder size={20} fill="#FFC107" stroke="none" />
-                    ) : (
-                      <FileText size={20} color="#8e8e93" strokeWidth={1.5} />
-                    )}
-                  </div>
-                  <span style={{ fontSize: 13, color: '#1c1c1e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</span>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  {isDir ? (
+                    <Folder size={20} color="#007aff" fill="#007aff" fillOpacity={0.2} strokeWidth={1.5} style={{ marginRight: 8 }} />
+                  ) : (
+                    <FileText size={20} color="#8e8e93" strokeWidth={1.5} style={{ marginRight: 8 }} />
+                  )}
+                  <span style={{ fontSize: 14, color: '#1c1c1e', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {displayName}
+                  </span>
                 </div>
               </td>
-              <td style={{ fontSize: 13, color: '#8e8e93', borderBottom: '1px solid #f2f2f7', paddingLeft: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {meta.originalPath || '-'}
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
+                <div style={{ fontSize: 13, color: '#8e8e93', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {meta.originalPath || '-'}
+                </div>
               </td>
-              <td style={{ fontSize: 13, color: '#8e8e93', borderBottom: '1px solid #f2f2f7', paddingLeft: 8 }}>
-                {fmtSize(e.size)}
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
+                <div style={{ fontSize: 13, color: '#8e8e93' }}>
+                  {fmtSize(meta.size || e.size || 0)}
+                </div>
               </td>
-              <td style={{ fontSize: 13, color: '#8e8e93', borderBottom: '1px solid #f2f2f7', paddingLeft: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', paddingRight: 20 }}>
-                <span>{meta.deletionTime ? new Date(meta.deletionTime).toLocaleString() : '-'}</span>
-                {meta.deletionTime && <span style={{ fontSize: 12, color: '#ff3b30', marginLeft: 8 }}>剩 {getRemainingTime(meta.deletionTime)}</span>}
+              <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
+                <div style={{ fontSize: 13, color: '#8e8e93' }}>
+                  {fmtTime((meta.deletionTime || 0) / 1000)}
+                </div>
               </td>
             </tr>
           )

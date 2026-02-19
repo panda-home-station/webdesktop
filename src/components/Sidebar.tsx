@@ -6,6 +6,10 @@ export interface SidebarItem {
   icon?: React.ReactNode
   badge?: number | string
   onClick?: () => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDrop?: (e: React.DragEvent) => void
+  onDragLeave?: (e: React.DragEvent) => void
+  highlighted?: boolean
 }
 
 interface SidebarProps {
@@ -47,6 +51,9 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 220, styl
                       if (item.onClick) item.onClick()
                       else if (onSelect) onSelect(item.id)
                     }}
+                    onDragOver={item.onDragOver}
+                    onDrop={item.onDrop}
+                    onDragLeave={item.onDragLeave}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -54,7 +61,7 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 220, styl
                       padding: '8px 12px',
                       borderRadius: 6,
                       cursor: 'pointer',
-                      background: isActive ? '#e5e7eb' : 'transparent',
+                      background: isActive ? '#e5e7eb' : (item.highlighted ? 'rgba(0,122,255,0.1)' : 'transparent'),
                       color: isActive ? '#111827' : '#374151',
                       fontWeight: isActive ? 500 : 400,
                       marginBottom: 2,
@@ -105,6 +112,9 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 220, styl
                   if (item.onClick) item.onClick()
                   else if (onSelect) onSelect(item.id)
                 }}
+                onDragOver={item.onDragOver}
+                onDrop={item.onDrop}
+                onDragLeave={item.onDragLeave}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -112,7 +122,7 @@ export function Sidebar({ items, sections, activeId, onSelect, width = 220, styl
                   padding: '8px 12px',
                   borderRadius: 6,
                   cursor: 'pointer',
-                  background: isActive ? '#e5e7eb' : 'transparent',
+                  background: isActive ? '#e5e7eb' : (item.highlighted ? 'rgba(0,122,255,0.1)' : 'transparent'),
                   color: isActive ? '#111827' : '#374151',
                   fontWeight: isActive ? 500 : 400,
                   marginBottom: 2,

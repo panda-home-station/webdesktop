@@ -26,7 +26,8 @@ type Props = {
   resizingKey: string | null
   onContextMenu: (e: React.MouseEvent, name: string) => void
   onOpenDir: (name: string) => void
-  trashMetadata: Record<string, { originalPath: string, deletionTime: number }>
+  onToggleExpand?: (name: string) => void
+  trashMetadata: Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }>
 }
 
 export default function TrashPane({
@@ -49,6 +50,7 @@ export default function TrashPane({
   resizingKey,
   onContextMenu,
   onOpenDir,
+  onToggleExpand,
   trashMetadata
 }: Props) {
   
@@ -138,9 +140,12 @@ export default function TrashPane({
           toggleSelect={toggleSelect}
           fmtTime={fmtTime}
           fmtSize={fmtSize}
-          onOpenDir={onOpenDir}
+          onOpenDir={(name) => {
+            // Disable double click enter in Trash
+          }}
           onContextMenu={onContextMenu}
           trashMetadata={trashMetadata}
+          onToggleExpand={onToggleExpand}
           colWidths={colWidths}
           startResize={handleResize}
           headerCheckboxRef={headerCheckboxRef}

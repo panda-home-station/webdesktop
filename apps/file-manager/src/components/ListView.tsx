@@ -16,7 +16,12 @@ export default function ListView({
   resizingKey,
   onOpenDir,
   onContextMenu,
-  onToggleExpand
+  onToggleExpand,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragLeave,
+  dragOverItem
 }: {
   path: string
   filtered: { name: string; is_dir: boolean; size: number; modified_ts: number; level?: number; expanded?: boolean; path?: string }[]
@@ -33,6 +38,11 @@ export default function ListView({
   onOpenDir: (name: string) => void
   onContextMenu: (e: React.MouseEvent, name: string) => void
   onToggleExpand?: (name: string) => void
+  onDragStart: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
+  onDragOver: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
+  onDrop: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string }) => void
+  onDragLeave: (e: React.DragEvent) => void
+  dragOverItem: string | null
 }) {
   const totalWidth = Object.values(colWidths).reduce((a, b) => a + b, 0)
   
@@ -141,11 +151,32 @@ export default function ListView({
             key={e.path || e.name}
             data-name={e.path || e.name}
             className={`list-row ${selected.has(e.path || e.name) ? 'selected' : ''}`}
+            draggable={true}
+            onDragStart={(ev) => onDragStart(ev, e)}
+            onDragOver={(ev) => {
+              if (e.is_dir) {
+                onDragOver(ev, e)
+              }
+            }}
+            onDrop={(ev) => {
+              if (e.is_dir) {
+                onDrop(ev, e)
+              }
+            }}
+            onDragLeave={(ev) => {
+              if (e.is_dir) {
+                onDragLeave(ev)
+              }
+            }}
             style={{
               height: 44,
               cursor: 'default',
               transition: 'background-color 0.1s',
-              backgroundColor: selected.has(e.path || e.name) ? 'rgba(0, 122, 255, 0.1)' : 'transparent',
+              backgroundColor: (dragOverItem === (e.path || e.name) && e.is_dir)
+                ? 'rgba(0, 122, 255, 0.2)' 
+                : selected.has(e.path || e.name) 
+                  ? 'rgba(0, 122, 255, 0.1)' 
+                  : 'transparent',
             }}
             onClick={(ev) => {
                // If control/cmd key is pressed, toggle. Otherwise set selected.

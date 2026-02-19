@@ -140,12 +140,89 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const dragItemsRef = useRef<{ name: string, rect: DOMRect }[]>([])
   const isDragOperation = useRef(false)
 
+  const [dragOverItem, setDragOverItem] = useState<string | null>(null)
+
+  const handleDragStart = (e: React.DragEvent, item: { name: string, is_dir: boolean, path?: string }) => {
+    if (renameTarget) {
+      e.preventDefault()
+      return
+    }
+    const itemPath = item.path || joinPath(path, item.name)
+    e.dataTransfer.setData('application/json', JSON.stringify({
+      path: itemPath,
+      name: item.name,
+      is_dir: item.is_dir
+    }))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragOver = (e: React.DragEvent, targetItem: { name: string, is_dir: boolean, path?: string } | null) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.dataTransfer.dropEffect = 'move'
+    
+    if (targetItem && targetItem.is_dir) {
+      const targetPath = targetItem.path || joinPath(path, targetItem.name)
+      setDragOverItem(targetPath)
+    } else {
+      setDragOverItem(path)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverItem(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetItem: { name: string, is_dir: boolean, path?: string } | null) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverItem(null)
+
+    try {
+      const dataStr = e.dataTransfer.getData('application/json')
+      if (!dataStr) return
+      
+      const data = JSON.parse(dataStr)
+      const sourcePath = data.path
+      const sourceName = data.name
+      
+      let targetPath = path
+      if (targetItem) {
+         if (targetItem.is_dir) {
+           targetPath = targetItem.path || joinPath(path, targetItem.name)
+         } else {
+           // If dropped on a file, treat as dropping on the current directory (background)
+           // But usually we don't want that behavior for precision. 
+           // Let's just return if dropped on a file.
+           return
+         }
+      }
+
+      const sourceParent = sourcePath.substring(0, sourcePath.lastIndexOf('/')) || '/'
+      
+      // Validation
+      if (sourcePath === targetPath) return
+      if (data.is_dir && targetPath.startsWith(sourcePath + '/')) return
+      if (targetPath === sourceParent) return
+
+      const newPath = targetPath.endsWith('/') ? `${targetPath}${sourceName}` : `${targetPath}/${sourceName}`
+      
+      await fmApi.fsRename(sourcePath, newPath)
+      await reloadCurrentDir()
+      
+    } catch (err) {
+      console.error('Drop failed', err)
+    }
+  }
+
   // Modals state
   const [showNewFolderModal, setShowNewFolderModal] = useState(false)
   const [newFolderName, setNewFolderName] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [itemsToDelete, setItemsToDelete] = useState<string[]>([])
-  const [trashMetadata, setTrashMetadata] = useState<Record<string, { originalPath: string, deletionTime: number }>>({})
+  const [trashMetadata, setTrashMetadata] = useState<Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }>>({})
 
   const loadTrashMetadata = async () => {
     try {
@@ -618,7 +695,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }
   
-  const handleDelete = (names: string[]) => {
+  const handleDelete = async (names: string[]) => {
       setItemsToDelete(names)
       setShowDeleteModal(true)
   }
@@ -626,70 +703,57 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const confirmDelete = async () => {
       const names = itemsToDelete
       
-      let trashEntries: Set<string> = new Set()
-      let currentMetadata: Record<string, { originalPath: string, deletionTime: number }> = {}
+      let currentMetadata: Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }> = {}
       
       if (path !== '/Trash') {
          try {
              // Ensure Trash exists
              await api.fsMkdir('/Trash')
-         } catch (e) {
-             // Ignore if exists
-         }
+         } catch (e) {}
          
          try {
-             // Get existing items to avoid collision
-             const res = await api.fsList('/Trash')
-             if (res && res.entries) {
-                trashEntries = new Set(res.entries.map(e => e.name))
-             }
-             currentMetadata = await loadTrashMetadata()
+             currentMetadata = await loadTrashMetadata() as any
          } catch (e) {
-             console.error("Failed to list Trash", e)
+             console.error("Failed to load trash metadata", e)
          }
       } else {
-         currentMetadata = { ...trashMetadata }
+         currentMetadata = { ...trashMetadata } as any
       }
 
       for (const n of names) {
-        const name = n.split('/').pop() || n
-        const id = `del-${n}-${Date.now()}`
+        const fullPath = n.startsWith('/') ? n : joinPath(path, n)
+        const name = fullPath.split('/').pop() || ''
+        if (!name) continue
+
+        const id = `del-${name}-${Date.now()}`
         pushFileTask({ id, kind: 'delete', name, dir: path, status: 'running' })
         try {
-          if (path === '/Trash') {
-             // Permanent delete
-             const p = n
-             await api.fsDelete(p)
-             if (currentMetadata[name]) delete currentMetadata[name]
+          if (path.startsWith('/Trash')) {
+             // Permanent delete from Trash
+             // n is the UUID (filename in Trash)
+             await api.fsDelete(fullPath)
+             if (currentMetadata[name]) {
+                 delete currentMetadata[name]
+             }
           } else {
              // Move to Trash
-             const from = n
+             const from = fullPath
              
-             // Calculate unique name in Trash
-             let targetName = name
-             if (trashEntries.has(targetName)) {
-                 let i = 1
-                 const parts = name.split('.')
-                 let ext = ''
-                 let base = name
-                 if (parts.length > 1) {
-                    ext = '.' + parts.pop()
-                    base = parts.join('.')
-                 }
-                 
-                 while (trashEntries.has(`${base} (${i})${ext}`)) {
-                     i++
-                 }
-                 targetName = `${base} (${i})${ext}`
-             }
+             // Generate UUID for the trash item
+             const uuid = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+             const to = `/Trash/${uuid}`
              
-             const to = `/Trash/${targetName}`
              await api.fsRename(from, to)
-             trashEntries.add(targetName)
              
-             currentMetadata[targetName] = {
+             // Find entry to get metadata
+             const entry = entries.find(e => e.name === name)
+             
+             currentMetadata[uuid] = {
                  originalPath: from,
-                 deletionTime: Date.now()
+                 deletionTime: Date.now(),
+                 name: name,
+                 is_dir: entry ? entry.is_dir : false,
+                 size: entry ? entry.size : 0
              }
           }
           updateFileTask(id, { status: 'done' })
@@ -702,6 +766,30 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       await saveTrashMetadata(currentMetadata)
       
       await reloadCurrentDir()
+      
+      // Refresh parent directories for nested items if they are expanded
+      if (path !== '/Trash') {
+        const uniqueParents = new Set<string>()
+        for (const n of names) {
+            const fullPath = n.startsWith('/') ? n : joinPath(path, n)
+            const parent = fullPath.substring(0, fullPath.lastIndexOf('/')) || '/'
+            if (parent !== path && expandedDirs.has(parent)) {
+                uniqueParents.add(parent)
+            }
+        }
+        
+        for (const p of uniqueParents) {
+            try {
+                const res = await api.fsList(p)
+                if (res && res.entries) {
+                    setDirCache(prev => ({ ...prev, [p]: res.entries }))
+                }
+            } catch (e) {
+                console.error(`Failed to refresh parent dir ${p}`, e)
+            }
+        }
+      }
+
       clearSelection()
       setShowDeleteModal(false)
   }
@@ -733,111 +821,103 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     for (const p of parts) {
       current = `${current}/${p}`
       try {
-         await fmApi.fsMkdir(current)
-      } catch (e) {
-         // ignore
+         // Try to list first to see if it exists (and is a dir)
+         await fmApi.fsList(current)
+      } catch {
+         // Doesn't exist or is not a dir, try to create
+         try {
+            await fmApi.fsMkdir(current)
+         } catch (e) {
+            // Ignore if it failed, but log it
+            // console.log(`Failed to mkdir ${current}`, e)
+         }
       }
     }
   }
 
   const restoreItems = async (names: string[]) => {
-    let currentMetadata = { ...trashMetadata }
-    // Always try to reload metadata if we are in Trash to ensure we have the latest info
-    if (path.startsWith('/Trash')) {
-        try {
-           const meta = await loadTrashMetadata()
-           currentMetadata = { ...currentMetadata, ...meta }
-        } catch (e) {
-           console.error('Failed to load trash metadata', e)
+    let currentMetadata: Record<string, { originalPath: string, deletionTime: number, name: string, is_dir: boolean, size: number }> = {}
+    try {
+        if (path.startsWith('/Trash')) {
+            currentMetadata = await loadTrashMetadata() as any
+        } else {
+            currentMetadata = { ...trashMetadata } as any
         }
+    } catch (e) {
+        console.error('Failed to load trash metadata', e)
+        currentMetadata = { ...trashMetadata } as any
     }
 
-    const processEntry = async (sourcePath: string, targetPath: string, isRoot: boolean, rootName: string) => {
-       // 1. Check if target exists
-       let targetExists = false
-       const targetParent = targetPath.substring(0, targetPath.lastIndexOf('/')) || '/'
-       const targetName = targetPath.split('/').pop() || ''
-       
-       try {
-           const list = await fmApi.fsList(targetParent)
-           if (list.entries.some(e => e.name === targetName)) {
-               targetExists = true
-           }
-       } catch {
-           targetExists = false
-       }
-       
-       if (!targetExists) {
-           await ensureParentDir(targetPath)
-           try {
-               await fmApi.fsRename(sourcePath, targetPath)
-               if (isRoot && currentMetadata[rootName]) {
-                   delete currentMetadata[rootName]
-               }
-           } catch (e) {
-               console.error(`Failed to restore ${sourcePath}`, e)
-           }
-           return
-       }
-       
-       // Target exists: Try to merge if source is a directory
-       try {
-           // Try to list source. If it succeeds, it's a directory.
-           const list = await fmApi.fsList(sourcePath)
-           
-           // Recursively restore children
-           for (const child of list.entries) {
-               await processEntry(
-                   `${sourcePath}/${child.name}`,
-                   `${targetPath}/${child.name}`,
-                   false, // Children are never root metadata items
-                   rootName
-               )
-           }
-           
-           // Check if source directory is now empty
-           const remaining = await fmApi.fsList(sourcePath)
-           if (remaining.entries.length === 0) {
-               // Delete the empty source directory
-               const srcParent = sourcePath.substring(0, sourcePath.lastIndexOf('/')) || '/'
-               const srcName = sourcePath.split('/').pop() || ''
-               await fmApi.fsDelete(srcParent, [srcName])
-               
-               if (isRoot && currentMetadata[rootName]) {
-                   delete currentMetadata[rootName]
-               }
-           }
-       } catch (e) {
-           // sourcePath is likely a file (fsList failed) or permission error
-           // If it's a file and target exists, we skip (do nothing)
-       }
-    }
+    const targetParentsToRefresh = new Set<string>()
 
     for (const n of names) {
-      const from = n.startsWith('/') ? n : joinPath(path, n)
-      const parts = from.split('/').filter(Boolean)
-      if (parts.length < 2) continue
-      
-      const rootItemName = parts[1]
-      let targetPath = ''
-      
-      if (currentMetadata[rootItemName]) {
-         const originalRoot = currentMetadata[rootItemName].originalPath
-         const rel = parts.slice(2).join('/')
-         if (rel) {
-            targetPath = originalRoot.endsWith('/') ? originalRoot + rel : originalRoot + '/' + rel
-         } else {
-            targetPath = originalRoot
-         }
-      } else {
-         // Fallback: restore to root if no metadata found
-         targetPath = '/' + parts.slice(1).join('/')
-      }
-      
-      await processEntry(from, targetPath, parts.length === 2, rootItemName)
+        const name = n.startsWith('/') ? n.split('/').pop() || '' : n
+        
+        const meta = currentMetadata[name]
+        if (!meta) {
+            console.warn(`No metadata found for ${name}`)
+            continue
+        }
+
+        const sourcePath = `/Trash/${name}`
+        const originalPath = meta.originalPath
+        
+        await ensureParentDir(originalPath)
+
+        let finalPath = originalPath
+        try {
+            const parent = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
+            const baseName = originalPath.split('/').pop() || ''
+            
+            const res = await api.fsList(parent)
+            const existing = new Set(res.entries.map(e => e.name))
+            
+            if (existing.has(baseName)) {
+                let attempt = 1
+                const parts = baseName.split('.')
+                let nameBase = baseName
+                let nameExt = ''
+                if (parts.length > 1 && !baseName.startsWith('.')) {
+                    nameExt = '.' + parts.pop()
+                    nameBase = parts.join('.')
+                }
+                
+                let newName = `${nameBase} (${attempt})${nameExt}`
+                while (existing.has(newName)) {
+                    attempt++
+                    newName = `${nameBase} (${attempt})${nameExt}`
+                }
+                finalPath = parent === '/' ? `/${newName}` : `${parent}/${newName}`
+            }
+        } catch (e) {
+            console.warn(`Collision check failed for ${originalPath}`, e)
+        }
+
+        try {
+            await api.fsRename(sourcePath, finalPath)
+            if (currentMetadata[name]) {
+                delete currentMetadata[name]
+            }
+            
+            const parent = finalPath.substring(0, finalPath.lastIndexOf('/')) || '/'
+            targetParentsToRefresh.add(parent)
+        } catch (e) {
+            console.error(`Failed to restore ${sourcePath} to ${finalPath}`, e)
+        }
     }
+    
     await saveTrashMetadata(currentMetadata)
     await reloadCurrentDir()
+    
+    for (const p of targetParentsToRefresh) {
+        try {
+            const res = await api.fsList(p)
+            setDirCache(prev => ({ ...prev, [p]: res.entries }))
+        } catch (e) {
+            console.error(`Failed to refresh target parent dir ${p}`, e)
+        }
+    }
+    
     clearSelection()
   }
 
@@ -1019,22 +1099,62 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       return base.filter(e => e.name.toLowerCase().includes(qq)).map(e => ({...e, level: 0, path: joinPath(path, e.name)}))
     }
 
+    // Sort entries for Trash: group by name, then deletion time?
+    // Actually, we just need to map them to display names.
+    // We should parse the timestamp from the name for root items.
     const result: any[] = []
     
     const process = (items: typeof entries, parentPath: string, level: number) => {
       const sorted = [...items].sort(sortFn)
       for (const item of sorted) {
-        const fullPath = joinPath(parentPath, item.name)
-        const isExpanded = expandedDirs.has(fullPath)
+        let fullPath = joinPath(parentPath, item.name)
+        let isExpanded = expandedDirs.has(fullPath)
+        
+        // For Trash Root Items, we want to display the original name
+        let displayName = item.name
+        let meta = trashMetadata[item.name]
+        let isDir = item.is_dir
+        let size = item.size
+        
+        if (path === '/Trash' && level === 0) {
+           if (meta) {
+               displayName = meta.name || item.name
+               // New format: /Trash/timestamp/originalName
+               // Override path to point to content
+               fullPath = joinPath(fullPath, meta.name || item.name)
+               // Check expanded state for the inner path
+               isExpanded = expandedDirs.has(fullPath)
+               // Override properties from metadata
+               isDir = meta.is_dir !== undefined ? meta.is_dir : item.is_dir
+               size = meta.size !== undefined ? meta.size : item.size
+           } else {
+               // Fallback for old items (timestamp_name)
+               const parts = item.name.split('_')
+               if (parts.length > 1 && /^\d+$/.test(parts[0])) {
+                   const originalName = parts.slice(1).join('_')
+                   displayName = originalName
+                   if (!meta) {
+                       // Mock metadata if missing
+                       meta = { originalPath: `/${originalName}`, deletionTime: parseInt(parts[0]) }
+                   }
+               }
+           }
+        }
+        
+        // For nested items in Trash, just show their name
         
         result.push({
           ...item,
+          name: displayName, // Override name for display
+          realName: item.name, // Keep real name for logic
+          is_dir: isDir,
+          size: size,
           level,
           expanded: isExpanded,
           path: fullPath
         })
         
-        if (item.is_dir && isExpanded && dirCache[fullPath]) {
+        if (isDir && isExpanded && dirCache[fullPath]) {
           process(dirCache[fullPath], fullPath, level + 1)
         }
       }
@@ -1195,15 +1315,55 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     }
   }
 
+  const handleTrashDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverItem(null)
+    try {
+      const dataStr = e.dataTransfer.getData('application/json')
+      if (!dataStr) return
+      const data = JSON.parse(dataStr)
+      if (data.path) {
+        handleDelete([data.path])
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
   const sections = useMemo(() => {
     const runningCount = tasks.filter(t => (t.kind === 'upload' || t.kind === 'download') && (t.status === 'running' || t.status === 'pending')).length
     return [
     {
       title: '文件',
       items: [
-        { id: 'home', label: '我的文件', icon: <Home size={20} strokeWidth={1.5} /> },
-        { id: 'team', label: '团队文件', icon: <Users size={20} strokeWidth={1.5} /> },
-        { id: 'appdata', label: '应用文件', icon: <Package size={20} strokeWidth={1.5} /> },
+        { 
+          id: 'home', 
+          label: '我的文件', 
+          icon: <Home size={20} strokeWidth={1.5} />,
+          onDragOver: (e: React.DragEvent) => handleDragOver(e, { name: 'Home', is_dir: true, path: '/' }),
+          onDrop: (e: React.DragEvent) => handleDrop(e, { name: 'Home', is_dir: true, path: '/' }),
+          onDragLeave: handleDragLeave,
+          highlighted: dragOverItem === '/'
+        },
+        { 
+          id: 'team', 
+          label: '团队文件', 
+          icon: <Users size={20} strokeWidth={1.5} />,
+          onDragOver: (e: React.DragEvent) => handleDragOver(e, { name: 'Team', is_dir: true, path: '/Team' }),
+          onDrop: (e: React.DragEvent) => handleDrop(e, { name: 'Team', is_dir: true, path: '/Team' }),
+          onDragLeave: handleDragLeave,
+          highlighted: dragOverItem === '/Team'
+        },
+        { 
+          id: 'appdata', 
+          label: '应用文件', 
+          icon: <Package size={20} strokeWidth={1.5} />,
+          onDragOver: (e: React.DragEvent) => handleDragOver(e, { name: 'AppData', is_dir: true, path: '/AppData' }),
+          onDrop: (e: React.DragEvent) => handleDrop(e, { name: 'AppData', is_dir: true, path: '/AppData' }),
+          onDragLeave: handleDragLeave,
+          highlighted: dragOverItem === '/AppData'
+        },
       ]
     },
     {
@@ -1225,11 +1385,19 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       title: '系统',
       items: [
         { id: 'transfers', label: '传输任务', icon: <ArrowLeftRight size={20} strokeWidth={1.5} />, badge: runningCount > 0 ? runningCount : undefined },
-        { id: 'trash', label: '回收站', icon: <Trash2 size={20} strokeWidth={1.5} /> },
+        { 
+          id: 'trash', 
+          label: '回收站', 
+          icon: <Trash2 size={20} strokeWidth={1.5} />,
+          onDragOver: (e: React.DragEvent) => handleDragOver(e, { name: 'Trash', is_dir: true, path: '/Trash' }),
+          onDrop: handleTrashDrop,
+          onDragLeave: handleDragLeave,
+          highlighted: dragOverItem === '/Trash'
+        },
       ]
     }
   ]
-  }, [tasks])
+  }, [tasks, path, dragOverItem])
 
   return (
     <div style={{ display: 'flex', height: '100%' }} className="noselect">
@@ -1307,11 +1475,10 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             resizingKey={resizingKey}
             onContextMenu={handleContextMenu}
             onOpenDir={(name) => {
-               setSelected(new Set())
-               const target = name.startsWith('/') ? name : joinPath(path, name)
-               navigate(target)
+               // Do nothing on double click in Trash
             }}
             trashMetadata={trashMetadata}
+            onToggleExpand={toggleExpand}
           />
         ) : (
           <>
@@ -1346,6 +1513,10 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
               setSortOrder={(o) => setSortOrder(o)}
               view={view}
               setView={(v) => setView(v)}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              onDragLeave={handleDragLeave}
+              dragOverItem={dragOverItem}
             />
             <style>{`
               #fm-list-container::-webkit-scrollbar { display: none; }
@@ -1356,6 +1527,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                style={{ flex: 1, overflow: 'auto', padding: 0, color: '#1c1c1e', fontSize: 14, background: '#ffffff', position: 'relative' }}
                onContextMenu={(e) => handleContextMenu(e, '')}
                onMouseDown={handleContainerMouseDown}
+               onDragOver={(e) => handleDragOver(e, null)}
+               onDrop={(e) => handleDrop(e, null)}
             >
               {view === 'list' ? (
                 <>
@@ -1379,6 +1552,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                     }}
                     onContextMenu={handleContextMenu}
                     onToggleExpand={toggleExpand}
+                    onDragStart={handleDragStart}
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                    onDragLeave={handleDragLeave}
+                    dragOverItem={dragOverItem}
                   />
                 </>
               ) : (
@@ -1396,6 +1574,11 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                   }}
                   onContextMenu={handleContextMenu}
                   onToggleExpand={toggleExpand}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  onDragLeave={handleDragLeave}
+                  dragOverItem={dragOverItem}
                 />
               )}
               {dragSelect && createPortal(

@@ -78,7 +78,11 @@ export default function Toolbar({
   sortOrder,
   setSortOrder,
   view,
-  setView
+  setView,
+  onDragOver,
+  onDrop,
+  onDragLeave,
+  dragOverItem
 }: {
   back: () => void
   forward: () => void
@@ -99,6 +103,10 @@ export default function Toolbar({
   setSortOrder: (o: 'asc' | 'desc') => void
   view: 'list' | 'grid'
   setView: (v: 'list' | 'grid') => void
+  onDragOver: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string } | null) => void
+  onDrop: (e: React.DragEvent, item: { name: string; is_dir: boolean; path?: string } | null) => void
+  onDragLeave: (e: React.DragEvent) => void
+  dragOverItem: string | null
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
@@ -127,15 +135,33 @@ export default function Toolbar({
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 4, overflow: 'hidden' }}>
         <div style={{ display: 'flex', alignItems: 'center', background: '#f2f2f7', borderRadius: 8, padding: '2px 8px', height: 32, maxWidth: '100%', overflow: 'hidden' }}>
            {crumbs.length > 1 && crumbs[1].to === '/AppData' ? (
-             <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/AppData')}>
+             <button 
+               style={{ border: 'none', background: dragOverItem === '/AppData' ? 'rgba(0,122,255,0.2)' : 'transparent', borderRadius: 4, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+               onClick={() => navigate('/AppData')}
+               onDragOver={(e) => onDragOver(e, { name: 'AppData', is_dir: true, path: '/AppData' })}
+               onDrop={(e) => onDrop(e, { name: 'AppData', is_dir: true, path: '/AppData' })}
+               onDragLeave={onDragLeave}
+             >
                <Package size={16} color="#6b7280" strokeWidth={1.5} />
              </button>
            ) : crumbs.length > 1 && crumbs[1].to === '/Team' ? (
-             <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/Team')}>
+             <button 
+               style={{ border: 'none', background: dragOverItem === '/Team' ? 'rgba(0,122,255,0.2)' : 'transparent', borderRadius: 4, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+               onClick={() => navigate('/Team')}
+               onDragOver={(e) => onDragOver(e, { name: 'Team', is_dir: true, path: '/Team' })}
+               onDrop={(e) => onDrop(e, { name: 'Team', is_dir: true, path: '/Team' })}
+               onDragLeave={onDragLeave}
+             >
                <Users size={16} color="#6b7280" strokeWidth={1.5} />
              </button>
            ) : (
-             <button style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => navigate('/')}>
+             <button 
+               style={{ border: 'none', background: dragOverItem === '/' ? 'rgba(0,122,255,0.2)' : 'transparent', borderRadius: 4, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+               onClick={() => navigate('/')}
+               onDragOver={(e) => onDragOver(e, { name: 'Root', is_dir: true, path: '/' })}
+               onDrop={(e) => onDrop(e, { name: 'Root', is_dir: true, path: '/' })}
+               onDragLeave={onDragLeave}
+             >
                <Home size={16} color="#6b7280" strokeWidth={1.5} />
              </button>
            )}
@@ -143,8 +169,11 @@ export default function Toolbar({
               <React.Fragment key={`crumb-${i}-${c.to}`}>
                 <span style={{ color: '#9ca3af', margin: '0 4px', fontSize: 12 }}>/</span>
                 <button 
-                  style={{ border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontSize: 13, color: '#1f2937', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  style={{ border: 'none', background: dragOverItem === c.to ? 'rgba(0,122,255,0.2)' : 'transparent', borderRadius: 4, padding: '0 4px', cursor: 'pointer', fontSize: 13, color: '#1f2937', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
                   onClick={() => navigate(c.to)}
+                  onDragOver={(e) => onDragOver(e, { name: c.label, is_dir: true, path: c.to })}
+                  onDrop={(e) => onDrop(e, { name: c.label, is_dir: true, path: c.to })}
+                  onDragLeave={onDragLeave}
                 >
                   {c.label}
                 </button>
