@@ -32,6 +32,10 @@ import { useNavigation } from './hooks/useNavigation'
 import { useSelection } from './hooks/useSelection'
 import { useTrash } from './hooks/useTrash'
 import { useTrashOperations } from './hooks/useTrashOperations'
+import { useDragSelection } from './hooks/useDragSelection'
+import { useFileDragAndDrop } from './hooks/useFileDragAndDrop'
+import { useFileUpload } from './hooks/useFileUpload'
+import { useClipboard } from './hooks/useClipboard'
 import { joinPath, fmtTime, fmtSize, getUniqueName, filterSystemEntries } from './utils'
 import { FileEntry, TrashMetadata, ClipboardItem, DragSelection, SortKey, SortOrder, ViewMode, ColumnWidths } from './types'
 
@@ -72,6 +76,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; name: string } | null>(null)
   const [q, setQ] = useState<string>('')
   const { selected, setSelected, toggleSelect, clearSelection, selectAll, isSelected } = useSelection()
+  const { dragSelect, handleContainerMouseDown } = useDragSelection({ path, view, selected, setSelected })
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sortButtonRef = useRef<HTMLButtonElement | null>(null)
   const [transferTab, setTransferTab] = useState<'upload' | 'download'>('upload')
@@ -84,10 +89,23 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     owner: 120,
     originalPath: 200,
   })
+
+  const {
+    startUpload,
+    handleUploadFiles,
+    getAvgSpeed,
+    uploadFilesMap
+  } = useFileUpload({ path, reloadCurrentDir, setTasks })
   
+  const {
+    clipboard,
+    setClipboard,
+    handleCopy,
+    handleCut,
+    handlePaste
+  } = useClipboard({ path, reloadCurrentDir, startUpload })
+
   // New State
-  const [clipboard, setClipboard] = useState<ClipboardItem | null>(null)
-  const [dragSelect, setDragSelect] = useState<DragSelection | null>(null)
   const [resizingKey, setResizingKey] = useState<string | null>(null)
   
   // Expandable dirs state
@@ -95,85 +113,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [dirCache, setDirCache] = useState<Record<string, FileEntry[]>>({})
 
   const listContainerRef = useRef<HTMLDivElement>(null)
-  const dragItemsRef = useRef<{ name: string, rect: DOMRect }[]>([])
-  const isDragOperation = useRef(false)
-
-  const [dragOverItem, setDragOverItem] = useState<string | null>(null)
-
-  const handleDragStart = (e: React.DragEvent, item: { name: string, is_dir: boolean, path?: string }) => {
-    if (renameTarget) {
-      e.preventDefault()
-      return
-    }
-    const itemPath = item.path || joinPath(path, item.name)
-    e.dataTransfer.setData('application/json', JSON.stringify({
-      path: itemPath,
-      name: item.name,
-      is_dir: item.is_dir
-    }))
-    e.dataTransfer.effectAllowed = 'move'
-  }
-
-  const handleDragOver = (e: React.DragEvent, targetItem: { name: string, is_dir: boolean, path?: string } | null) => {
-    e.preventDefault()
-    e.stopPropagation()
-    e.dataTransfer.dropEffect = 'move'
-    
-    if (targetItem && targetItem.is_dir) {
-      const targetPath = targetItem.path || joinPath(path, targetItem.name)
-      setDragOverItem(targetPath)
-    } else {
-      setDragOverItem(path)
-    }
-  }
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOverItem(null)
-  }
-
-  const handleDrop = async (e: React.DragEvent, targetItem: { name: string, is_dir: boolean, path?: string } | null) => {
-    e.preventDefault()
-    e.stopPropagation()
-    setDragOverItem(null)
-
-    try {
-      const dataStr = e.dataTransfer.getData('application/json')
-      if (!dataStr) return
-      
-      const data = JSON.parse(dataStr)
-      const sourcePath = data.path
-      const sourceName = data.name
-      
-      let targetPath = path
-      if (targetItem) {
-         if (targetItem.is_dir) {
-           targetPath = targetItem.path || joinPath(path, targetItem.name)
-         } else {
-           // If dropped on a file, treat as dropping on the current directory (background)
-           // But usually we don't want that behavior for precision. 
-           // Let's just return if dropped on a file.
-           return
-         }
-      }
-
-      const sourceParent = sourcePath.substring(0, sourcePath.lastIndexOf('/')) || '/'
-      
-      // Validation
-      if (sourcePath === targetPath) return
-      if (data.is_dir && targetPath.startsWith(sourcePath + '/')) return
-      if (targetPath === sourceParent) return
-
-      const newPath = targetPath.endsWith('/') ? `${targetPath}${sourceName}` : `${targetPath}/${sourceName}`
-      
-      await fmApi.fsRename(sourcePath, newPath)
-      await reloadCurrentDir()
-      
-    } catch (err) {
-      console.error('Drop failed', err)
-    }
-  }
 
   // Modals state
   const [showNewFolderModal, setShowNewFolderModal] = useState(false)
@@ -188,19 +127,21 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   const [renameTarget, setRenameTarget] = useState('')
   const [renameNewName, setRenameNewName] = useState('')
   
+  const {
+    dragOverItem,
+    handleDragStart,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop
+  } = useFileDragAndDrop({ path, renameTarget, reloadCurrentDir })
+  
   const [showNewFileModal, setShowNewFileModal] = useState(false)
   const [newFileName, setNewFileName] = useState('')
 
   const [showCancelTaskModal, setShowCancelTaskModal] = useState(false)
   const [taskToCancel, setTaskToCancel] = useState<FileTask | null>(null)
 
-  const headerCheckboxRef = useRef<HTMLInputElement | null>(null)
-  const abortControllers = useRef<Map<string, AbortController>>(new Map())
-  const uploadFilesMap = useRef<Map<string, File>>(new Map())
-  const speedStatsRef = useRef<Map<string, { samples: { ts: number; bps: number }[]; lastAvg: number }>>(new Map())
-  const SPEED_WINDOW_MS = 6000
 
-  const joinPath = (dir: string, name: string) => (dir.endsWith('/') ? `${dir}${name}` : `${dir}/${name}`)
   const reloadCurrentDir = async () => {
     const rs = await fmApi.fsList(path)
     let entries = rs.entries as FileEntry[]
@@ -221,64 +162,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     currentPath: path
   })
 
-  const startUpload = async (id: string, file: File, dir: string, offset: number = 0) => {
-    const controller = new AbortController()
-    abortControllers.current.set(id, controller)
-    updateFileTask(id, { status: 'running' })
-    console.log(`[${new Date().toLocaleTimeString()}] FileManager: startUpload ${file.name}`);
-    try {
-      await fmApi.fsUpload(dir, file, (info) => {
-        updateFileTask(id, { progress: info.percent, total: info.total, loaded: info.loaded, bps: info.bps })
-      }, controller.signal)
-      console.log(`[${new Date().toLocaleTimeString()}] FileManager: upload finished ${file.name}`);
-      updateFileTask(id, { progress: 100, status: 'done' })
-      uploadFilesMap.current.delete(id)
-      if (path === dir) {
-        await reloadCurrentDir()
-      }
-    } catch (e: any) {
-      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
-        // ignore
-      } else {
-        updateFileTask(id, { status: 'error' })
-      }
-    } finally {
-      abortControllers.current.delete(id)
-    }
-  }
-  useEffect(() => {
-    setTasks(getFileTasks())
-    const unsub = subscribeFileTasks((ts) => {
-      const now = Date.now()
-      for (const t of ts) {
-        if (t.status === 'running') {
-          const entry = speedStatsRef.current.get(t.id) || { samples: [], lastAvg: 0 }
-          if (t.bps != null) {
-            entry.samples.push({ ts: now, bps: t.bps })
-          }
-          entry.samples = entry.samples.filter(s => now - s.ts <= SPEED_WINDOW_MS)
-          if (entry.samples.length > 0) {
-            let sum = 0
-            for (const s of entry.samples) sum += s.bps
-            entry.lastAvg = sum / entry.samples.length
-          }
-          speedStatsRef.current.set(t.id, entry)
-        } else {
-          const entry = speedStatsRef.current.get(t.id)
-          if (entry) {
-            entry.samples = []
-            speedStatsRef.current.set(t.id, entry)
-          }
-        }
-      }
-      setTasks(ts)
-    })
-    return () => unsub()
-  }, [])
-  const getAvgSpeed = (id: string) => {
-    const e = speedStatsRef.current.get(id)
-    return e && e.lastAvg ? e.lastAvg : 0
-  }
+
 
   useEffect(() => {
     let mounted = true
@@ -370,94 +254,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
 
   const closeContextMenu = () => setContextMenu(null)
 
-  // Drag Select Logic
-  const handleContainerMouseDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('.list-row, .grid-item')) return
-    if (path === '/Trash' || path === '/Transfers') return
-    
-    // Allow left (0) and right (2) click
-    if (e.button !== 0 && e.button !== 2) return
 
-    const startX = e.clientX
-    const startY = e.clientY
-    
-    // Optimization: Don't calculate rects yet. Wait for drag threshold.
-    dragItemsRef.current = []
-    isDragOperation.current = false
-    
-    // Initial selection state
-    const initialSelected = new Set(e.ctrlKey || e.metaKey || e.shiftKey ? selected : [])
-    
-    const move = (ev: MouseEvent) => {
-      // If moved significantly, mark as drag operation
-      if (!isDragOperation.current) {
-         if (Math.abs(ev.clientX - startX) > 5 || Math.abs(ev.clientY - startY) > 5) {
-             isDragOperation.current = true
-             
-             // Calculate rects only once when drag actually starts
-             const items = document.querySelectorAll(view === 'list' ? '.list-row' : '.grid-item')
-             const dragItems: { name: string, rect: DOMRect }[] = []
-             items.forEach(el => {
-                const name = el.getAttribute('data-name')
-                if (name) {
-                  dragItems.push({ name, rect: el.getBoundingClientRect() })
-                }
-             })
-             dragItemsRef.current = dragItems
-         } else {
-             return
-         }
-      }
-      
-      setDragSelect({ startX, startY, curX: ev.clientX, curY: ev.clientY })
-      
-      const box = {
-        left: Math.min(startX, ev.clientX),
-        top: Math.min(startY, ev.clientY),
-        right: Math.max(startX, ev.clientX),
-        bottom: Math.max(startY, ev.clientY)
-      }
-      
-      const nextSelected = new Set(initialSelected)
-      
-      // Use cached rects
-      for (const item of dragItemsRef.current) {
-        const r = item.rect
-        // Check overlap
-        if (r.left < box.right && r.right > box.left && r.top < box.bottom && r.bottom > box.top) {
-           nextSelected.add(item.name)
-        }
-      }
-      
-      setSelected(nextSelected)
-    }
-    
-    const up = (ev: MouseEvent) => {
-      window.removeEventListener('mousemove', move)
-      window.removeEventListener('mouseup', up)
-      setDragSelect(null)
-      
-      // If no drag happened and clicked on empty space, clear selection (only for left click)
-      if (!isDragOperation.current) {
-         if (e.button === 0 && !ev.shiftKey && !ev.ctrlKey && !ev.metaKey && !(e.target as HTMLElement).closest('.list-row, .grid-item')) {
-           setSelected(new Set())
-         }
-      } else {
-         // If dragged, prevent context menu if it was right click
-         if (e.button === 2) {
-            const preventMenu = (e: Event) => {
-                e.preventDefault()
-                e.stopPropagation()
-            }
-            window.addEventListener('contextmenu', preventMenu, { capture: true, once: true })
-            setTimeout(() => window.removeEventListener('contextmenu', preventMenu, { capture: true }), 100)
-         }
-      }
-      dragItemsRef.current = []
-    }
-    window.addEventListener('mousemove', move)
-    window.addEventListener('mouseup', up)
-  }
 
   // Enhanced Operations
   const getTargetItems = (clickedName?: string) => {
@@ -467,76 +264,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     return Array.from(selected)
   }
 
-  const handleCopy = (names: string[]) => {
-    setClipboard({ items: names, action: 'copy', sourcePath: path })
-  }
 
-  const handleCut = (names: string[]) => {
-    setClipboard({ items: names, action: 'move', sourcePath: path })
-  }
-
-  const handlePaste = async () => {
-    if (!clipboard) return
-    const { items, action, sourcePath } = clipboard
-    if (action === 'move') {
-      for (const itemPath of items) {
-        const name = itemPath.split('/').pop() || ''
-        const from = itemPath
-        const to = joinPath(path, name)
-        if (from !== to) {
-          await fmApi.fsRename(from, to)
-        }
-      }
-      await reloadCurrentDir()
-      setClipboard(null) // Move clears clipboard
-    } else if (action === 'copy') {
-       for (const itemPath of items) {
-         const name = itemPath.split('/').pop() || ''
-         const from = itemPath
-         // Determine new name to avoid collision? Or just overwrite/fail?
-         // For now simple copy
-         const to = joinPath(path, name)
-         if (from === to) {
-            // Copy to same dir -> duplicate name
-            const parts = name.split('.')
-            const ext = parts.length > 1 ? parts.pop() : ''
-            const base = parts.join('.')
-            const newName = `${base} copy${ext ? '.' + ext : ''}`
-            
-            // We need to handle directory copy differently? 
-            // fsDownloadBlob only works for files usually?
-            // If it's a directory, we can't easily copy it with blob download.
-            // Check if it's a directory
-            // We don't have easy check for source file type if it's not in current dir entries.
-            // But we can try download blob.
-            try {
-               const blob = await fmApi.fsDownloadBlob(from)
-               const file = new File([blob], newName, { type: blob.type })
-               const id = `copy-${newName}-${Date.now()}`
-               pushFileTask({ id, kind: 'upload', name: newName, dir: path, progress: 0, total: blob.size, loaded: 0, bps: 0, status: 'running' })
-               await startUpload(id, file, path)
-            } catch (e) {
-               console.error('Copy failed', e)
-               alert(`复制失败: ${name} (可能是文件夹或太大)`)
-            }
-         } else {
-            // Copy to different dir
-             try {
-               const blob = await fmApi.fsDownloadBlob(from)
-               const file = new File([blob], name, { type: blob.type })
-               const id = `copy-${name}-${Date.now()}`
-               pushFileTask({ id, kind: 'upload', name: name, dir: path, progress: 0, total: blob.size, loaded: 0, bps: 0, status: 'running' })
-               await startUpload(id, file, path)
-            } catch (e) {
-               console.error('Copy failed', e)
-               alert(`复制失败: ${name} (可能是文件夹或太大)`)
-            }
-         }
-       }
-       await reloadCurrentDir()
-       // Copy keeps clipboard
-    }
-  }
 
   const handleRename = (name: string) => {
     setRenameTarget(name)
@@ -619,23 +347,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       setShowDeleteModal(false)
   }
 
-  const handleUploadFiles = async (files: FileList | null) => {
-    if (!files || files.length === 0) return
-    const fileList = Array.from(files)
-    const tasksToRun: { id: string, file: File }[] = []
 
-    for (const f of fileList) {
-      const id = `${f.name}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-      pushFileTask({ id, kind: 'upload', name: f.name, dir: path, progress: 0, total: f.size, loaded: 0, bps: 0, status: 'pending' })
-      uploadFilesMap.current.set(id, f)
-      tasksToRun.push({ id, file: f })
-    }
-
-    for (const { id, file } of tasksToRun) {
-      if (!uploadFilesMap.current.has(id)) continue
-      await startUpload(id, file, path)
-    }
-  }
 
   const onEmptyTrash = () => {
     if (entries.length === 0) return
