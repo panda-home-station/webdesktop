@@ -27,6 +27,7 @@ type Props = {
   onOpenDir: (name: string) => void
   onToggleExpand?: (name: string) => void
   trashMetadata: Record<string, TrashMetadata>
+  loading?: boolean
 }
 
 export default function TrashPane({
@@ -50,10 +51,11 @@ export default function TrashPane({
   onContextMenu,
   onOpenDir,
   onToggleExpand,
-  trashMetadata
+  trashMetadata,
+  loading
 }: Props) {
   
-  if (entries.length === 0) {
+  if (!loading && entries.length === 0) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -131,25 +133,44 @@ export default function TrashPane({
       </div>
 
       <div ref={containerRef} style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
-        <TrashListView
-          filtered={filtered}
-          selected={selected}
-          setSelected={setSelected}
-          clearSelection={clearSelection}
-          toggleSelect={toggleSelect}
-          fmtTime={fmtTime}
-          fmtSize={fmtSize}
-          onOpenDir={(name) => {
-            // Disable double click enter in Trash
-          }}
-          onContextMenu={onContextMenu}
-          trashMetadata={trashMetadata}
-          onToggleExpand={onToggleExpand}
-          colWidths={colWidths}
-          startResize={handleResize}
-          headerCheckboxRef={headerCheckboxRef}
-          resizingKey={resizingKey}
-        />
+        {loading ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div className="fm-spinner" />
+            <style>{`
+              .fm-spinner {
+                width: 24px;
+                height: 24px;
+                border: 3px solid #e5e5ea;
+                border-top-color: #007aff;
+                border-radius: 50%;
+                animation: fm-spin 0.8s linear infinite;
+              }
+              @keyframes fm-spin {
+                to { transform: rotate(360deg); }
+              }
+            `}</style>
+          </div>
+        ) : (
+          <TrashListView
+            filtered={filtered}
+            selected={selected}
+            setSelected={setSelected}
+            clearSelection={clearSelection}
+            toggleSelect={toggleSelect}
+            fmtTime={fmtTime}
+            fmtSize={fmtSize}
+            onOpenDir={(name) => {
+              // Disable double click enter in Trash
+            }}
+            onContextMenu={onContextMenu}
+            trashMetadata={trashMetadata}
+            onToggleExpand={onToggleExpand}
+            colWidths={colWidths}
+            startResize={handleResize}
+            headerCheckboxRef={headerCheckboxRef}
+            resizingKey={resizingKey}
+          />
+        )}
       </div>
 
       <style>{`

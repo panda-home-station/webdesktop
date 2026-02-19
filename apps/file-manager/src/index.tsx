@@ -164,6 +164,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
 
 
   useEffect(() => {
+    setEntries([])
     let mounted = true
     const load = async () => {
       setLoading(true)
@@ -834,6 +835,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
           />
         ) : path.startsWith('/Trash') ? (
           <TrashPane
+            loading={loading}
             entries={entries}
             filtered={filtered}
             selected={selected}
@@ -908,7 +910,24 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
                onDragOver={(e) => handleDragOver(e, null)}
                onDrop={(e) => handleDrop(e, null)}
             >
-              {view === 'list' ? (
+              {loading ? (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                  <div className="fm-spinner" />
+                  <style>{`
+                    .fm-spinner {
+                      width: 24px;
+                      height: 24px;
+                      border: 3px solid #e5e5ea;
+                      border-top-color: #007aff;
+                      border-radius: 50%;
+                      animation: fm-spin 0.8s linear infinite;
+                    }
+                    @keyframes fm-spin {
+                      to { transform: rotate(360deg); }
+                    }
+                  `}</style>
+                </div>
+              ) : view === 'list' ? (
                 <>
                   <ListView
                     path={path}
