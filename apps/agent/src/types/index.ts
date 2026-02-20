@@ -12,7 +12,9 @@ export type Message = {
   content: string
   id: string
   timestamp: Date
+  thoughts?: string[]
   toolCalls?: {
+    id: string
     name: string
     args: any
     status: 'running' | 'completed' | 'error'

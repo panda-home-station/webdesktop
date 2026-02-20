@@ -82,9 +82,24 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         alignItems: isUser ? 'flex-end' : 'flex-start',
         lineHeight: '1.5'
       }}>
-        <div style={currentStyles}>
-          <MarkdownContent content={message.content} color={currentStyles.color as string} />
-        </div>
+        {message.thoughts && message.thoughts.length > 0 && (
+          <div style={{
+            fontSize: '13px',
+            color: '#666',
+            backgroundColor: '#f8f9fa',
+            padding: '8px 12px',
+            borderRadius: '8px',
+            marginBottom: '8px',
+            borderLeft: '3px solid #ddd'
+          }}>
+            <div style={{ fontWeight: 500, marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>思考过程</div>
+            {message.thoughts.map((thought, idx) => (
+              <div key={idx} style={{ marginBottom: '4px' }}>
+                <MarkdownContent content={thought} color="#666" />
+              </div>
+            ))}
+          </div>
+        )}
 
         {showToolCalls && message.toolCalls && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
@@ -100,14 +115,38 @@ export const MessageItem: React.FC<MessageItemProps> = ({
                 borderRadius: '6px',
                 border: '1px solid #eee'
               }}>
-                {tool.name === 'web_search' && <Globe size={12} />}
-                {tool.name === 'file_system' && <Box size={12} />}
-                {tool.name === 'terminal' && <Terminal size={12} />}
-                <span>正在使用 {availableTools.find(t => t.id === tool.name)?.name || tool.name}...</span>
+                <Terminal size={12} />
+                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tool.name}</span>
+                <span style={{ fontFamily: 'monospace', color: '#888' }}>{JSON.stringify(tool.args)}</span>
+                {tool.status === 'running' && <span className="animate-pulse">...</span>}
+                {tool.status === 'completed' && <span style={{ color: 'green' }}>✓</span>}
+                {tool.status === 'error' && <span style={{ color: 'red' }}>✗</span>}
+              </div>
+            ))}
+            {/* Show tool results if available */}
+            {message.toolCalls.map((tool, idx) => tool.result && (
+              <div key={`result-${idx}`} style={{
+                fontSize: '12px',
+                color: '#444',
+                backgroundColor: '#f0f9ff',
+                padding: '8px',
+                borderRadius: '6px',
+                borderLeft: '3px solid #3b82f6',
+                fontFamily: 'monospace',
+                whiteSpace: 'pre-wrap',
+                maxHeight: '200px',
+                overflowY: 'auto'
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: '4px', color: '#3b82f6' }}>Result ({tool.name}):</div>
+                {tool.result}
               </div>
             ))}
           </div>
         )}
+
+        <div style={currentStyles}>
+          <MarkdownContent content={message.content} color={currentStyles.color as string} />
+        </div>
       </div>
     </div>
   )

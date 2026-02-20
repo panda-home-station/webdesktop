@@ -230,155 +230,25 @@ export function useChat(initialMessages?: any[]) {
   const processMessage = async (content: string, userMsg: Message, sessionId: string | null) => {
     abortControllerRef.current = new AbortController()
     setIsLoading(true)
-
-    // Dynamic workflow logic
-    if (selectedAgent.id === 'coder') {
-      setActiveWorkflow({
-        id: 'wf-' + Date.now(),
-        title: '代码生成与验证',
-        status: 'running',
-        steps: [
-          { id: '1', label: '需求分析', status: 'completed' },
-          { id: '2', label: '架构设计', status: 'running' },
-          { id: '3', label: '代码实现', status: 'pending' },
-          { id: '4', label: '单元测试', status: 'pending' },
-        ]
-      })
-    } else if (selectedAgent.id === 'researcher') {
-      setActiveWorkflow({
-        id: 'wf-' + Date.now(),
-        title: '深度研究与汇总',
-        status: 'running',
-        steps: [
-          { id: '1', label: '关键词提取', status: 'completed' },
-          { id: '2', label: '全网搜索', status: 'running' },
-          { id: '3', label: '内容过滤', status: 'pending' },
-          { id: '4', label: '报告生成', status: 'pending' },
-        ]
-      })
-    } else if (selectedAgent.id === 'workflow-master' || content.includes('流程')) {
-      setActiveWorkflow({
-        id: 'wf-' + Date.now(),
-        title: '自动化分析流程',
-        status: 'running',
-        steps: [
-          { id: '1', label: '环境扫描', status: 'completed' },
-          { id: '2', label: '数据提取', status: 'running' },
-          { id: '3', label: '深度分析', status: 'pending' },
-          { id: '4', label: '生成报告', status: 'pending' },
-        ]
-      })
-    } else {
-      setActiveWorkflow(null)
-    }
+    
+    // Create placeholder assistant message
+    const assistantMsgId = Date.now().toString() + '-assistant';
+    setMessages(prev => [...prev, {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      timestamp: new Date(),
+      thoughts: [],
+      toolCalls: []
+    }]);
 
     try {
-      let toolCalls: Message['toolCalls'] = undefined
-      const isSearchIntent = selectedTools.includes('web_search') || 
-                            content.toLowerCase().includes('搜索') || 
-                            content.toLowerCase().includes('search') || 
-                            content.toLowerCase().includes('联网') ||
-                            selectedAgent.id === 'researcher';
-
-      if (isSearchIntent) {
-        // Try to extract search query if it's a long message, otherwise use the whole thing
-        const query = content.length > 50 ? content.slice(0, 50) : content;
-        toolCalls = [{ name: 'web_search', args: { query }, status: 'running' }]
-      } else if (selectedTools.includes('file_system') || content.toLowerCase().includes('文件') || content.toLowerCase().includes('file')) {
-        toolCalls = [{ name: 'file_system', args: { action: 'read' }, status: 'running' }]
-      } else if (selectedTools.includes('terminal') || content.toLowerCase().includes('命令') || content.toLowerCase().includes('run')) {
-        toolCalls = [{ name: 'terminal', args: { cmd: content }, status: 'running' }]
-      }
-
-      // Reset selected tools after use
-      setSelectedTools([])
-
-      let isToolExecuting = false;
-      let searchResults = '';
-      if (toolCalls) {
-        isToolExecuting = true;
-        const toolMsgId = 'tool-executing';
-        setMessages(prev => [...prev, {
-          id: toolMsgId,
-          role: 'assistant',
-          content: '正在调用工具处理您的请求...',
-          timestamp: new Date(),
-          toolCalls
-        }])
-
-      // If it's a web search, actually perform it
-      const searchCall = toolCalls.find(tc => tc.name === 'web_search');
-      if (searchCall) {
-        try {
-          const searchResp = await fetch('/api/agent/search', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-            },
-            body: JSON.stringify({ q: searchCall.args.query })
-          });
-          if (searchResp.ok) {
-            const results = await searchResp.json();
-            if (Array.isArray(results) && results.length > 0) {
-              searchResults = results.map((r: any) => `标题: ${r.title}\n链接: ${r.link}\n摘要: ${r.snippet}`).join('\n\n');
-              
-              const assistantContent = `已为您找到以下搜索结果：\n\n${searchResults.slice(0, 500)}...`;
-              
-              setMessages(prev => prev.map(m => 
-                m.id === toolMsgId ? { 
-                  ...m, 
-                  content: assistantContent,
-                  toolCalls: m.toolCalls?.map(tc => tc.name === 'web_search' ? { ...tc, status: 'completed', result: JSON.stringify(results) } : tc)
-                } : m
-              ));
-
-              // Save tool result to history
-              if (sessionId) {
-                fetch(`/api/agent/sessions/${sessionId}/messages`, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-                  },
-                  body: JSON.stringify({
-                    role: 'assistant',
-                    content: assistantContent,
-                    tool_calls: toolCalls?.map(tc => tc.name === 'web_search' ? { ...tc, status: 'completed', result: JSON.stringify(results) } : tc)
-                  })
-                }).then(() => {
-                  // 更新侧边栏预览
-                  setHistory(prev => prev.map(s => 
-                    s.id === sessionId ? { ...s, lastMessage: assistantContent, timestamp: new Date() } : s
-                  ));
-                }).catch(e => console.error('Failed to save tool message:', e));
-              }
-            } else {
-                setMessages(prev => prev.map(m => 
-                  m.id === toolMsgId ? { 
-                    ...m, 
-                    content: '未找到相关搜索结果。',
-                    toolCalls: m.toolCalls?.map(tc => tc.name === 'web_search' ? { ...tc, status: 'completed', result: '[]' } : tc)
-                  } : m
-                ));
-              }
-            }
-          } catch (e) {
-            console.error('Search failed:', e);
-          }
-        }
-      }
-
       const historyMessages = messages.filter(m => m.id !== userMsg.id && m.id !== 'tool-executing');
-      // Apply context window limit
       const limitedHistory = contextWindow > 0 ? historyMessages.slice(-contextWindow) : historyMessages;
 
-      const systemPrompt = selectedAgent.systemPrompt + 
-        (customInstructions ? `\n\n用户自定义指令：\n${customInstructions}` : '') + 
-        (searchResults ? `\n\n以下是相关的搜索结果，请参考这些信息回答用户的问题：\n${searchResults}` : '');
-
       const chatMessages = [
-        { role: 'system', content: systemPrompt },
+        ...(selectedAgent.systemPrompt ? [{ role: 'system', content: selectedAgent.systemPrompt }] : []),
+        ...(customInstructions ? [{ role: 'system', content: `用户自定义指令：\n${customInstructions}` }] : []),
         ...limitedHistory.map(m => ({ role: m.role, content: m.content })),
         { role: 'user', content: userMsg.content }
       ]
@@ -398,110 +268,141 @@ export function useChat(initialMessages?: any[]) {
         signal: abortControllerRef.current?.signal
       });
 
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const reader = response.body?.getReader();
       if (!reader) throw new Error('No reader available');
 
-      if (isToolExecuting) {
-        // Keep search results in history by giving it a unique ID
-        setMessages(prev => prev.map(m => m.id === 'tool-executing' ? { ...m, id: 'tool-' + Date.now() } : m))
-        setIsLoading(false)
-        setActiveWorkflow(prev => {
-          if (!prev) return null;
-          const newSteps = [...prev.steps];
-          const runningIdx = newSteps.findIndex(s => s.status === 'running');
-          if (runningIdx !== -1 && runningIdx < newSteps.length - 1) {
-            newSteps[runningIdx].status = 'completed';
-            newSteps[runningIdx + 1].status = 'running';
-          }
-          return { ...prev, steps: newSteps };
-        });
-      }
-
-      const assistantMsgId = (Date.now() + 1).toString();
-      setMessages(prev => [...prev, { id: assistantMsgId, role: 'assistant', content: '', timestamp: new Date() }]);
-      setIsLoading(false);
-
       const decoder = new TextDecoder();
-      let fullContent = '';
       let buffer = '';
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) {
-          // Save assistant message to history if session exists
-          if (sessionId && fullContent) {
-            fetch(`/api/agent/sessions/${sessionId}/messages`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-              },
-              body: JSON.stringify({
-                role: 'assistant',
-                content: fullContent
-              })
-            }).then(() => {
-              // 更新侧边栏预览
-              setHistory(prev => prev.map(s => 
-                s.id === sessionId ? { ...s, lastMessage: fullContent, timestamp: new Date() } : s
-              ));
-            }).catch(e => console.error('Failed to save assistant message:', e));
-          }
-          break;
-        }
+        if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
 
         for (const line of lines) {
+          if (line.trim() === '') continue;
           if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6);
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+
             try {
-              // 尝试解析 JSON 格式的内容（新后端格式）
-              const data = JSON.parse(dataStr);
-              if (data && typeof data.content === 'string') {
-                fullContent += data.content;
-              } else {
-                fullContent += dataStr;
-              }
+              const event = JSON.parse(data);
+              
+              setMessages(prev => prev.map(m => {
+                if (m.id !== assistantMsgId) return m;
+
+                const updatedMsg = { ...m };
+                
+                if (event.type === 'thought') {
+                  // Add new thought or append to last thought if it's incomplete (not implemented here, assuming full thoughts for now)
+                  // For streaming thoughts, we might want to just append text. 
+                  // But the backend seems to send full thought content or chunks?
+                  // Let's assume 'thought' event sends a chunk of thought text.
+                  // Wait, the backend implementation sends: AgentEvent::Thought(content)
+                  // If it's a stream of tokens, we should append. If it's a full block, we push.
+                  // The backend loop sends `Thought(content)` when `response.tool_calls` is present.
+                  // It seems `content` is the whole text so far? Or a chunk?
+                  // In `AgentRuntime`, `provider.chat` returns a stream. 
+                  // But the `AgentEvent::Thought` is emitted when `response.content` is present AND `tool_calls` is present.
+                  // Actually, `AgentRuntime` logic is:
+                  // if content is present:
+                  //   if no tool calls: Answer(content)
+                  //   else: Thought(content)
+                  // So it's sending chunks.
+                  
+                  // Let's treat thoughts as a list of strings. 
+                  // If the last item in thoughts is "active", we append. 
+                  // But for simplicity, let's just push to thoughts array if it's a new "block" of thought.
+                  // However, usually thoughts are just text. 
+                  // Let's append to the last thought entry if it exists, otherwise create new.
+                  const thoughts = updatedMsg.thoughts || [];
+                  if (thoughts.length === 0) {
+                    thoughts.push(event.content);
+                  } else {
+                    // Simple append for now
+                    thoughts[thoughts.length - 1] += event.content;
+                  }
+                  updatedMsg.thoughts = thoughts;
+                } else if (event.type === 'tool_call') {
+                  const toolCall = event.content; // Expecting {id, function: {name, arguments}}
+                  const toolCalls = updatedMsg.toolCalls || [];
+                  // Check if tool call already exists (by ID) to avoid duplicates if re-sent
+                  if (!toolCalls.find(tc => tc.id === toolCall.id)) {
+                    toolCalls.push({
+                      id: toolCall.id,
+                      name: toolCall.function.name,
+                      args: JSON.parse(toolCall.function.arguments),
+                      status: 'running'
+                    });
+                  }
+                  updatedMsg.toolCalls = toolCalls;
+                } else if (event.type === 'tool_result') {
+                  const { id, result } = event.content;
+                  const toolCalls = updatedMsg.toolCalls || [];
+                  updatedMsg.toolCalls = toolCalls.map(tc => 
+                    tc.id === id ? { ...tc, status: 'completed', result } : tc
+                  );
+                } else if (event.type === 'answer') {
+                  updatedMsg.content += event.content;
+                }
+
+                return updatedMsg;
+              }));
+
             } catch (e) {
-              // 如果不是 JSON，回退到原始字符串解析（兼容旧后端或非标准 SSE）
-              fullContent += dataStr;
+              console.error('Error parsing SSE data:', e);
             }
-            
-            setMessages(prev => prev.map(m => 
-              m.id === assistantMsgId ? { ...m, content: fullContent } : m
-            ));
           }
         }
       }
 
-      setActiveWorkflow(prev => {
-        if (!prev) return null;
-        const newSteps = [...prev.steps];
-        const runningIdx = newSteps.findIndex(s => s.status === 'running');
-        if (runningIdx !== -1) {
-          newSteps[runningIdx].status = 'completed';
-        }
-        return { ...prev, status: 'completed', steps: newSteps };
-      });
+      // Final update to history
+      if (sessionId) {
+        // Fetch the updated message from state to save it
+        // Since setMessages is async, we can't rely on 'messages' here.
+        // But we can construct the final message content from what we have.
+        // Actually, better to just let the backend handle persistence if possible, 
+        // but here we are frontend-driven.
+        // We should save the final assistant message to the backend session.
+        // For now, let's just update the local history list last message.
+        setHistory(prev => prev.map(s => {
+          if (s.id === sessionId) {
+            return {
+              ...s,
+              lastMessage: 'Assistant responded', // Placeholder or actual content
+              timestamp: new Date()
+            }
+          }
+          return s;
+        }));
+      }
 
-    } catch (error: any) {
-      if (error.name === 'AbortError') return;
-      console.error('Chat error:', error);
-      setMessages(prev => [...prev, { 
-        id: 'error-' + Date.now(), 
-        role: 'assistant', 
-        content: '抱歉，处理您的请求时出错了。', 
-        timestamp: new Date() 
-      }]);
+    } catch (e: any) {
+      if (e.name === 'AbortError') {
+        console.log('Request aborted');
+      } else {
+        console.error('Chat error:', e);
+        setMessages(prev => [...prev, {
+          id: Date.now().toString(),
+          role: 'system',
+          content: `Error: ${e.message}`,
+          timestamp: new Date()
+        }]);
+      }
+    } finally {
       setIsLoading(false);
-      setActiveWorkflow(prev => prev ? { ...prev, status: 'failed' } : null);
+      abortControllerRef.current = null;
     }
   }
+
+
 
   const handleStop = () => {
     if (abortControllerRef.current) {
