@@ -55,3 +55,10 @@ export type ChatSession = {
   agentId: string
   messages: Message[]
 }
+
+export interface ApiConfig {
+  id: string
+  name: string
+  endpoint: string
+  model: string
+}

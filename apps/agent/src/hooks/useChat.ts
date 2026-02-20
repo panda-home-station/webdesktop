@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Message, Agent, AgentWorkflow, AgentTask, ChatSession } from '../types'
+import { Message, Agent, AgentWorkflow, AgentTask, ChatSession, ApiConfig } from '../types'
 import { MOCK_AGENTS } from '../constants'
 
 export function useChat(initialMessages?: any[]) {
@@ -26,8 +26,36 @@ export function useChat(initialMessages?: any[]) {
     { id: '3', title: '对接工具 API', status: 'pending', createdAt: new Date() },
   ])
 
-  const [apiEndpoint, setApiEndpoint] = useState(() => localStorage.getItem('agent_api_endpoint') || 'http://192.168.1.189:11434')
-  const [apiModel, setApiModel] = useState(() => localStorage.getItem('agent_api_model') || 'qwen3:14b')
+  const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>(() => {
+    try {
+      const stored = localStorage.getItem('agent_api_list')
+      if (stored) return JSON.parse(stored)
+    } catch (e) {
+      console.error('Failed to parse api list', e)
+    }
+    return [{
+      id: 'default',
+      name: '默认 API',
+      endpoint: localStorage.getItem('agent_api_endpoint') || 'http://192.168.1.189:11434',
+      model: localStorage.getItem('agent_api_model') || 'qwen3:14b'
+    }]
+  })
+  
+  const [selectedApiId, setSelectedApiId] = useState<string>(() => {
+    return localStorage.getItem('agent_api_selected_id') || 'default'
+  })
+
+  const currentApiConfig = apiConfigs.find(c => c.id === selectedApiId) || apiConfigs[0]
+  const apiEndpoint = currentApiConfig?.endpoint || ''
+  const apiModel = currentApiConfig?.model || ''
+
+  const setApiEndpoint = (endpoint: string) => {
+    setApiConfigs(prev => prev.map(c => c.id === selectedApiId ? { ...c, endpoint } : c))
+  }
+
+  const setApiModel = (model: string) => {
+    setApiConfigs(prev => prev.map(c => c.id === selectedApiId ? { ...c, model } : c))
+  }
   const [contextWindow, setContextWindow] = useState(() => parseInt(localStorage.getItem('agent_context_window') || '10'))
   const [temperature, setTemperature] = useState(() => parseFloat(localStorage.getItem('agent_temperature') || '0.7'))
   const [customInstructions, setCustomInstructions] = useState(() => localStorage.getItem('agent_custom_instructions') || '')
@@ -506,6 +534,10 @@ export function useChat(initialMessages?: any[]) {
     setApiEndpoint,
     apiModel,
     setApiModel,
+    apiConfigs,
+    setApiConfigs,
+    selectedApiId,
+    setSelectedApiId,
     history,
     selectedSessionId,
     loadSession,

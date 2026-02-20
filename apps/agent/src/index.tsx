@@ -40,6 +40,10 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
     setApiEndpoint,
     apiModel,
     setApiModel,
+    apiConfigs,
+    setApiConfigs,
+    selectedApiId,
+    setSelectedApiId,
     history,
     selectedSessionId,
     loadSession,
@@ -58,6 +62,8 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
   const saveSettings = () => {
     localStorage.setItem('agent_api_endpoint', apiEndpoint)
     localStorage.setItem('agent_api_model', apiModel)
+    localStorage.setItem('agent_api_list', JSON.stringify(apiConfigs))
+    localStorage.setItem('agent_api_selected_id', selectedApiId)
     localStorage.setItem('agent_context_window', contextWindow.toString())
     localStorage.setItem('agent_temperature', temperature.toString())
     localStorage.setItem('agent_custom_instructions', customInstructions)
@@ -179,6 +185,10 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
           setApiEndpoint={setApiEndpoint}
           apiModel={apiModel}
           setApiModel={setApiModel}
+          apiConfigs={apiConfigs}
+          setApiConfigs={setApiConfigs}
+          selectedApiId={selectedApiId}
+          setSelectedApiId={setSelectedApiId}
           contextWindow={contextWindow}
           setContextWindow={setContextWindow}
           temperature={temperature}
