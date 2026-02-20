@@ -46,12 +46,21 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
     deleteSession,
     createNewChat,
     selectedTools,
-    toggleTool
+    toggleTool,
+    contextWindow,
+    setContextWindow,
+    temperature,
+    setTemperature,
+    customInstructions,
+    setCustomInstructions
   } = useChat(initialMessages)
 
   const saveSettings = () => {
     localStorage.setItem('agent_api_endpoint', apiEndpoint)
     localStorage.setItem('agent_api_model', apiModel)
+    localStorage.setItem('agent_context_window', contextWindow.toString())
+    localStorage.setItem('agent_temperature', temperature.toString())
+    localStorage.setItem('agent_custom_instructions', customInstructions)
     setIsSettingsOpen(false)
   }
 
@@ -170,6 +179,12 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
           setApiEndpoint={setApiEndpoint}
           apiModel={apiModel}
           setApiModel={setApiModel}
+          contextWindow={contextWindow}
+          setContextWindow={setContextWindow}
+          temperature={temperature}
+          setTemperature={setTemperature}
+          customInstructions={customInstructions}
+          setCustomInstructions={setCustomInstructions}
           saveSettings={saveSettings}
           onCancel={() => setIsSettingsOpen(false)}
         />

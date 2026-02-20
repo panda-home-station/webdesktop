@@ -28,6 +28,9 @@ export function useChat(initialMessages?: any[]) {
 
   const [apiEndpoint, setApiEndpoint] = useState(() => localStorage.getItem('agent_api_endpoint') || 'http://192.168.1.189:11434')
   const [apiModel, setApiModel] = useState(() => localStorage.getItem('agent_api_model') || 'qwen3:14b')
+  const [contextWindow, setContextWindow] = useState(() => parseInt(localStorage.getItem('agent_context_window') || '10'))
+  const [temperature, setTemperature] = useState(() => parseFloat(localStorage.getItem('agent_temperature') || '0.7'))
+  const [customInstructions, setCustomInstructions] = useState(() => localStorage.getItem('agent_custom_instructions') || '')
   
   const fetchSessions = async () => {
     try {
@@ -338,9 +341,17 @@ export function useChat(initialMessages?: any[]) {
         }
       }
 
+      const historyMessages = messages.filter(m => m.id !== userMsg.id && m.id !== 'tool-executing');
+      // Apply context window limit
+      const limitedHistory = contextWindow > 0 ? historyMessages.slice(-contextWindow) : historyMessages;
+
+      const systemPrompt = selectedAgent.systemPrompt + 
+        (customInstructions ? `\n\n用户自定义指令：\n${customInstructions}` : '') + 
+        (searchResults ? `\n\n以下是相关的搜索结果，请参考这些信息回答用户的问题：\n${searchResults}` : '');
+
       const chatMessages = [
-        { role: 'system', content: selectedAgent.systemPrompt + (searchResults ? `\n\n以下是相关的搜索结果，请参考这些信息回答用户的问题：\n${searchResults}` : '') },
-        ...messages.filter(m => m.id !== userMsg.id).map(m => ({ role: m.role, content: m.content })),
+        { role: 'system', content: systemPrompt },
+        ...limitedHistory.map(m => ({ role: m.role, content: m.content })),
         { role: 'user', content: userMsg.content }
       ]
 
@@ -500,6 +511,12 @@ export function useChat(initialMessages?: any[]) {
     loadSession,
     createNewChat,
     selectedTools,
-    toggleTool
+    toggleTool,
+    contextWindow,
+    setContextWindow,
+    temperature,
+    setTemperature,
+    customInstructions,
+    setCustomInstructions
   }
 }

@@ -115,6 +115,16 @@ export default function App() {
   }, [isLocked])
 
   useEffect(() => {
+    api.getDeviceInfo().then(info => {
+      if (info && info.device_name) {
+        document.title = `${info.device_name} - Panda OS`
+      }
+    }).catch(() => {
+      // ignore
+    })
+  }, [])
+
+  useEffect(() => {
     const checkAuth = async () => {
       const t = api.getToken()
       if (t) {
