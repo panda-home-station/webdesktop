@@ -368,6 +368,10 @@ export const api = {
       return { ok: true }
     }
   },
+  async execCommand(command: string) {
+    const r = await instance.post('/api/agent/terminal/exec', { command })
+    return r.data as { stdout: string; stderr: string; exit_code: number; cwd: string }
+  },
   async fsUploadLegacy(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal) {
     try {
       const fd = new FormData()

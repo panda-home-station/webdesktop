@@ -1,0 +1,10 @@
+{
+  "name": "nasterm",
+  "title": "Terminal",
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 1100,
+  "minHeight": 640
+}
