@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useContext } from 'react'
 import { api } from '../../../src/api/client'
 import { Modal } from '../../../src/components/Modal'
+import { WindowContext } from '../../../src/sdk/window'
 import Icon from '@mdi/react'
 import {
   mdiPlus,
@@ -219,6 +220,7 @@ const PathPicker = ({ initialPath, onClose, onSelect }: { initialPath: string; o
 }
 
 export default function Downloader() {
+  const win = useContext(WindowContext)
   const [tasks, setTasks] = useState<DownloadTask[]>([])
   const [showAdd, setShowAdd] = useState(false)
   const [newUrl, setNewUrl] = useState('')
@@ -226,6 +228,19 @@ export default function Downloader() {
   const [showPicker, setShowPicker] = useState(false)
   const [error, setError] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
+
+  useEffect(() => {
+    if (win && win.setTitle) {
+      const map: Record<string, string> = {
+        all: '全部任务',
+        downloading: '下载中',
+        paused: '已暂停',
+        done: '已完成',
+        error: '错误'
+      }
+      win.setTitle(`Downloader - ${map[activeFilter] || '全部任务'}`)
+    }
+  }, [activeFilter, win])
 
   const [resolving, setResolving] = useState(false)
   const [magnetInfo, setMagnetInfo] = useState<MagnetInfo | null>(null)

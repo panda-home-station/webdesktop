@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
+import { WindowContext } from '../../../src/sdk/window'
 import { instance as axios, api } from '../../../src/api/client'
 import { 
   Monitor,
@@ -30,7 +31,16 @@ const TABS = [
 ]
 
 export default function SystemSettings() {
+  const win = useContext(WindowContext)
   const [activeTab, setActiveTab] = useState('device')
+
+  useEffect(() => {
+    if (win && win.setTitle) {
+      const tabName = TABS.find(t => t.id === activeTab)?.label || '设置'
+      win.setTitle(`Settings - ${tabName}`)
+    }
+  }, [activeTab, win])
+
   const [deviceInfo, setDeviceInfo] = useState<any>(() => {
     try {
       const cached = localStorage.getItem('pnas_device_info')

@@ -484,6 +484,10 @@ export default function WindowManager() {
     setShowLauncher(false)
   }, [])
 
+  const handleTitleChange = useCallback((id: string, title: string) => {
+    setWins(ws => ws.map(w => (w.id === id ? { ...w, title } : w)))
+  }, [])
+
   return (
     <div style={{ position: 'relative', flex: 1 }}>
       <Launcher
@@ -529,6 +533,7 @@ export default function WindowManager() {
               restoreRect={w.prev}
               minW={minW}
               minH={minH}
+              onTitleChange={handleTitleChange}
             />
           )
         })}

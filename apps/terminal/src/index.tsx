@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import Ansi from 'ansi-to-react';
 import { api as client } from '../../../src/api/client';
+import { useWindow } from '../../../src/sdk/window';
 
 // Types
 type HistoryItem = {
@@ -20,6 +21,22 @@ const TerminalApp: React.FC = () => {
   
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Try to get window context (it might not be available if running standalone, though unlikely in this OS)
+  let win: any = null;
+  try {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    win = useWindow();
+  } catch (e) {
+    // Ignore error if not in window context
+  }
+
+  // Update window title when CWD changes
+  useEffect(() => {
+    if (win && win.setTitle) {
+      win.setTitle(`Terminal - ${cwd}`);
+    }
+  }, [cwd, win]);
 
   // Initial welcome message
   useEffect(() => {

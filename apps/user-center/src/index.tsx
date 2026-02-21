@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useContext } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
+import { WindowContext } from '../../../src/sdk/window'
 import { instance as axios, api } from '../../../src/api/client'
 import Icon from '@mdi/react'
 import { mdiAccountCircleOutline, mdiImageOutline, mdiShieldLockOutline } from '@mdi/js'
@@ -45,7 +46,16 @@ const fmApi = {
 }
 
 export default function UserCenter() {
-  const [active, setActive] = useState<Item>('profile')
+  const win = useContext(WindowContext)
+  const [active, setActive] = useState<string>('profile')
+
+  useEffect(() => {
+    if (win && win.setTitle) {
+      const tabName = active === 'profile' ? '账户信息' : active === 'wallpapers' ? '主题与壁纸' : '安全'
+      win.setTitle(`User Center - ${tabName}`)
+    }
+  }, [active, win])
+
   const user = fmApi.getUser()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 

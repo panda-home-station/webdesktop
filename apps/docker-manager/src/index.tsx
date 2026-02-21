@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useContext } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
+import { WindowContext } from '../../../src/sdk/window'
 import Icon from '@mdi/react'
 import { mdiViewGridOutline, mdiCubeOutline, mdiTableColumn, mdiImageFilterNone, mdiDatabase, mdiHarddisk, mdiNetwork } from '@mdi/js'
 import { Layers } from 'lucide-react'
@@ -48,7 +49,16 @@ const TABS = [
 ]
 
 export default function DockerManager() {
+  const win = useContext(WindowContext)
   const [active, setActive] = useState('overview')
+
+  useEffect(() => {
+    if (win && win.setTitle) {
+      const tabName = TABS.find(t => t.id === active)?.label || '概览'
+      win.setTitle(`Docker - ${tabName}`)
+    }
+  }, [active, win])
+
   const [containers, setContainers] = useState<Container[]>([])
   const [images, setImages] = useState<Image[]>([])
   const [volumesList, setVolumesList] = useState<Volume[]>([])

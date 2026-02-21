@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useContext } from 'react'
 import { createPortal } from 'react-dom'
+import { WindowContext } from '../../../src/sdk/window'
 import {
   Folder,
   Home,
@@ -90,6 +91,13 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     owner: 120,
     originalPath: 200,
   })
+
+  const win = useContext(WindowContext)
+  useEffect(() => {
+    if (win && win.setTitle) {
+      win.setTitle(`File Manager - ${path === '/' ? 'Home' : path}`)
+    }
+  }, [path, win])
 
   const reloadCurrentDir = async () => {
     const rs = await fmApi.fsList(path)

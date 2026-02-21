@@ -1,7 +1,8 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react'
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import Icon from '@mdi/react'
 import { mdiAbTesting } from '@mdi/js'
 import { getAppContextMenu, setDragging, subscribeDragging } from '../sdk/desktop'
+import { WindowContext } from '../sdk/window'
 
 export interface WinProps {
   id: string
@@ -24,6 +25,7 @@ export interface WinProps {
   onMove: (id: string, x: number, y: number) => void
   onResize: (id: string, w: number, h: number, x?: number, y?: number) => void
   onDragFromMaximized?: (id: string, x: number, y: number, w: number, h: number) => void
+  onTitleChange?: (id: string, title: string) => void
   restoreRect?: { x: number; y: number; w: number; h: number }
   minW?: number
   minH?: number
@@ -49,15 +51,27 @@ export default function Window({
   onMove,
   onResize,
   onDragFromMaximized,
+  onTitleChange,
   restoreRect,
   minW = 300,
-  minH = 200
+  minH = 200,
+  isActive
 }: WinProps) {
   if (minimized) return null
 
   const winRef = useRef<HTMLDivElement>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
+
+  const contextValue = useMemo(() => ({
+    id,
+    appId,
+    setTitle: (t: string) => onTitleChange?.(id, t),
+    close: () => onClose(id),
+    minimize: () => onMinimize(id),
+    maximize: () => onMaximize(id),
+    isActive: !!isActive
+  }), [id, appId, onTitleChange, onClose, onMinimize, onMaximize, isActive])
 
   const handleMouseDown = () => {
     onFocus(id)
@@ -430,12 +444,15 @@ export default function Window({
         color: 'var(--text)',
         position: 'relative',
         overflow: 'hidden',
+        contain: 'size layout paint style', // CSS Isolation
         background: '#ffffff',
-        borderBottomLeftRadius: maximized ? 0 : 'var(--win-radius)',
-        borderBottomRightRadius: maximized ? 0 : 'var(--win-radius)'
-      }}>
-        {content}
-        {menu && (
+          borderBottomLeftRadius: maximized ? 0 : 'var(--win-radius)',
+          borderBottomRightRadius: maximized ? 0 : 'var(--win-radius)'
+        }}>
+          <WindowContext.Provider value={contextValue}>
+            {content}
+          </WindowContext.Provider>
+          {menu && (
           <div className="semi-portal" style={{ zIndex: 10005 }}>
             <div tabIndex={-1} className="semi-portal-inner" style={{ position: 'fixed', left: menu.x, top: menu.y, zIndex: 10006 }}>
               <div style={{ minWidth: 160, padding: 6, borderRadius: 10, background: 'rgba(243,244,246,0.96)', backdropFilter: 'blur(8px)', border: '1px solid var(--win-border)', boxShadow: '0 10px 24px rgba(0,0,0,0.18)' }}>

@@ -1,7 +1,13 @@
-import React from 'react'
+import React, { useEffect, useContext } from 'react'
 import { listApps } from '../../../src/apps/registry'
+import { WindowContext } from '../../../src/sdk/window'
 
 export default function AppStore() {
+  const win = useContext(WindowContext)
+  useEffect(() => {
+    if (win && win.setTitle) win.setTitle('App Store - 全部应用')
+  }, [win])
+
   const apps = listApps()
   return (
     <div style={{ padding: 16 }} className="noselect">

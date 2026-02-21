@@ -1,5 +1,6 @@
-import React, { useEffect, useState, useCallback, memo, useRef } from 'react'
+import React, { useEffect, useState, useCallback, memo, useRef, useContext } from 'react'
 import { instance as axios } from '../../../src/api/client'
+import { WindowContext } from '../../../src/sdk/window'
 import { Cpu, HardDrive, Network, MemoryStick as MemoryIcon, Activity, Calendar, Monitor as GpuIcon } from 'lucide-react'
 import { Sidebar } from '../../../src/components/Sidebar'
 import { subscribeDragging, subscribeAnimating, subscribeLauncherOpen } from '../../../src/sdk/desktop'
@@ -611,10 +612,18 @@ const HistoryView = memo(({ historyData, range, setRange }: { historyData: Stats
 ))
 
 export default function MonitorApp() {
+  const win = useContext(WindowContext)
   const [activeTab, setActiveTab] = useState('performance')
   const [loading, setLoading] = useState(false)
   const [range, setRange] = useState<'1h' | '6h' | '24h'>('1h')
   const [historyData, setHistoryData] = useState<Stats[]>([])
+
+  useEffect(() => {
+    if (win && win.setTitle) {
+      const tabName = TABS.find(t => t.id === activeTab)?.label || '监控'
+      win.setTitle(`Monitor - ${tabName}`)
+    }
+  }, [activeTab, win])
 
   // 订阅实时数据更新，仅启动和停止 store，不触发当前组件 re-render
   useEffect(() => {

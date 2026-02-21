@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
+import { WindowContext } from '../../../src/sdk/window'
 import { Sidebar } from './components/Sidebar'
 import { ChatArea } from './components/ChatArea'
 import { Workspace } from './components/Workspace'
@@ -8,8 +9,15 @@ import { useChat } from './hooks/useChat'
 import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, CHAT_MIN_WIDTH, RESIZER_WIDTH } from './constants'
 
 export default function AgentApp({ initialMessages }: { initialMessages?: any[] }) {
+  const win = useContext(WindowContext)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
   
+  useEffect(() => {
+    if (win && win.setTitle) {
+      win.setTitle('Agent - AI Assistant')
+    }
+  }, [win])
+
   const {
     isSidebarOpen,
     setIsSidebarOpen,
