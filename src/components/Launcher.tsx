@@ -178,6 +178,7 @@ export default function Launcher({ isOpen, onOpen, onClose }: Props & { isOpen: 
             display: 'grid', 
             gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', 
             gap: 0, 
+            alignContent: 'flex-start',
             width: '100%',
             maxWidth: 1200,
             padding: '0 40px',
