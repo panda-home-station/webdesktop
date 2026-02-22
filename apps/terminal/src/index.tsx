@@ -9,12 +9,20 @@ type HistoryItem = {
   type: 'command' | 'output' | 'error';
   content: string;
   cwd?: string;
+  username?: string;
 };
 
 const TerminalApp: React.FC = () => {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [input, setInput] = useState('');
   const [cwd, setCwd] = useState('~');
+  const [username, setUsername] = useState('user');
+  const [sessionId] = useState(() => {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  });
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +64,13 @@ const TerminalApp: React.FC = () => {
     ]);
     // Focus input on mount
     inputRef.current?.focus();
+    
+    // Get initial user info
+    client.execCommand('whoami', sessionId).then(res => {
+      if (res.exit_code === 0 && res.stdout) {
+        setUsername(res.stdout.trim());
+      }
+    }).catch(() => {});
   }, []);
 
   // Focus input when loading finishes
@@ -81,7 +96,8 @@ const TerminalApp: React.FC = () => {
         id: Date.now().toString(),
         type: 'command',
         content: cmd,
-        cwd: cwd
+        cwd: cwd,
+        username: username
       };
       
       setHistory(prev => [...prev, newHistoryItem]);
@@ -134,13 +150,16 @@ const TerminalApp: React.FC = () => {
       else if (cmd === 'la') finalCmd = 'ls -a';
 
       try {
-        const res = await client.execCommand(finalCmd);
+        const res = await client.execCommand(finalCmd, sessionId);
         
         // Update CWD
         if (res.cwd) {
           let displayCwd = res.cwd;
-          if (displayCwd.startsWith('/home/jolly')) {
-            displayCwd = '~' + displayCwd.substring(11);
+          const userHome = `/User/${username}`;
+          if (displayCwd === userHome) {
+            displayCwd = '~';
+          } else if (displayCwd.startsWith(userHome + '/')) {
+            displayCwd = '~' + displayCwd.substring(userHome.length);
           }
           setCwd(displayCwd);
         }
@@ -161,6 +180,48 @@ const TerminalApp: React.FC = () => {
         }]);
       } finally {
         setIsLoading(false);
+      }
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      
+      // If already loading or empty input, ignore
+      if (isLoading || !input) return;
+
+      try {
+        const suggestions = await client.completeCommand(input, sessionId);
+        if (suggestions && suggestions.length > 0) {
+          if (suggestions.length === 1) {
+            // Single match: auto-complete
+            const parts = input.split(' ');
+            const newParts = [...parts];
+            newParts[newParts.length - 1] = suggestions[0];
+            setInput(newParts.join(' '));
+          } else {
+            // Multiple matches: show suggestions but keep input
+            // Do NOT add to history as a command execution
+            setHistory(prev => [
+              ...prev, 
+              // Add a "fake" command entry to show what user typed before pressing tab
+              {
+                id: Date.now().toString(),
+                type: 'command',
+                content: input,
+                cwd: cwd,
+                username: username
+              },
+              // Add the suggestions output
+              {
+                id: Date.now().toString() + '-suggestions',
+                type: 'output',
+                content: suggestions.join('  ')
+              }
+            ]);
+            // Input remains focused and unchanged (or maybe complete common prefix?)
+            // For now, keep it simple.
+          }
+        }
+      } catch (err) {
+        console.error('Completion failed', err);
       }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
@@ -187,7 +248,8 @@ const TerminalApp: React.FC = () => {
           id: Date.now().toString(),
           type: 'command',
           content: input + '^C',
-          cwd: cwd
+          cwd: cwd,
+          username: username
        }]);
        setInput('');
     }
@@ -220,11 +282,18 @@ const TerminalApp: React.FC = () => {
     
     // Check if there is actual text selected
     if (selectedText.length > 0) {
-      try {
-        // Try using the modern Clipboard API first
-        await navigator.clipboard.writeText(selectedText);
-      } catch (err) {
-        console.warn('Clipboard write failed, falling back to execCommand', err);
+      let success = false;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        try {
+          // Try using the modern Clipboard API first
+          await navigator.clipboard.writeText(selectedText);
+          success = true;
+        } catch (err) {
+          console.warn('Clipboard write failed, falling back to execCommand', err);
+        }
+      }
+
+      if (!success) {
         // Fallback to deprecated execCommand for broader compatibility
         try {
           document.execCommand('copy');
@@ -261,7 +330,7 @@ const TerminalApp: React.FC = () => {
         <div key={item.id} style={{ marginBottom: '2px' }}>
           {item.type === 'command' ? (
              <div style={{ display: 'flex', alignItems: 'center' }}>
-               <span style={{ color: '#c678dd', fontWeight: 'bold', marginRight: '6px' }}>root@nas</span>
+               <span style={{ color: '#c678dd', fontWeight: 'bold', marginRight: '6px' }}>{item.username || username}@nas</span>
                <span style={{ color: '#5c6370', marginRight: '6px' }}>:</span>
                <span style={{ color: '#61afef', fontWeight: 'bold', marginRight: '10px' }}>{item.cwd}</span>
                <span style={{ color: '#e06c75', fontWeight: 'bold', marginRight: '10px' }}>$</span>
@@ -275,35 +344,37 @@ const TerminalApp: React.FC = () => {
         </div>
       ))}
       
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <span style={{ color: '#c678dd', fontWeight: 'bold', marginRight: '6px' }}>root@nas</span>
-        <span style={{ color: '#5c6370', marginRight: '6px' }}>:</span>
-        <span style={{ color: '#61afef', fontWeight: 'bold', marginRight: '10px' }}>{cwd}</span>
-        <span style={{ color: '#e06c75', fontWeight: 'bold', marginRight: '10px' }}>$</span>
-        <input
-          ref={inputRef}
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          style={{
-            background: 'transparent',
-            border: 'none',
-            color: '#cccccc',
-            fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
-            fontSize: '16px',
-            flex: 1,
-            outline: 'none',
-            padding: 0,
-            margin: 0
-          }}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
-          disabled={isLoading}
-        />
-      </div>
+      {!isLoading && (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <span style={{ color: '#c678dd', fontWeight: 'bold', marginRight: '6px' }}>{username}@nas</span>
+          <span style={{ color: '#5c6370', marginRight: '6px' }}>:</span>
+          <span style={{ color: '#61afef', fontWeight: 'bold', marginRight: '10px' }}>{cwd}</span>
+          <span style={{ color: '#e06c75', fontWeight: 'bold', marginRight: '10px' }}>$</span>
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#cccccc',
+              fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
+              fontSize: '16px',
+              flex: 1,
+              outline: 'none',
+              padding: 0,
+              margin: 0
+            }}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck="false"
+            disabled={isLoading}
+          />
+        </div>
+      )}
     </div>
   );
 };
