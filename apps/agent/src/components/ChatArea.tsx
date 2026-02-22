@@ -1,6 +1,6 @@
 import React from 'react'
 import { Plus, Bot, Layers, ChevronLeft, ChevronRight } from 'lucide-react'
-import { Message, Agent } from '../types'
+import { Message, Agent, WorkspaceContent } from '../types'
 import { AVAILABLE_TOOLS } from '../constants'
 import { MessageList } from './MessageList'
 import { ChatInput } from './ChatInput'
@@ -20,6 +20,8 @@ interface ChatAreaProps {
   toggleWorkspace: () => void
   selectedTools: string[]
   onToggleTool: (toolId: string) => void
+  setWorkspaceContent: (content: WorkspaceContent) => void
+  setIsWorkspaceOpen: (open: boolean) => void
 }
 
 export const ChatArea: React.FC<ChatAreaProps> = ({
@@ -36,7 +38,9 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   isWorkspaceOpen,
   toggleWorkspace,
   selectedTools,
-  onToggleTool
+  onToggleTool,
+  setWorkspaceContent,
+  setIsWorkspaceOpen
 }) => {
   return (
     <div style={{
@@ -102,6 +106,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
         messages={messages}
         isLoading={isLoading}
         isCompact={false}
+        onShowDetail={(content) => {
+          setWorkspaceContent(content)
+          setIsWorkspaceOpen(true)
+        }}
         messageItemProps={{
           userStyles: {
             backgroundColor: '#e3f2fd',

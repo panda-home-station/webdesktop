@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { MessageItem } from './MessageItem'
-import { Message } from '../types'
+import { Message, WorkspaceContent } from '../types'
 import { Bot } from 'lucide-react'
 
 interface MessageListProps {
@@ -10,6 +10,7 @@ interface MessageListProps {
   emptyState?: React.ReactNode
   messageItemProps?: any
   renderLoading?: () => React.ReactNode
+  onShowDetail?: (content: WorkspaceContent) => void
 }
 
 export const MessageList: React.FC<MessageListProps> = ({
@@ -18,7 +19,8 @@ export const MessageList: React.FC<MessageListProps> = ({
   isCompact = false,
   emptyState,
   messageItemProps = {},
-  renderLoading
+  renderLoading,
+  onShowDetail
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -65,6 +67,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               key={m.id} 
               message={m} 
               isCompact={isCompact}
+              onShowDetail={onShowDetail}
               {...messageItemProps}
             />
           ))}

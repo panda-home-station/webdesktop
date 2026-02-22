@@ -6,6 +6,6 @@
     "default": "./robot.svg"
   },
   "capabilities": ["core"],
-  "minWidth": 692,
-  "minHeight": 600
+  "minWidth": 1100,
+  "minHeight": 640
 }

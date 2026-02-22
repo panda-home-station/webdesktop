@@ -1,7 +1,7 @@
 import React from 'react'
-import { Bot, User, Globe, Box, Terminal } from 'lucide-react'
+import { Bot, User, Globe, Box, Terminal, ChevronRight, CheckCircle2, Brain } from 'lucide-react'
 import { MarkdownContent } from './MarkdownContent'
-import { Message } from '../types'
+import { Message, WorkspaceContent } from '../types'
 
 interface MessageItemProps {
   message: Message
@@ -11,6 +11,7 @@ interface MessageItemProps {
   avatarStyles?: React.CSSProperties
   showToolCalls?: boolean
   availableTools?: { id: string; name: string }[]
+  onShowDetail?: (content: WorkspaceContent) => void
 }
 
 export const MessageItem: React.FC<MessageItemProps> = ({
@@ -20,7 +21,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({
   assistantStyles = {},
   avatarStyles = {},
   showToolCalls = true,
-  availableTools = []
+  availableTools = [],
+  onShowDetail
 }) => {
   const isUser = message.role === 'user'
   
@@ -82,71 +84,110 @@ export const MessageItem: React.FC<MessageItemProps> = ({
         alignItems: isUser ? 'flex-end' : 'flex-start',
         lineHeight: '1.5'
       }}>
+        {/* Thinking Process Section */}
         {message.thoughts && message.thoughts.length > 0 && (
-          <div style={{
-            fontSize: '13px',
-            color: '#666',
-            backgroundColor: '#f8f9fa',
-            padding: '8px 12px',
-            borderRadius: '8px',
-            marginBottom: '8px',
-            borderLeft: '3px solid #ddd'
-          }}>
-            <div style={{ fontWeight: 500, marginBottom: '4px', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>思考过程</div>
-            {message.thoughts.map((thought, idx) => (
-              <div key={idx} style={{ marginBottom: '4px' }}>
-                <MarkdownContent content={thought} color="#666" />
-              </div>
-            ))}
+          <div 
+            onClick={() => onShowDetail?.({ type: 'thinking', content: message.thoughts || [] })}
+            style={{
+              fontSize: '13px',
+              color: '#666',
+              backgroundColor: '#f8f9fa',
+              padding: '8px 12px',
+              borderRadius: '8px',
+              marginBottom: '8px',
+              border: '1px solid #e0e0e0',
+              width: '100%',
+              boxSizing: 'border-box',
+              cursor: onShowDetail ? 'pointer' : 'default',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              if (onShowDetail) {
+                e.currentTarget.style.backgroundColor = '#f0f4f8'
+                e.currentTarget.style.borderColor = '#d1d5db'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (onShowDetail) {
+                e.currentTarget.style.backgroundColor = '#f8f9fa'
+                e.currentTarget.style.borderColor = '#e0e0e0'
+              }
+            }}
+          >
+            <Brain size={14} color="#3b82f6" />
+            <span style={{ fontWeight: 500, color: '#374151' }}>Thinking Process</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {message.content ? (
+                  <CheckCircle2 size={14} color="#10b981" />
+                ) : (
+                  <span className="animate-pulse" style={{ fontSize: 11, color: '#3b82f6' }}>Thinking...</span>
+                )}
+                {onShowDetail && <ChevronRight size={14} color="#9ca3af" />}
+             </div>
           </div>
         )}
 
-        {showToolCalls && message.toolCalls && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+        {/* Tool Calls Section */}
+        {showToolCalls && message.toolCalls && message.toolCalls.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', marginBottom: '8px' }}>
             {message.toolCalls.map((tool, idx) => (
-              <div key={idx} style={{ 
-                fontSize: '12px', 
-                color: '#666', 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 8,
-                backgroundColor: '#f5f5f5',
-                padding: '6px 10px',
-                borderRadius: '6px',
-                border: '1px solid #eee'
-              }}>
-                <Terminal size={12} />
-                <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tool.name}</span>
-                <span style={{ fontFamily: 'monospace', color: '#888' }}>{JSON.stringify(tool.args)}</span>
-                {tool.status === 'running' && <span className="animate-pulse">...</span>}
-                {tool.status === 'completed' && <span style={{ color: 'green' }}>✓</span>}
-                {tool.status === 'error' && <span style={{ color: 'red' }}>✗</span>}
-              </div>
-            ))}
-            {/* Show tool results if available */}
-            {message.toolCalls.map((tool, idx) => tool.result && (
-              <div key={`result-${idx}`} style={{
-                fontSize: '12px',
-                color: '#444',
-                backgroundColor: '#f0f9ff',
-                padding: '8px',
-                borderRadius: '6px',
-                borderLeft: '3px solid #3b82f6',
-                fontFamily: 'monospace',
-                whiteSpace: 'pre-wrap',
-                maxHeight: '200px',
-                overflowY: 'auto'
-              }}>
-                <div style={{ fontWeight: 600, marginBottom: '4px', color: '#3b82f6' }}>Result ({tool.name}):</div>
-                {tool.result}
+              <div 
+                key={idx} 
+                onClick={() => onShowDetail?.({ type: 'tool', content: tool })}
+                style={{ 
+                  fontSize: '12px', 
+                  color: '#444', 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: 8,
+                  backgroundColor: '#f0f7ff',
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #dbeafe',
+                  cursor: onShowDetail ? 'pointer' : 'default',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (onShowDetail) {
+                    e.currentTarget.style.backgroundColor = '#eff6ff'
+                    e.currentTarget.style.borderColor = '#bfdbfe'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (onShowDetail) {
+                    e.currentTarget.style.backgroundColor = '#f0f7ff'
+                    e.currentTarget.style.borderColor = '#dbeafe'
+                  }
+                }}
+              >
+                <Terminal size={12} color="#3b82f6" />
+                <span style={{ fontWeight: 600, color: '#1d4ed8' }}>Using Tool:</span>
+                <span style={{ fontFamily: 'monospace', fontWeight: 500 }}>{tool.name}</span>
+                <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {tool.status === 'running' && <span className="animate-pulse" style={{ color: '#f59e0b', fontSize: 11 }}>Running...</span>}
+                  {tool.status === 'completed' && <CheckCircle2 size={14} color="#10b981" />}
+                  {tool.status === 'error' && <span style={{ color: '#ef4444', fontWeight: 500, fontSize: 11 }}>Error</span>}
+                  {onShowDetail && <ChevronRight size={14} color="#9ca3af" />}
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        <div style={currentStyles}>
-          <MarkdownContent content={message.content} color={currentStyles.color as string} />
-        </div>
+        {/* Answer Section */}
+        {message.content && (
+          <div style={{ width: '100%' }}>
+            {!isUser && (
+              <div style={{ fontWeight: 600, fontSize: '11px', color: '#10b981', marginBottom: '4px', paddingLeft: '4px' }}>ANSWER:</div>
+            )}
+            <div style={currentStyles}>
+              <MarkdownContent content={message.content} color={currentStyles.color as string} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

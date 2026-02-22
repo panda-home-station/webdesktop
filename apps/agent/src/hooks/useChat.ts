@@ -20,11 +20,7 @@ export function useChat(initialMessages?: any[]) {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
   const [activeWorkflow, setActiveWorkflow] = useState<AgentWorkflow | null>(null)
   const [selectedTools, setSelectedTools] = useState<string[]>([])
-  const [tasks, setTasks] = useState<AgentTask[]>([
-    { id: '1', title: '分析项目结构', status: 'completed', createdAt: new Date() },
-    { id: '2', title: '实现三栏布局 UI', status: 'in_progress', createdAt: new Date() },
-    { id: '3', title: '对接工具 API', status: 'pending', createdAt: new Date() },
-  ])
+  const [tasks, setTasks] = useState<AgentTask[]>([])
 
   const [apiConfigs, setApiConfigs] = useState<ApiConfig[]>(() => {
     try {
@@ -233,6 +229,15 @@ export function useChat(initialMessages?: any[]) {
     
     // Create placeholder assistant message
     const assistantMsgId = Date.now().toString() + '-assistant';
+    
+    // Initialize active workflow for this request
+    setActiveWorkflow({
+      id: Date.now().toString(),
+      title: 'Processing Request...',
+      status: 'running',
+      steps: []
+    });
+
     setMessages(prev => [...prev, {
       id: assistantMsgId,
       role: 'assistant',
@@ -295,38 +300,60 @@ export function useChat(initialMessages?: any[]) {
             try {
               const event = JSON.parse(data);
               
+              // Update Workflow
+              setActiveWorkflow(prev => {
+                if (!prev) return prev;
+                const newSteps = [...prev.steps];
+                const lastStep = newSteps[newSteps.length - 1];
+
+                if (event.type === 'thought') {
+                   // Add new thought step
+                   newSteps.push({
+                     id: `thought-${Date.now()}`,
+                     label: 'Thinking...', 
+                     status: 'completed'
+                   });
+                } else if (event.type === 'tool_call') {
+                   const toolCall = event.content;
+                   newSteps.push({
+                     id: toolCall.id,
+                     label: `Tool: ${toolCall.function.name}`,
+                     status: 'running'
+                   });
+                } else if (event.type === 'tool_result') {
+                   const { id } = event.content;
+                   const stepIndex = newSteps.findIndex(s => s.id === id);
+                   if (stepIndex !== -1) {
+                     newSteps[stepIndex] = { ...newSteps[stepIndex], status: 'completed' };
+                   }
+                } else if (event.type === 'answer') {
+                   // Only add answer step once
+                   if (!lastStep || lastStep.label !== 'Final Answer') {
+                       newSteps.push({
+                         id: `answer-${Date.now()}`,
+                         label: 'Final Answer',
+                         status: 'completed'
+                       });
+                   }
+                   // Mark workflow as completed
+                   return { ...prev, steps: newSteps, status: 'completed' };
+                } else if (event.type === 'error') {
+                   return { ...prev, status: 'error' };
+                }
+
+                return { ...prev, steps: newSteps };
+              });
+
               setMessages(prev => prev.map(m => {
                 if (m.id !== assistantMsgId) return m;
 
                 const updatedMsg = { ...m };
                 
                 if (event.type === 'thought') {
-                  // Add new thought or append to last thought if it's incomplete (not implemented here, assuming full thoughts for now)
-                  // For streaming thoughts, we might want to just append text. 
-                  // But the backend seems to send full thought content or chunks?
-                  // Let's assume 'thought' event sends a chunk of thought text.
-                  // Wait, the backend implementation sends: AgentEvent::Thought(content)
-                  // If it's a stream of tokens, we should append. If it's a full block, we push.
-                  // The backend loop sends `Thought(content)` when `response.tool_calls` is present.
-                  // It seems `content` is the whole text so far? Or a chunk?
-                  // In `AgentRuntime`, `provider.chat` returns a stream. 
-                  // But the `AgentEvent::Thought` is emitted when `response.content` is present AND `tool_calls` is present.
-                  // Actually, `AgentRuntime` logic is:
-                  // if content is present:
-                  //   if no tool calls: Answer(content)
-                  //   else: Thought(content)
-                  // So it's sending chunks.
-                  
-                  // Let's treat thoughts as a list of strings. 
-                  // If the last item in thoughts is "active", we append. 
-                  // But for simplicity, let's just push to thoughts array if it's a new "block" of thought.
-                  // However, usually thoughts are just text. 
-                  // Let's append to the last thought entry if it exists, otherwise create new.
                   const thoughts = updatedMsg.thoughts || [];
                   if (thoughts.length === 0) {
                     thoughts.push(event.content);
                   } else {
-                    // Simple append for now
                     thoughts[thoughts.length - 1] += event.content;
                   }
                   updatedMsg.thoughts = thoughts;

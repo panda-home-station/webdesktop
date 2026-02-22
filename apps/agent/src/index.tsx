@@ -7,10 +7,12 @@ import { SettingsPage } from './components/SettingsPage'
 import { useLayout } from './hooks/useLayout'
 import { useChat } from './hooks/useChat'
 import { SIDEBAR_EXPANDED, SIDEBAR_COLLAPSED, CHAT_MIN_WIDTH, RESIZER_WIDTH } from './constants'
+import { AgentTask, AgentWorkflow, WorkspaceContent } from './types'
 
 export default function AgentApp({ initialMessages }: { initialMessages?: any[] }) {
   const win = useContext(WindowContext)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [workspaceContent, setWorkspaceContent] = useState<WorkspaceContent>({ type: 'workflow' })
   
   useEffect(() => {
     if (win && win.setTitle) {
@@ -224,6 +226,8 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
             toggleWorkspace={toggleWorkspace}
             selectedTools={selectedTools}
             onToggleTool={toggleTool}
+            setWorkspaceContent={setWorkspaceContent}
+            setIsWorkspaceOpen={setIsWorkspaceOpen}
           />
 
           {/* Resizer Handle */}
@@ -260,6 +264,7 @@ export default function AgentApp({ initialMessages }: { initialMessages?: any[] 
             tasks={tasks}
             activeWorkflow={activeWorkflow}
             isInitial={isInitial}
+            workspaceContent={workspaceContent}
           />
         </>
       )}

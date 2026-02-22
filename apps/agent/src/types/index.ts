@@ -13,13 +13,7 @@ export type Message = {
   id: string
   timestamp: Date
   thoughts?: string[]
-  toolCalls?: {
-    id: string
-    name: string
-    args: any
-    status: 'running' | 'completed' | 'error'
-    result?: string
-  }[]
+  toolCalls?: ToolCall[]
 }
 
 export type Agent = {
@@ -64,3 +58,16 @@ export interface ApiConfig {
   endpoint: string
   model: string
 }
+
+export type ToolCall = {
+  id: string
+  name: string
+  args: any
+  status: 'running' | 'completed' | 'error'
+  result?: string
+}
+
+export type WorkspaceContent = 
+  | { type: 'workflow' }
+  | { type: 'thinking'; content: string[] }
+  | { type: 'tool'; content: ToolCall }
