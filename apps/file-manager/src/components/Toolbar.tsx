@@ -154,6 +154,16 @@ export default function Toolbar({
              >
                <Users size={16} color="#6b7280" strokeWidth={1.5} />
              </button>
+           ) : crumbs.length > 2 && crumbs[1].to === '/User' && crumbs[2].to === '/User/admin' ? (
+             <button 
+               style={{ border: 'none', background: dragOverItem === '/User/admin' ? 'rgba(0,122,255,0.2)' : 'transparent', borderRadius: 4, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
+               onClick={() => navigate('/User/admin')}
+               onDragOver={(e) => onDragOver(e, { name: 'Home', is_dir: true, path: '/User/admin' })}
+               onDrop={(e) => onDrop(e, { name: 'Home', is_dir: true, path: '/User/admin' })}
+               onDragLeave={onDragLeave}
+             >
+               <Home size={16} color="#6b7280" strokeWidth={1.5} />
+             </button>
            ) : (
              <button 
                style={{ border: 'none', background: dragOverItem === '/' ? 'rgba(0,122,255,0.2)' : 'transparent', borderRadius: 4, padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }} 
@@ -165,7 +175,9 @@ export default function Toolbar({
                <Home size={16} color="#6b7280" strokeWidth={1.5} />
              </button>
            )}
-           {(crumbs.length > 1 && (crumbs[1].to === '/AppData' || crumbs[1].to === '/Team') ? crumbs.slice(2) : crumbs.slice(1)).map((c, i) => (
+           {(crumbs.length > 1 && (crumbs[1].to === '/AppData' || crumbs[1].to === '/Team') ? crumbs.slice(2) : 
+             (crumbs.length > 2 && crumbs[1].to === '/User' && crumbs[2].to === '/User/admin') ? crumbs.slice(3) :
+             crumbs.slice(1)).map((c, i) => (
               <React.Fragment key={`crumb-${i}-${c.to}`}>
                 <span style={{ color: '#9ca3af', margin: '0 4px', fontSize: 12 }}>/</span>
                 <button 
