@@ -319,8 +319,11 @@ const TerminalApp: React.FC = () => {
         fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
         fontSize: '16px',
         padding: '16px',
-        overflowY: 'auto',
-        boxSizing: 'border-box'
+        overflowY: 'scroll',
+        boxSizing: 'border-box',
+        lineHeight: '20px',
+        WebkitFontSmoothing: 'antialiased',
+        MozOsxFontSmoothing: 'grayscale'
       }}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
@@ -329,7 +332,7 @@ const TerminalApp: React.FC = () => {
       {history.map((item) => (
         <div key={item.id} style={{ marginBottom: '2px' }}>
           {item.type === 'command' ? (
-             <div style={{ display: 'flex', alignItems: 'center' }}>
+             <div style={{ display: 'flex', alignItems: 'baseline' }}>
                <span style={{ color: '#c678dd', fontWeight: 'bold', marginRight: '6px' }}>{item.username || username}@nas</span>
                <span style={{ color: '#5c6370', marginRight: '6px' }}>:</span>
                <span style={{ color: '#61afef', fontWeight: 'bold', marginRight: '10px' }}>{item.cwd}</span>
@@ -337,7 +340,7 @@ const TerminalApp: React.FC = () => {
                <span style={{ color: '#cccccc' }}>{item.content}</span>
              </div>
           ) : (
-             <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: '1.2' }}>
+             <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: '20px' }}>
                <Ansi>{item.content}</Ansi>
              </div>
           )}
@@ -345,7 +348,7 @@ const TerminalApp: React.FC = () => {
       ))}
       
       {!isLoading && (
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', marginBottom: '2px' }}>
           <span style={{ color: '#c678dd', fontWeight: 'bold', marginRight: '6px' }}>{username}@nas</span>
           <span style={{ color: '#5c6370', marginRight: '6px' }}>:</span>
           <span style={{ color: '#61afef', fontWeight: 'bold', marginRight: '10px' }}>{cwd}</span>
@@ -362,10 +365,14 @@ const TerminalApp: React.FC = () => {
               color: '#cccccc',
               fontFamily: "'JetBrains Mono', 'Fira Code', 'Consolas', monospace",
               fontSize: '16px',
+              lineHeight: '20px',
+              height: '20px',
               flex: 1,
               outline: 'none',
               padding: 0,
-              margin: 0
+              margin: 0,
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale'
             }}
             autoComplete="off"
             autoCorrect="off"
