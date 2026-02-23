@@ -65,7 +65,7 @@ const btnConfirmStyle = (danger?: boolean): React.CSSProperties => ({
 const fmApi = api
 
 export default function FileManager({ initialPath }: { initialPath?: string }) {
-  const { path, setPath, navHist, navIndex, navigate, back, forward, crumbs } = useNavigation(initialPath || '/')
+  const { path, setPath, navHist, navIndex, navigate, back, forward, crumbs } = useNavigation(initialPath || '/User/admin')
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [tasks, setTasks] = useState<FileTask[]>([])
   const [loading, setLoading] = useState<boolean>(false)
@@ -728,10 +728,10 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
           id: 'home', 
           label: '我的文件', 
           icon: <Home size={20} strokeWidth={1.5} />,
-          onDragOver: (e: React.DragEvent) => handleDragOver(e, { name: 'Home', is_dir: true, path: '/' }),
-          onDrop: (e: React.DragEvent) => handleDrop(e, { name: 'Home', is_dir: true, path: '/' }),
+          onDragOver: (e: React.DragEvent) => handleDragOver(e, { name: 'Home', is_dir: true, path: '/User/admin' }),
+          onDrop: (e: React.DragEvent) => handleDrop(e, { name: 'Home', is_dir: true, path: '/User/admin' }),
           onDragLeave: handleDragLeave,
-          highlighted: dragOverItem === '/'
+          highlighted: dragOverItem === '/User/admin'
         },
         { 
           id: 'team', 
@@ -813,7 +813,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         activeId={active}
         onSelect={(id) => {
           const toMap: Record<string, string> = {
-            home: '/',
+            home: '/User/admin',
             team: '/Team',
             appdata: '/AppData',
             'shared-with-me': '/SharedWithMe',
