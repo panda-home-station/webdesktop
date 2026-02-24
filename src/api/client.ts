@@ -10,15 +10,21 @@ const base = window.location.port === '5173'
 let offline = false
 const TOKEN_KEY = 'authToken'
 const USER_KEY = 'authUser'
-type Entry = { name: string; is_dir: boolean; size: number; modified_ts: number }
+export type Entry = { 
+  id: string
+  name: string
+  is_dir: boolean
+  size: number
+  modified_ts: number
+  mime: string
+}
 type Node = { type: 'dir' | 'file'; children?: Record<string, Node>; size?: number; modified_ts?: number }
 type User = { user_id: string; username: string }
 type FsListResp = {
   path: string
-  entries: { id?: string; name: string; is_dir: boolean; size: number; modified_ts: number }[]
-  has_more?: boolean
-  next_offset?: number
-  total?: number
+  entries: Entry[]
+  has_more: boolean
+  next_offset: number
 }
 let token = localStorage.getItem(TOKEN_KEY) || ''
 let currentUser: User | null = null
@@ -71,90 +77,28 @@ function setUser(u: User | null) {
     localStorage.removeItem(USER_KEY)
   }
 }
-function mockLoadRoot(): Node {
-  const raw = localStorage.getItem('mockfs')
-  let root: Node
-  if (raw) {
-    try {
-      root = JSON.parse(raw)
-    } catch {
-      root = { type: 'dir', children: {} }
-    }
-  } else {
-    root = { type: 'dir', children: {} }
-    localStorage.setItem('mockfs', JSON.stringify(root))
-  }
-  return root
-}
-function mockSaveRoot(root: Node) {
-  localStorage.setItem('mockfs', JSON.stringify(root))
-}
-function mockEnsureDir(path: string) {
-  const root = mockLoadRoot()
-  const parts = (path || '/').split('/').filter(Boolean)
-  let cur: Node = root
-  for (const p of parts) {
-    cur.children = cur.children || {}
-    if (!cur.children[p]) {
-      cur.children[p] = { type: 'dir', children: {}, modified_ts: Math.floor(Date.now() / 1000) }
-    }
-    cur = cur.children[p]
-  }
-  mockSaveRoot(root)
-}
-function mockTraverse(path: string): { root: Node; node: Node; parent: Node | null; name: string } {
-  const root = mockLoadRoot()
-  const parts = (path || '/').split('/').filter(Boolean)
-  let cur: Node = root
-  let parent: Node | null = null
-  let name = ''
-  for (const p of parts) {
-    parent = cur
-    name = p
-    cur.children = cur.children || {}
-    cur = cur.children[p] || { type: 'dir', children: {} }
-  }
-  return { root, node: cur, parent, name }
-}
-function getMockList(path: string): { base: string; path: string; entries: Entry[] } {
-  const { node } = mockTraverse(path)
-  const children = node.children || {}
-  const entries: Entry[] = Object.entries(children).map(([name, n]) => ({
-    name,
-    is_dir: n.type === 'dir',
-    size: n.type === 'file' ? n.size || 0 : 0,
-    modified_ts: n.modified_ts || Math.floor(Date.now() / 1000)
-  }))
-  return { base: '/', path, entries }
-}
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-
-
 export const api = {
   async health() {
     try {
       const r = await instance.get(`/health`)
-      offline = false
       return r.data as { status: string; ts: number }
     } catch (e: any) {
       if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
         throw e
       }
-      offline = true
       return { status: 'offline', ts: Math.floor(Date.now() / 1000) }
     }
   },
   async version() {
     try {
       const r = await instance.get(`/version`)
-      offline = false
       return r.data as { version: string }
     } catch {
-      offline = true
       return { version: 'frontend-only' }
     }
   },
@@ -167,6 +111,34 @@ export const api = {
       system_time: string
       uptime: string
     }
+  },
+  async getSystemStats() {
+    const r = await instance.get(`/api/system/stats`)
+    return r.data as {
+      cpu_usage: number
+      mem_total: number
+      mem_used: number
+      disk_total: number
+      disk_used: number
+      net_in: number
+      net_out: number
+      timestamp: number
+    }
+  },
+  async getSystemStatsHistory(start: string, end: string, limit = 1000) {
+    const r = await instance.get(`/api/system/stats/history`, {
+      params: { start, end, limit }
+    })
+    return r.data as {
+      cpu_usage: number
+      mem_total: number
+      mem_used: number
+      disk_total: number
+      disk_used: number
+      net_in: number
+      net_out: number
+      timestamp: number
+    }[]
   },
   async initState() {
     const r = await instance.get(`/api/system/init/state`)
@@ -298,75 +270,25 @@ export const api = {
       return { ok: false }
     }
   },
-  async fsList(path: string) {
-    try {
-      const r = await instance.get(`/api/docs/list`, { params: { path, limit: 200 } })
-      offline = false
-      return r.data as FsListResp
-    } catch {
-      offline = true
-      return getMockList(path)
-    }
+  async fsList(path: string, limit = 200) {
+    const r = await instance.get(`/api/docs/list`, { params: { path, limit } })
+    return r.data as FsListResp
   },
   async fsListPage(path: string, offset: number, limit = 500) {
     const r = await instance.get(`/api/docs/list`, { params: { path, offset, limit } })
     return r.data as FsListResp
   },
   async fsMkdir(path: string) {
-    try {
-      const r = await instance.post(`/api/docs/mkdir`, { path })
-      offline = false
-      return r.data as { ok: boolean }
-    } catch (e: any) {
-      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
-        throw e
-      }
-      offline = true
-      mockEnsureDir(path)
-      return { ok: true }
-    }
+    const r = await instance.post(`/api/docs/mkdir`, { path })
+    return r.data as { ok: boolean }
   },
   async fsDelete(path: string) {
-    try {
-      const r = await instance.delete(`/api/docs/delete`, { params: { path } })
-      offline = false
-      return r.data as { ok: boolean }
-    } catch (e: any) {
-      if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
-        throw e
-      }
-      offline = true
-      const { root, parent, name } = mockTraverse(path)
-      if (parent && parent.children && name && parent.children[name]) {
-        delete parent.children[name]
-        mockSaveRoot(root)
-      }
-      return { ok: true }
-    }
+    const r = await instance.delete(`/api/docs/delete`, { params: { path } })
+    return r.data as { ok: boolean }
   },
   async fsRename(from: string, to: string) {
-    try {
-      const r = await instance.post(`/api/docs/rename`, { from, to })
-      return r.data as { ok: boolean }
-    } catch {
-      const { root, parent, name } = mockTraverse(from)
-      if (!parent || !parent.children || !parent.children[name]) return { ok: false }
-      const node = parent.children[name]
-      delete parent.children[name]
-      const toParts = (to || '').split('/').filter(Boolean)
-      const newName = toParts.pop() || name
-      let cur = root
-      for (const p of toParts) {
-        cur.children = cur.children || {}
-        cur.children[p] = cur.children[p] || { type: 'dir', children: {} }
-        cur = cur.children[p]
-      }
-      cur.children = cur.children || {}
-      cur.children[newName] = node
-      node.modified_ts = Math.floor(Date.now() / 1000)
-      mockSaveRoot(root)
-      return { ok: true }
-    }
+    const r = await instance.post(`/api/docs/rename`, { from, to })
+    return r.data as { ok: boolean }
   },
   async execCommand(command: string, sessionId?: string) {
     const r = await instance.post('/api/agent/terminal/exec', { command, session_id: sessionId })
@@ -377,7 +299,6 @@ export const api = {
     return r.data as string[]
   },
   async fsUploadLegacy(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal) {
-    try {
       const fd = new FormData()
       fd.append('path', path)
       fd.append('size', String(file.size))
@@ -387,7 +308,7 @@ export const api = {
       let lastTs = Date.now()
       let currentBps = 0
       
-      const r = await instance.post(`/api/docs/upload`, fd, {
+      await instance.post(`/api/docs/upload`, fd, {
         signal,
         onUploadProgress: (e) => {
           if (onProgress && e.loaded != null && e.total != null) {
@@ -407,15 +328,7 @@ export const api = {
           }
         }
       })
-      offline = false
       return { ok: true }
-    } catch (e: any) {
-       if (e && (e.name === 'Canceled' || e.code === 'ERR_CANCELED')) {
-         throw e
-       }
-       offline = true
-       throw e
-    }
   },
 
   async fsUpload(path: string, file: File, onProgress?: (info: { percent: number; loaded: number; total: number; bps?: number }) => void, signal?: AbortSignal) {

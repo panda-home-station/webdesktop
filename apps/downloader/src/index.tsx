@@ -81,7 +81,7 @@ const PathPicker = ({ initialPath, onClose, onSelect }: { initialPath: string; o
   const [entries, setEntries] = useState<any[]>([])
 
   useEffect(() => {
-    (api as any).fsList(currentPath).then((res: any) => {
+    api.fsList(currentPath).then((res) => {
       if (res && res.entries) {
         setEntries(res.entries)
       } else {
@@ -94,8 +94,8 @@ const PathPicker = ({ initialPath, onClose, onSelect }: { initialPath: string; o
     const name = prompt('请输入新文件夹名称')
     if (!name) return
     const newDir = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`
-    await (api as any).fsMkdir(newDir)
-    const res = await (api as any).fsList(currentPath)
+    await api.fsMkdir(newDir)
+    const res = await api.fsList(currentPath)
     if (res && res.entries) setEntries(res.entries)
   }
 

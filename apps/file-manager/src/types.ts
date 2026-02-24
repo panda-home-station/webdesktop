@@ -1,8 +1,10 @@
 export interface FileEntry {
+  id: string
   name: string
   is_dir: boolean
   size: number
   modified_ts: number
+  mime: string
   path?: string
   level?: number
   expanded?: boolean

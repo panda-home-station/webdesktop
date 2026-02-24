@@ -1,4 +1,4 @@
-import { instance as axios } from '../../../src/api/client'
+import { instance as axios, api } from '../../../src/api/client'
 import { Container, Image, Mirror, Network, Volume } from './types'
 
 export const podmanApi = {
@@ -81,8 +81,8 @@ export const podmanApi = {
     }
   },
   async fsList(path: string) {
-    const r = await axios.get('/api/docs/list', { params: { path, limit: 1000, offset: 0 } })
-    return r.data as { path: string; entries: { name: string; is_dir: boolean }[] }
+    const r = await api.fsList(path, 1000)
+    return r
   },
   async registryHot(page = 1, pageSize = 24) {
     const r = await axios.get('/api/podman/registry/hot', { params: { page, page_size: pageSize } })

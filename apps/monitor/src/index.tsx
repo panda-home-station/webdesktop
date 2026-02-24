@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, memo, useRef, useContext } from 'react'
-import { instance as axios } from '../../../src/api/client'
+import { api } from '../../../src/api/client'
 import { WindowContext } from '../../../src/sdk/window'
 import { Cpu, HardDrive, Network, MemoryStick as MemoryIcon, Activity, Calendar, Monitor as GpuIcon } from 'lucide-react'
 import { Sidebar } from '../../../src/components/Sidebar'
@@ -34,8 +34,7 @@ class StatsStore extends EventEmitter {
 
   async fetch() {
     try {
-      const res = await axios.get('/api/system/stats')
-      const stats = res.data
+      const stats = await (api as any).getSystemStats()
       this.current = stats
       this.history.push(stats)
       if (this.history.length > 60) this.history.shift() // 保留最近 60 个点，增加到 2 分钟数据
@@ -642,14 +641,8 @@ export default function MonitorApp() {
       else if (timeRange === '6h') start.setHours(now.getHours() - 6)
       else if (timeRange === '24h') start.setDate(now.getDate() - 1)
 
-      const res = await axios.get('/api/system/stats/history', {
-        params: {
-          start: start.toISOString(),
-          end: now.toISOString(),
-          limit: 1000
-        }
-      })
-      setHistoryData(res.data.reverse())
+      const data = await (api as any).getSystemStatsHistory(start.toISOString(), now.toISOString(), 1000)
+      setHistoryData(data.reverse())
     } catch (e) {
       console.error('Failed to fetch history', e)
     } finally {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
 import { WindowContext } from '../../../src/sdk/window'
-import { instance as axios, api } from '../../../src/api/client'
+import { api } from '../../../src/api/client'
 import { 
   Monitor,
   Users, 
@@ -52,8 +52,7 @@ export default function SystemSettings() {
 
   useEffect(() => {
     const fetchInfo = () => {
-      axios.get('/api/system/device').then(r => {
-        const data = r.data
+      api.getDeviceInfo().then(data => {
         setDeviceInfo(data)
         try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch {}
       }).catch(console.error)

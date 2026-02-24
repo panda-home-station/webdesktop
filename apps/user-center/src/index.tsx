@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useContext } from 'react'
 import { Sidebar } from '../../../src/components/Sidebar'
 import { WindowContext } from '../../../src/sdk/window'
-import { instance as axios, api } from '../../../src/api/client'
+import { api } from '../../../src/api/client'
 import Icon from '@mdi/react'
 import { mdiAccountCircleOutline, mdiImageOutline, mdiShieldLockOutline } from '@mdi/js'
 import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '../../../src/state/desktop'
@@ -9,41 +9,6 @@ import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpape
 type Item = 'profile' | 'wallpapers' | 'security'
 
 const WALL_DIR = '/AppData/Wallpapers'
-
-const fmApi = {
-  async fsMkdir(path: string) {
-    await axios.post('/api/docs/mkdir', { path })
-  },
-  async fsList(path: string) {
-    const r = await axios.get('/api/docs/list', { params: { path, limit: 200, offset: 0 } })
-    return r.data as { path: string; entries: { id?: string; name: string; is_dir: boolean }[] }
-  },
-  async fsUpload(dir: string, file: File) {
-    const fd = new FormData()
-    fd.append('path', dir)
-    fd.append('size', String(file.size))
-    fd.append('offset', '0')
-    fd.append('file', file)
-    await axios.post('/api/docs/upload', fd)
-  },
-  fsDownloadUrl(path: string) {
-    const host = window.location.hostname || 'localhost'
-    const apiPort = (import.meta as any).env?.VITE_PNAS_PORT ?? '8000'
-    const protocol = window.location.protocol === 'https:' ? 'https' : 'http'
-    const base = `${protocol}://${host}:${apiPort}`
-    const token = localStorage.getItem('authToken') || ''
-    const u = new URL(`${base}/api/docs/download`)
-    u.searchParams.set('path', path || '')
-    if (token) u.searchParams.set('token', token)
-    return u.toString()
-  },
-  getUser(): { user_id: string; username: string } | null {
-    try {
-      const raw = localStorage.getItem('authUser')
-      return raw ? JSON.parse(raw) : null
-    } catch { return null }
-  }
-}
 
 export default function UserCenter() {
   const win = useContext(WindowContext)
@@ -56,7 +21,7 @@ export default function UserCenter() {
     }
   }, [active, win])
 
-  const user = fmApi.getUser()
+  const user = api.getUser()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [busy, setBusy] = useState(false)
@@ -73,10 +38,10 @@ export default function UserCenter() {
     ;(async () => {
       setBusy(true)
       try {
-        await fmApi.fsMkdir(WALL_DIR)
+        await api.fsMkdir(WALL_DIR)
       } catch {}
       try {
-        const rs = await fmApi.fsList(WALL_DIR)
+        const rs = await api.fsList(WALL_DIR)
         setEntries(rs.entries)
       } catch {
         setEntries([])
@@ -154,9 +119,9 @@ export default function UserCenter() {
                     setBusy(true)
                     try {
                       for (const f of Array.from(files)) {
-                        await fmApi.fsUpload(WALL_DIR, f)
+                        await api.fsUpload(WALL_DIR, f)
                       }
-                      const rs = await fmApi.fsList(WALL_DIR)
+                      const rs = await api.fsList(WALL_DIR)
                       setEntries(rs.entries)
                     } finally {
                       setBusy(false)
@@ -169,7 +134,7 @@ export default function UserCenter() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10 }}>
               {imgs.map(it => {
                 const full = WALL_DIR.endsWith('/') ? `${WALL_DIR}${it.name}` : `${WALL_DIR}/${it.name}`
-                const url = fmApi.fsDownloadUrl(full)
+                const url = api.fsDownloadUrl(full)
                 const selected = curWallpaper && curWallpaper.includes(it.name)
                 return (
                   <button
