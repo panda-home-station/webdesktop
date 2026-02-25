@@ -1,0 +1,7 @@
+Package: webdesktop
+Version: 0.1.0
+Section: web
+Priority: optional
+Architecture: amd64
+Maintainer: PHS
+Description: Panda Home Station Web Desktop static assets
