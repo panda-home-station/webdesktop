@@ -21,6 +21,6 @@ PKG="${WORK}/pkg"
 mkdir -p "${PKG}/DEBIAN" "${PKG}/usr/share/phs/webdesktop"
 cp -a "$SRC"/. "${PKG}/usr/share/phs/webdesktop/"
 cp "$DIR/debian/control" "${PKG}/DEBIAN/control"
-OUT="$(cd "$PROJ/../artifacts" 2>/dev/null || mkdir -p "$PROJ/../artifacts"; echo "$PROJ/../artifacts")"
+OUT="$(cd "$PROJ/artifacts" 2>/dev/null || mkdir -p "$PROJ/artifacts"; echo "$PROJ/artifacts")"
 dpkg-deb -b "$PKG" "${OUT}/webdesktop_${VERSION}_${ARCH}.deb" >/dev/null
 echo "${OUT}/webdesktop_${VERSION}_${ARCH}.deb"

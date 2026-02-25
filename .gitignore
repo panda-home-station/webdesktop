@@ -20,3 +20,4 @@ pnpm-debug.log*
 src/**/*.js
 src/**/*.js.map
 assets
+artifacts
