@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react'
 import { Folder, FileText, Trash2, RotateCcw, Ban, CheckSquare } from 'lucide-react'
 import TrashListView from './TrashListView'
-import { FileEntry, TrashMetadata } from '../types'
+import { FileEntry } from '../types'
 
 type Props = {
   entries: FileEntry[]
@@ -26,7 +26,7 @@ type Props = {
   onContextMenu: (e: React.MouseEvent, name: string) => void
   onOpenDir: (name: string) => void
   onToggleExpand?: (name: string) => void
-  trashMetadata: Record<string, TrashMetadata>
+  currentPath: string
   loading?: boolean
 }
 
@@ -51,7 +51,7 @@ export default function TrashPane({
   onContextMenu,
   onOpenDir,
   onToggleExpand,
-  trashMetadata,
+  currentPath,
   loading
 }: Props) {
   
@@ -163,7 +163,7 @@ export default function TrashPane({
               // Disable double click enter in Trash
             }}
             onContextMenu={onContextMenu}
-            trashMetadata={trashMetadata}
+            currentPath={currentPath}
             onToggleExpand={onToggleExpand}
             colWidths={colWidths}
             startResize={handleResize}

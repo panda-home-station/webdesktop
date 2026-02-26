@@ -84,19 +84,8 @@ export function useTrashOperations({
   const handleDelete = useCallback(async (names: string[]) => {
       let currentMetadata: Record<string, TrashMetadata> = {}
       
-      if (currentPath !== '/Trash') {
-         try {
-             await api.fsMkdir('/Trash')
-         } catch (e) {}
-         
-         try {
-             const loaded = await loadTrashMetadata()
-             currentMetadata = loaded || {}
-         } catch (e) {
-             console.error("Failed to load trash metadata", e)
-         }
-      } else {
-         currentMetadata = { ...trashMetadata }
+      if (currentPath === '/Trash') {
+        currentMetadata = { ...trashMetadata }
       }
 
       const targetParentsToRefresh = new Set<string>()
@@ -116,32 +105,11 @@ export function useTrashOperations({
                  delete currentMetadata[name]
              }
           } else {
-             // Move to Trash
-             const from = fullPath
-             
-             // Generate UUID for the trash item
-             const uuid = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`
-             const to = `/Trash/${uuid}`
-             
-             await api.fsRename(from, to)
-             
-             // Find entry to get metadata
-             const entry = entries.find(e => e.name === name)
-             
-             currentMetadata[uuid] = {
-                 originalPath: from,
-                 deletionTime: Date.now(),
-                 name: name,
-                 is_dir: entry ? entry.is_dir : false,
-                 size: entry ? entry.size : 0
-             }
-             
-             // Track parent for refresh if we are deleting from a regular dir
-             if (currentPath !== '/Trash') {
-                const parent = fullPath.substring(0, fullPath.lastIndexOf('/')) || '/'
-                if (parent !== currentPath && expandedDirs.has(parent)) {
-                    targetParentsToRefresh.add(parent)
-                }
+             // Delegate move-to-trash to backend
+             await api.fsDelete(fullPath)
+             const parent = fullPath.substring(0, fullPath.lastIndexOf('/')) || '/'
+             if (parent !== currentPath && expandedDirs.has(parent)) {
+                 targetParentsToRefresh.add(parent)
              }
           }
           updateFileTask(id, { status: 'done' })
@@ -152,7 +120,10 @@ export function useTrashOperations({
         }
       }
       
-      await saveTrashMetadata(currentMetadata)
+      // Keep metadata update only when operating inside Trash
+      if (currentPath.startsWith('/Trash')) {
+        await saveTrashMetadata(currentMetadata)
+      }
       
       await reloadCurrentDir()
       
@@ -170,66 +141,37 @@ export function useTrashOperations({
   }, [trashMetadata, loadTrashMetadata, saveTrashMetadata, reloadCurrentDir, clearSelection, expandedDirs, setDirCache, entries, currentPath])
 
   const restoreItems = useCallback(async (names: string[]) => {
-    let currentMetadata: Record<string, TrashMetadata> = {}
-    try {
-        if (currentPath.startsWith('/Trash')) {
-            const loaded = await loadTrashMetadata()
-            currentMetadata = loaded || {}
-        } else {
-            currentMetadata = { ...trashMetadata }
-        }
-    } catch (e) {
-        console.error('Failed to load trash metadata', e)
-        currentMetadata = { ...trashMetadata }
-    }
-
     const targetParentsToRefresh = new Set<string>()
-
+    const rel = currentPath.startsWith('/Trash') ? currentPath.slice('/Trash'.length) : ''
+    const originalDir = rel || '/'
+    if (originalDir === '/') {
+      return
+    }
     for (const n of names) {
-        const name = n.startsWith('/') ? n.split('/').pop() || '' : n
-        
-        const meta = currentMetadata[name]
-        if (!meta) {
-            console.warn(`No metadata found for ${name}`)
-            continue
-        }
-
-        const sourcePath = `/Trash/${name}`
-        const originalPath = meta.originalPath
-        
-        await ensureParentDir(originalPath)
-
-        const parent = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
-        const baseName = originalPath.split('/').pop() || ''
-        
-        const finalPath = await getNonConflictingPath(parent, baseName)
-
-        try {
-            await api.fsRename(sourcePath, finalPath)
-            if (currentMetadata[name]) {
-                delete currentMetadata[name]
-            }
-            
-            targetParentsToRefresh.add(parent)
-        } catch (e) {
-            console.error(`Failed to restore ${sourcePath} to ${finalPath}`, e)
-        }
+      const name = n.startsWith('/') ? n.split('/').pop() || '' : n
+      if (!name) continue
+      const sourcePath = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`
+      const parent = originalDir
+      const finalPath = await getNonConflictingPath(parent, name)
+      try {
+        await ensureParentDir(finalPath)
+        await api.fsRename(sourcePath, finalPath)
+        targetParentsToRefresh.add(parent)
+      } catch (e) {
+        console.error(`Failed to restore ${sourcePath} to ${finalPath}`, e)
+      }
     }
-    
-    await saveTrashMetadata(currentMetadata)
     await reloadCurrentDir()
-    
     for (const p of targetParentsToRefresh) {
-        try {
-            const res = await api.fsList(p)
-            setDirCache(prev => ({ ...prev, [p]: res.entries as FileEntry[] }))
-        } catch (e) {
-            console.error(`Failed to refresh target parent dir ${p}`, e)
-        }
+      try {
+        const res = await api.fsList(p)
+        setDirCache(prev => ({ ...prev, [p]: res.entries as FileEntry[] }))
+      } catch (e) {
+        console.error(`Failed to refresh target parent dir ${p}`, e)
+      }
     }
-    
     clearSelection()
-  }, [trashMetadata, loadTrashMetadata, saveTrashMetadata, reloadCurrentDir, clearSelection, setDirCache, currentPath])
+  }, [reloadCurrentDir, clearSelection, setDirCache, currentPath])
 
   const emptyTrash = useCallback(async () => {
     if (entries.length === 0) return

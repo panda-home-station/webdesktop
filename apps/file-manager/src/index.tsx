@@ -445,7 +445,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       '/Trash',
       '/Transfers',
     ])
-    if (to !== '/' && !reserved.has(to)) {
+    const isReservedPath = to === '/' || to.startsWith('/User') || reserved.has(to)
+    if (!isReservedPath) {
       await fmApi.fsMkdir(to)
     }
     setSelected(new Set())
@@ -494,63 +495,26 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       return base.filter(e => e.name.toLowerCase().includes(qq)).map(e => ({...e, level: 0, path: joinPath(path, e.name)}))
     }
 
-    // Sort entries for Trash: group by name, then deletion time?
-    // Actually, we just need to map them to display names.
-    // We should parse the timestamp from the name for root items.
     const result: any[] = []
     
     const process = (items: typeof entries, parentPath: string, level: number) => {
       const sorted = [...items].sort(sortFn)
       for (const item of sorted) {
-        let fullPath = joinPath(parentPath, item.name)
-        let isExpanded = expandedDirs.has(fullPath)
-        
-        // For Trash Root Items, we want to display the original name
-        let displayName = item.name
-        let meta = trashMetadata[item.name]
-        let isDir = item.is_dir
-        let size = item.size
-        
-        if (path === '/Trash' && level === 0) {
-           if (meta) {
-               displayName = meta.name || item.name
-               // New format: /Trash/timestamp/originalName
-               // Override path to point to content
-               fullPath = joinPath(fullPath, meta.name || item.name)
-               // Check expanded state for the inner path
-               isExpanded = expandedDirs.has(fullPath)
-               // Override properties from metadata
-               isDir = meta.is_dir !== undefined ? meta.is_dir : item.is_dir
-               size = meta.size !== undefined ? meta.size : item.size
-           } else {
-               // Fallback for old items (timestamp_name)
-               const parts = item.name.split('_')
-               if (parts.length > 1 && /^\d+$/.test(parts[0])) {
-                   const originalName = parts.slice(1).join('_')
-                   displayName = originalName
-                   if (!meta) {
-                       // Mock metadata if missing
-                       meta = { originalPath: `/${originalName}`, deletionTime: parseInt(parts[0]) }
-                   }
-               }
-           }
-        }
-        
-        // For nested items in Trash, just show their name
-        
+        const fullPath = joinPath(parentPath, item.name)
+        const isExpanded = expandedDirs.has(fullPath)
         result.push({
           ...item,
-          name: item.name, // Keep original name (UUID for trash)
-          displayName: displayName, // Pass display name separately if needed
-          realName: item.name, // Keep real name for logic
-          is_dir: isDir,
-          size: size,
+          name: item.name,
+          displayName: item.name,
+          realName: item.name,
+          is_dir: item.is_dir,
+          size: item.size,
           level,
           expanded: isExpanded,
           path: fullPath
         })
         
-        if (isDir && isExpanded && dirCache[fullPath]) {
+        if (item.is_dir && isExpanded && dirCache[fullPath]) {
           process(dirCache[fullPath], fullPath, level + 1)
         }
       }
@@ -558,7 +522,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     
     process(entries, path, 0)
     return result
-  }, [entries, sortKey, sortOrder, q, expandedDirs, dirCache, path, trashMetadata])
+  }, [entries, sortKey, sortOrder, q, expandedDirs, dirCache, path])
 
   useEffect(() => {
     try {
@@ -737,10 +701,6 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
           id: 'team', 
           label: '团队文件', 
           icon: <Users size={20} strokeWidth={1.5} />,
-          onDragOver: (e: React.DragEvent) => handleDragOver(e, { name: 'Team', is_dir: true, path: '/Team' }),
-          onDrop: (e: React.DragEvent) => handleDrop(e, { name: 'Team', is_dir: true, path: '/Team' }),
-          onDragLeave: handleDragLeave,
-          highlighted: dragOverItem === '/Team'
         },
         { 
           id: 'appdata', 
@@ -814,7 +774,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
         onSelect={(id) => {
           const toMap: Record<string, string> = {
             home: '/User/admin',
-            team: '/Team',
+            team: '/User',
             appdata: '/AppData',
             'shared-with-me': '/SharedWithMe',
             'my-shares': '/MyShares',
@@ -865,7 +825,7 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
             onOpenDir={(name) => {
                // Do nothing on double click in Trash
             }}
-            trashMetadata={trashMetadata}
+            currentPath={path}
             onToggleExpand={toggleExpand}
           />
         ) : (
@@ -1213,4 +1173,3 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     </div>
   )
 }
-

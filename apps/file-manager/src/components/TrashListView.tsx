@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
-import { Folder, FileText } from 'lucide-react'
-import { FileEntry, TrashMetadata } from '../types'
+import { Folder, FileText, ChevronRight, ChevronDown } from 'lucide-react'
+import { FileEntry } from '../types'
 
 export default function TrashListView({
   filtered,
@@ -12,11 +12,12 @@ export default function TrashListView({
   fmtSize,
   onOpenDir,
   onContextMenu,
-  trashMetadata,
+  currentPath,
   colWidths,
   startResize,
   headerCheckboxRef,
   resizingKey,
+  onToggleExpand,
 }: {
   filtered: FileEntry[]
   selected: Set<string>
@@ -27,7 +28,7 @@ export default function TrashListView({
   fmtSize: (n: number) => string
   onOpenDir: (name: string) => void
   onContextMenu: (e: React.MouseEvent, name: string) => void
-  trashMetadata: Record<string, TrashMetadata>
+  currentPath: string
   colWidths: Record<string, number>
   startResize: (key: string, nextKey: string | null, e: React.MouseEvent) => void
   headerCheckboxRef: React.RefObject<HTMLInputElement>
@@ -133,10 +134,8 @@ export default function TrashListView({
       </thead>
       <tbody>
         {filtered.map((e) => {
-          const meta = trashMetadata[e.name] || {}
-          const displayName = meta.name || e.name
-          const isDir = meta.is_dir !== undefined ? meta.is_dir : e.is_dir
-          
+          const displayName = e.name
+          const isDir = e.is_dir
           return (
             <tr
               key={e.name}
@@ -163,6 +162,30 @@ export default function TrashListView({
             >
               <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
                 <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ width: (e.level || 0) * 22, flexShrink: 0 }} />
+                  {isDir && onToggleExpand ? (
+                    <div
+                      onClick={(ev) => {
+                        ev.stopPropagation()
+                        onToggleExpand(e.path || e.name)
+                      }}
+                      style={{
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 16,
+                        height: 16,
+                        borderRadius: 4,
+                        flexShrink: 0,
+                        marginRight: 6,
+                      }}
+                      onMouseEnter={(ev) => ev.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.05)'}
+                      onMouseLeave={(ev) => ev.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {(e as any).expanded ? <ChevronDown size={14} color="#8e8e93" /> : <ChevronRight size={14} color="#8e8e93" />}
+                    </div>
+                  ) : <div style={{ width: 16, flexShrink: 0, marginRight: 6 }} />}
                   {isDir ? (
                     <Folder size={20} color="#007aff" fill="#007aff" fillOpacity={0.2} strokeWidth={1.5} style={{ marginRight: 8 }} />
                   ) : (
@@ -175,17 +198,17 @@ export default function TrashListView({
               </td>
               <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
                 <div style={{ fontSize: 13, color: '#8e8e93', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {meta.originalPath || '-'}
+                  {currentPath.startsWith('/Trash') ? (currentPath.slice('/Trash'.length) || '/') : '-'}
                 </div>
               </td>
               <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
                 <div style={{ fontSize: 13, color: '#8e8e93' }}>
-                  {fmtSize(meta.size || e.size || 0)}
+                  {isDir ? '--' : fmtSize(e.size || 0)}
                 </div>
               </td>
               <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
                 <div style={{ fontSize: 13, color: '#8e8e93' }}>
-                  {fmtTime((meta.deletionTime || 0) / 1000)}
+                  {fmtTime(e.modified_ts || 0)}
                 </div>
               </td>
             </tr>
