@@ -198,7 +198,7 @@ export default function TrashListView({
               </td>
               <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
                 <div style={{ fontSize: 13, color: '#8e8e93', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {currentPath.startsWith('/Trash') ? (currentPath.slice('/Trash'.length) || '/') : '-'}
+                  {currentPath.startsWith('/Trash') ? (e.original_path ? e.original_path.slice(0, e.original_path.lastIndexOf('/')) : '/') : '-'}
                 </div>
               </td>
               <td style={{ paddingLeft: 8, borderBottom: '1px solid #f2f2f7' }}>
