@@ -29,6 +29,8 @@ export default function InitForm({ onDone }: Props) {
     setError('')
     try {
       await api.initSystem(deviceName, username, password)
+      // 初始化成功后更新页面标题
+      document.title = `${deviceName} - Panda OS`
       // 初始化成功后清除本地残留的桌面状态（如打开的应用等）
       clearPersistState()
       // 初始化成功后自动登录

@@ -115,14 +115,20 @@ export default function App() {
   }, [isLocked])
 
   useEffect(() => {
-    api.getDeviceInfo().then(info => {
+    const updateTitle = async () => {
+      if (needInit) {
+        document.title = '系统初始化 - PandaOS'
+        return
+      }
+      const info = await api.getDeviceInfo()
       if (info && info.device_name) {
         document.title = `${info.device_name} - Panda OS`
       }
-    }).catch(() => {
+    }
+    updateTitle().catch(() => {
       // ignore
     })
-  }, [])
+  }, [needInit])
 
   useEffect(() => {
     const checkAuth = async () => {
