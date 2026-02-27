@@ -143,18 +143,52 @@ export function useTrashOperations({
   const restoreItems = useCallback(async (names: string[]) => {
     const targetParentsToRefresh = new Set<string>()
     let currentMetadata: Record<string, TrashMetadata> = {}
-    
+
     if (currentPath === '/Trash') {
       currentMetadata = { ...trashMetadata }
     }
-    
+
+    // Create a map using the unique path (e.path is set in filtered entries)
+    // This handles duplicate file names from different directories
+    const entriesMap = new Map<string, FileEntry>()
+    for (const entry of entries) {
+      // Use path (full trash path) as key - this is unique
+      const key = (entry as any).path || entry.name
+      entriesMap.set(key, entry)
+    }
+
+    // Track which entries have been processed
+    const processedEntries = new Set<string>()
+
     for (const n of names) {
-      const entry = entries.find(e => e.name === n)
-      if (!entry) continue
-      
+      // Skip if this entry has already been processed
+      if (processedEntries.has(n)) {
+        continue
+      }
+
+      let entry = entriesMap.get(n)
+
+      // If not found by path, try to find by name and use the first unprocessed match
+      if (!entry) {
+        // Find entries with matching name that haven't been processed
+        const matchingEntries = entries.filter(e => e.name === n)
+        if (matchingEntries.length > 0) {
+          // Use the first match that hasn't been processed
+          entry = matchingEntries.find(e => !processedEntries.has((e as any).path || e.name))
+        }
+      }
+
+      if (!entry) {
+        console.warn(`Entry not found for: ${n}`)
+        continue
+      }
+
+      const entryKey = (entry as any).path || entry.name
+      processedEntries.add(entryKey)
+
       const fileName = entry.original_path ? entry.original_path.split('/').pop() || '' : n.split('/').pop() || ''
       if (!fileName) continue
-      
+
       let originalPath = ''
       if (entry.original_path) {
         originalPath = entry.original_path
@@ -163,22 +197,22 @@ export function useTrashOperations({
       } else {
         originalPath = `/User/admin/${fileName}`
       }
-      
+
       const originalDir = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
       // sourcePath should be /Trash/<original_dir>/<fileName> to match backend query
       const sourcePath = `/Trash${originalDir}/${fileName}`
-      
+
       const finalPath = await getNonConflictingPath(
         originalDir,
         fileName
       )
-      
+
       try {
         await ensureParentDir(finalPath)
         await api.fsRename(sourcePath, finalPath)
         const parent = finalPath.substring(0, finalPath.lastIndexOf('/')) || '/'
         targetParentsToRefresh.add(parent)
-        
+
         if (currentMetadata[fileName]) {
           delete currentMetadata[fileName]
         }
