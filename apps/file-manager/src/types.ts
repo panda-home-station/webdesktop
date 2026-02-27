@@ -9,6 +9,7 @@ export interface FileEntry {
   level?: number
   expanded?: boolean
   realName?: string
+  original_path?: string
 }
 
 export interface DragItem {

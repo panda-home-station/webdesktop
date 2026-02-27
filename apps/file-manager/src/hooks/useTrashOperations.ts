@@ -142,36 +142,52 @@ export function useTrashOperations({
 
   const restoreItems = useCallback(async (names: string[]) => {
     const targetParentsToRefresh = new Set<string>()
-    const rel = currentPath.startsWith('/Trash') ? currentPath.slice('/Trash'.length) : ''
-    const originalDir = rel || '/'
-    if (originalDir === '/') {
-      return
-    }
+    
     for (const n of names) {
-      const name = n.startsWith('/') ? n.split('/').pop() || '' : n
-      if (!name) continue
-      const sourcePath = currentPath === '/' ? `/${name}` : `${currentPath}/${name}`
-      const parent = originalDir
-      const finalPath = await getNonConflictingPath(parent, name)
+      const entry = entries.find(e => e.name === n)
+      if (!entry) continue
+      
+      const fileName = entry.original_path ? entry.original_path.split('/').pop() || '' : n.split('/').pop() || ''
+      if (!fileName) continue
+      
+      let originalPath = ''
+      if (entry.original_path) {
+        originalPath = entry.original_path
+      } else if (trashMetadata[fileName] && trashMetadata[fileName].originalPath) {
+        originalPath = trashMetadata[fileName].originalPath
+      } else {
+        originalPath = `/User/admin/${fileName}`
+      }
+      
+      const originalDir = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
+      const sourcePath = originalDir === '/' ? `/Trash/${fileName}` : `/Trash${originalDir}/${fileName}`
+      
+      const finalPath = await getNonConflictingPath(
+        originalDir,
+        fileName
+      )
+      
       try {
         await ensureParentDir(finalPath)
         await api.fsRename(sourcePath, finalPath)
+        const parent = finalPath.substring(0, finalPath.lastIndexOf('/')) || '/'
         targetParentsToRefresh.add(parent)
       } catch (e) {
         console.error(`Failed to restore ${sourcePath} to ${finalPath}`, e)
       }
     }
+    
     await reloadCurrentDir()
     for (const p of targetParentsToRefresh) {
       try {
         const res = await api.fsList(p)
-        setDirCache(prev => ({ ...prev, [p]: res.entries as FileEntry[] }))
+        setDirCache(prev => ({ ...prev, [p]: res.entries }))
       } catch (e) {
         console.error(`Failed to refresh target parent dir ${p}`, e)
       }
     }
     clearSelection()
-  }, [reloadCurrentDir, clearSelection, setDirCache, currentPath])
+  }, [reloadCurrentDir, clearSelection, setDirCache, currentPath, trashMetadata, entries])
 
   const emptyTrash = useCallback(async () => {
     if (entries.length === 0) return

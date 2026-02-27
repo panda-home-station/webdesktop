@@ -374,8 +374,8 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
     if (path.startsWith('/Trash')) {
       if (name) {
          return [
-            { label: '还原', onClick: () => onRestoreOne(name) },
-            { label: '彻底删除', color: '#ff3b30', onClick: () => onDeleteOne(name) }
+            { label: '还原', onClick: () => restoreItems([name]) },
+            { label: '彻底删除', color: '#ff3b30', onClick: () => handleDelete([name]) }
          ]
       } else {
          return [
