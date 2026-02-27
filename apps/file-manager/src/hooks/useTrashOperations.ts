@@ -142,6 +142,11 @@ export function useTrashOperations({
 
   const restoreItems = useCallback(async (names: string[]) => {
     const targetParentsToRefresh = new Set<string>()
+    let currentMetadata: Record<string, TrashMetadata> = {}
+    
+    if (currentPath === '/Trash') {
+      currentMetadata = { ...trashMetadata }
+    }
     
     for (const n of names) {
       const entry = entries.find(e => e.name === n)
@@ -160,7 +165,8 @@ export function useTrashOperations({
       }
       
       const originalDir = originalPath.substring(0, originalPath.lastIndexOf('/')) || '/'
-      const sourcePath = originalDir === '/' ? `/Trash/${fileName}` : `/Trash${originalDir}/${fileName}`
+      // sourcePath should be /Trash/<original_dir>/<fileName> to match backend query
+      const sourcePath = `/Trash${originalDir}/${fileName}`
       
       const finalPath = await getNonConflictingPath(
         originalDir,
@@ -172,9 +178,17 @@ export function useTrashOperations({
         await api.fsRename(sourcePath, finalPath)
         const parent = finalPath.substring(0, finalPath.lastIndexOf('/')) || '/'
         targetParentsToRefresh.add(parent)
+        
+        if (currentMetadata[fileName]) {
+          delete currentMetadata[fileName]
+        }
       } catch (e) {
         console.error(`Failed to restore ${sourcePath} to ${finalPath}`, e)
       }
+    }
+    
+    if (currentPath.startsWith('/Trash')) {
+      await saveTrashMetadata(currentMetadata)
     }
     
     await reloadCurrentDir()
@@ -187,7 +201,7 @@ export function useTrashOperations({
       }
     }
     clearSelection()
-  }, [reloadCurrentDir, clearSelection, setDirCache, currentPath, trashMetadata, entries])
+  }, [reloadCurrentDir, clearSelection, setDirCache, currentPath, trashMetadata, entries, saveTrashMetadata])
 
   const emptyTrash = useCallback(async () => {
     if (entries.length === 0) return
