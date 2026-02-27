@@ -458,18 +458,28 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
   }
 
   const toggleExpand = async (entryName: string) => {
+    // entryName is the original_path for Trash (e.g., "/新建文件夹")
+    // We need to build the full path for API call and use original_path as cache key
     const fullPath = entryName.startsWith('/') ? entryName : joinPath(path, entryName)
     const next = new Set(expandedDirs)
+
+    // For Trash, API path needs /Trash prefix, but cache key uses original_path
+    const apiPath = path.startsWith('/Trash') && !fullPath.startsWith('/Trash')
+      ? `/Trash${fullPath}`
+      : fullPath
+
     if (next.has(fullPath)) {
       next.delete(fullPath)
     } else {
       next.add(fullPath)
       if (!dirCache[fullPath]) {
         try {
-          const res = await fmApi.fsList(fullPath)
+          console.log("toggleExpand fetching:", { entryName, fullPath, apiPath, currentPath: path })
+          const res = await fmApi.fsList(apiPath)
+          console.log("toggleExpand fetched entries:", res.entries)
           setDirCache(prev => ({ ...prev, [fullPath]: res.entries }))
         } catch (e) {
-          console.error("Failed to list dir", fullPath, e)
+          console.error("Failed to list dir", apiPath, e)
         }
       }
     }
@@ -495,8 +505,78 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
       return base.filter(e => e.name.toLowerCase().includes(qq)).map(e => ({...e, level: 0, path: joinPath(path, e.name)}))
     }
 
+    // For Trash, build tree structure from original_path
+    if (path === '/Trash') {
+      const result: any[] = []
+
+      // Build a map from original path to entries (including cache data)
+      const pathMap = new Map<string, any[]>()
+
+      // First, add current entries
+      for (const entry of entries) {
+        const originalPath = (entry as any).original_path
+        if (originalPath) {
+          const parts = originalPath.split('/').filter(Boolean)
+          if (parts.length === 1) {
+            // Root level item
+            if (!pathMap.has('')) pathMap.set('', [])
+            pathMap.get('')!.push(entry)
+          } else {
+            // Child item - might be in cache
+            const parentPath = '/' + parts.slice(0, -1).join('/')
+            if (!pathMap.has(parentPath)) pathMap.set(parentPath, [])
+            pathMap.get(parentPath)!.push(entry)
+          }
+        }
+      }
+
+      // Add cache data for expanded directories
+      for (const [cachePath, cacheEntries] of Object.entries(dirCache)) {
+        if (!pathMap.has(cachePath)) pathMap.set(cachePath, [])
+        for (const entry of cacheEntries) {
+          pathMap.get(cachePath)!.push({ ...entry, fromCache: true })
+        }
+      }
+
+      const process = (entries: any[], currentPath: string, level: number) => {
+        const sorted = [...entries].sort(sortFn)
+        for (const entry of sorted) {
+          const originalPath = (entry as any).original_path
+          const fullPath = originalPath || joinPath(currentPath, entry.name)
+          const isExpanded = expandedDirs.has(fullPath)
+
+          result.push({
+            ...entry,
+            name: entry.name,
+            displayName: entry.name,
+            realName: entry.name,
+            is_dir: entry.is_dir,
+            size: entry.size,
+            level,
+            expanded: isExpanded,
+            path: fullPath
+          })
+
+          // If directory and expanded, process children from pathMap or dirCache
+          if (entry.is_dir && isExpanded) {
+            const childEntries = pathMap.get(fullPath) || dirCache[fullPath]
+            if (childEntries) {
+              process(childEntries, fullPath, level + 1)
+            }
+          }
+        }
+      }
+
+      // Start with root level items
+      if (pathMap.has('')) {
+        process(pathMap.get('')!, '', 0)
+      }
+
+      return result
+    }
+
     const result: any[] = []
-    
+
     const process = (items: typeof entries, parentPath: string, level: number) => {
       const sorted = [...items].sort(sortFn)
       for (const item of sorted) {
@@ -513,13 +593,13 @@ export default function FileManager({ initialPath }: { initialPath?: string }) {
           expanded: isExpanded,
           path: fullPath
         })
-        
+
         if (item.is_dir && isExpanded && dirCache[fullPath]) {
           process(dirCache[fullPath], fullPath, level + 1)
         }
       }
     }
-    
+
     process(entries, path, 0)
     return result
   }, [entries, sortKey, sortOrder, q, expandedDirs, dirCache, path])
