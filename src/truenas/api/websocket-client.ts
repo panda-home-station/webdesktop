@@ -5,6 +5,8 @@
  * Ported from Angular webui's WebSocketHandlerService.
  */
 
+import { environment } from '../../environments/environment';
+
 export interface WebSocketMessage {
   id: string
   method: string
@@ -32,13 +34,21 @@ export class TrueNASWebSocketClient {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private isConnected = false
 
-  constructor(private url: string) {
+  constructor() {
     this.connect()
+  }
+
+  private getWebSocketUrl(): string {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // In production, use current host. In dev, use configured remote
+    const host = import.meta.env.PROD ? window.location.host : environment.remote;
+    return `${protocol}//${host}/api/current`;
   }
 
   private connect(): void {
     try {
-      this.ws = new WebSocket(this.url)
+      const url = this.getWebSocketUrl();
+      this.ws = new WebSocket(url)
       this.ws.onopen = this.handleOpen.bind(this)
       this.ws.onmessage = this.handleMessage.bind(this)
       this.ws.onclose = this.handleClose.bind(this)

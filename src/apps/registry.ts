@@ -20,6 +20,7 @@ type AppDef = {
   minH?: number
 }
 
+// apps directory is in project root, so we use ../../apps from src/apps/
 const manifests: Record<string, Manifest> = Object.fromEntries(
   Object.entries(import.meta.glob('../../apps/**/manifest.json', { eager: true })).map(([p, m]) => [
     p,

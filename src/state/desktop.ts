@@ -6,9 +6,10 @@
  */
 
 const WALLPAPER_KEY = 'wallpaperPath'
+const DEFAULT_WALLPAPER = '/wallpaper_default.webp'
 
 export function getWallpaper(): string {
-  return localStorage.getItem(WALLPAPER_KEY) || ''
+  return localStorage.getItem(WALLPAPER_KEY) || DEFAULT_WALLPAPER
 }
 
 export function setWallpaper(path: string): void {

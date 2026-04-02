@@ -1,7 +1,12 @@
-import React, { useState, useEffect } from 'react'
-import { X, Maximize2, Sparkles, Command, CornerDownLeft } from 'lucide-react'
-import { ChatInput } from '../../apps/agent/src/components/ChatInput'
-import { type Message } from '../../apps/agent/src/types'
+import React, { useState, useEffect, useRef } from 'react'
+import { X, Maximize2, Sparkles, CornerDownLeft } from 'lucide-react'
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  timestamp: Date
+}
 
 interface QuickAgentDialogProps {
   onClose: () => void
@@ -11,8 +16,8 @@ interface QuickAgentDialogProps {
 
 const SUGGESTIONS = [
   { icon: '📝', text: '帮我写一份周报', prompt: '帮我写一份本周的工作周报，包含项目进度、遇到的问题和下周计划。' },
-  { icon: '💡', text: '头脑风暴', prompt: '针对“提升团队工作效率”这个主题，帮我进行头脑风暴，提供5个创新性的建议。' },
-  { icon: '🔍', text: '解释概念', prompt: '用通俗易懂的语言帮我解释一下什么是“量子计算”。' },
+  { icon: '💡', text: '头脑风暴', prompt: '针对"提升团队工作效率"这个主题，帮我进行头脑风暴，提供5个创新性的建议。' },
+  { icon: '🔍', text: '解释概念', prompt: '用通俗易懂的语言帮我解释一下什么是"量子计算"。' },
   { icon: '🌐', text: '翻译成英文', prompt: '请将以下内容翻译成地道的英文：' },
 ]
 
@@ -20,17 +25,21 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
   const [input, setInput] = useState('')
   const [isHovered, setIsHovered] = useState(false)
   const [isMaximizing, setIsMaximizing] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
     if (visible) {
       setIsMaximizing(false)
-      // Focus is handled by ChatInput internal input
+      // Auto focus input
+      setTimeout(() => {
+        textareaRef.current?.focus()
+      }, 100)
     }
   }, [visible])
 
   const handleMaximize = (messages: Message[] = []) => {
     setIsMaximizing(true)
-    // Delay calling the actual open function to let animation play
+    // Delay calling actual open function to let animation play
     setTimeout(() => {
       onOpenFullApp(messages)
     }, 100)
@@ -59,12 +68,21 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
     }
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Escape') {
+      onClose()
+    } else if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
   if (!visible) return null
 
   return (
     <>
       {/* Background Overlay to capture clicks outside */}
-      <div 
+      <div
         onClick={onClose}
         style={{
           position: 'fixed',
@@ -77,11 +95,11 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
           animation: isMaximizing ? 'quickAgentFadeOut 0.1s forwards' : 'quickAgentFadeIn 0.15s ease-out'
         }}
       />
-      
-      <div 
+
+      <div
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the dialog
+        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside dialog
         style={{
           position: 'fixed',
           left: '50%',
@@ -90,14 +108,14 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
           width: 720,
           backgroundColor: '#ffffff', // Solid white background
           borderRadius: 24,
-          boxShadow: isHovered 
+          boxShadow: isHovered
             ? '0 40px 80px rgba(0,0,0,0.15), 0 0 1px rgba(0,0,0,0.1)'
             : '0 30px 70px rgba(0,0,0,0.12), 0 0 1px rgba(0,0,0,0.1)',
           display: 'flex',
           flexDirection: 'column',
           zIndex: 10001,
           border: '1px solid #e5e7eb', // Distinct light border
-          animation: isMaximizing 
+          animation: isMaximizing
             ? 'quickAgentMaximize 0.15s cubic-bezier(0.16, 1, 0.3, 1) forwards'
             : 'quickAgentSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
           overflow: 'hidden',
@@ -134,7 +152,7 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button 
+            <button
               onClick={() => handleMaximize()}
               style={{
                 width: 32,
@@ -159,41 +177,26 @@ export const QuickAgentDialog: React.FC<QuickAgentDialogProps> = ({ onClose, onO
         </div>
 
         <div style={{ width: '100%', padding: '8px 0' }}>
-          <ChatInput
+          <textarea
+            ref={textareaRef}
             value={input}
-            onChange={setInput}
-            onSend={() => handleSend()}
-            isCompact={false}
-            autoFocus={true}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="告诉我你想做什么..."
-            showTools={false}
-            showActionBar={false}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                onClose()
-              }
-            }}
-            wrapperStyles={{
-              padding: '0 24px',
-              background: 'transparent',
-              width: '100%'
-            }}
-            containerStyles={{ 
-              border: 'none', 
-              background: 'transparent', 
-              padding: 0,
-              boxShadow: 'none',
-              gap: 0,
-              width: '100%'
-            }}
-            inputStyles={{
-              fontSize: 18,
-              lineHeight: '1.6',
-              fontWeight: 400,
-              color: '#111827',
+            style={{
+              width: '100%',
               minHeight: 80,
               maxHeight: 200,
-              padding: '8px 0'
+              padding: '8px 24px',
+              border: 'none',
+              background: 'transparent',
+              fontSize: 18,
+              lineHeight: 1.6,
+              fontWeight: 400,
+              color: '#111827',
+              resize: 'none',
+              outline: 'none',
+              fontFamily: 'inherit'
             }}
           />
         </div>

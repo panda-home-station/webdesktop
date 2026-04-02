@@ -1,0 +1,12 @@
+{
+  "name": "agent",
+  "title": "AI助手",
+  "version": "0.1.0",
+  "capabilities": [],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 800,
+  "minHeight": 600
+}

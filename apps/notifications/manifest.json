@@ -1,0 +1,12 @@
+{
+  "name": "notifications",
+  "title": "通知",
+  "version": "0.1.0",
+  "capabilities": [],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 400,
+  "minHeight": 500
+}

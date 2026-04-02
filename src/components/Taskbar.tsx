@@ -3,10 +3,16 @@ import { createPortal } from 'react-dom'
 import { listApps } from '../apps/registry'
 import { openApp, showDesktop, logout, lockScreen } from '../sdk/desktop'
 import { getAppContextMenu } from '../sdk/desktop'
-import { api } from '../api/client'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
 import { Monitor, LayoutGrid, User, Lock, LogOut } from 'lucide-react'
+
+// Mock user data for TrueNAS webdesktop
+const mockUser = {
+  username: 'root',
+  user_id: 1,
+  avatar_url: undefined
+}
 
 type WinItem = {
   id: string
@@ -154,7 +160,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
 
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const [accountMenu, setAccountMenu] = useState<{ x: number; y: number } | null>(null)
-  const user = api.getUser()
+  const user = mockUser
   
   const focusOrOpen = (appId: string) => {
     const appWins = byApp[appId] || []
