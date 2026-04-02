@@ -3,6 +3,7 @@ import { TrueNASEnvironment, environmentVersion, remote } from './environment.in
 export const environment: TrueNASEnvironment = {
   environmentVersion,
   remote,
+  build: 'development',
   buildYear: new Date().getFullYear(),
   production: false,
 };

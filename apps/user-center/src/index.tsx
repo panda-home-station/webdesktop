@@ -1,10 +1,20 @@
 import React, { useEffect, useMemo, useRef, useState, useContext } from 'react'
-import { Sidebar } from '../../../src/components/Sidebar'
-import { WindowContext } from '../../../src/sdk/window'
-import { api } from '../../../src/api/client'
+import { Sidebar } from '@src/components/Sidebar'
+import { WindowContext } from '@src/sdk/window'
+import { useAuthStore } from '@src/truenas/stores/auth.store'
 import Icon from '@mdi/react'
 import { mdiAccountCircleOutline, mdiImageOutline, mdiShieldLockOutline } from '@mdi/js'
-import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '../../../src/state/desktop'
+import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '@src/state/desktop'
+
+// Mock API for now - will be replaced with TrueNAS API
+const api = {
+  fsMkdir: async (path: string) => { },
+  fsList: async (path: string) => ({ entries: [] }),
+  fsUpload: async (path: string, file: File) => { },
+  fsDownloadUrl: (path: string) => '',
+  getSecuritySettings: async () => ({ idle_timeout: 0, idle_action: 'lock' }),
+  setSecuritySettings: async (settings: any) => { },
+}
 
 type Item = 'profile' | 'wallpapers' | 'security'
 
@@ -13,6 +23,7 @@ const WALL_DIR = '/AppData/Wallpapers'
 export default function UserCenter() {
   const win = useContext(WindowContext)
   const [active, setActive] = useState<string>('profile')
+  const { user } = useAuthStore()
 
   useEffect(() => {
     if (win && win.setTitle) {
@@ -21,7 +32,6 @@ export default function UserCenter() {
     }
   }, [active, win])
 
-  const user = api.getUser()
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [busy, setBusy] = useState(false)
@@ -82,11 +92,11 @@ export default function UserCenter() {
             <div style={{ fontWeight: 700 }}>账户信息</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: '#64748b', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
-                {(user?.username || 'U').slice(0, 1).toUpperCase()}
+                {(user?.pw_name || 'U').slice(0, 1).toUpperCase()}
               </div>
               <div>
-                <div>用户名：{user?.username || '未登录'}</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>用户ID：{user?.user_id || '-'}</div>
+                <div>用户名：{user?.pw_name || '未登录'}</div>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>用户ID：{user?.pw_uid || '-'}</div>
               </div>
             </div>
           </div>
@@ -205,19 +215,19 @@ function SecuritySettings() {
   return (
     <div style={{ padding: 16, display: 'grid', gap: 16 }}>
       <div style={{ fontWeight: 700 }}>安全设置</div>
-      
+
       <div style={{ display: 'grid', gap: 12, maxWidth: 400 }}>
         <div style={{ display: 'grid', gap: 6 }}>
           <div style={{ fontSize: 14, fontWeight: 500 }}>自动锁定与退出</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>当您在指定时间内没有操作时，系统将自动执行锁定屏幕或退出登录的操作。</div>
-          
+
           <div style={{ display: 'grid', gap: 10, padding: 12, background: 'rgba(0,0,0,0.03)', borderRadius: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 13 }}>空闲等待时间</span>
-              <select 
-                value={idleTimeout} 
+              <select
+                value={idleTimeout}
                 onChange={(e) => handleTimeoutChange(parseInt(e.target.value))}
-                style={{ 
+                style={{
                   padding: '4px 8px',
                   borderRadius: 6,
                   border: '1px solid var(--button-border)',
@@ -235,13 +245,13 @@ function SecuritySettings() {
                 <option value={60}>1 小时</option>
               </select>
             </div>
-            
+
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ fontSize: 13 }}>空闲时操作</span>
-              <select 
-                value={idleAction} 
+              <select
+                value={idleAction}
                 onChange={(e) => handleActionChange(e.target.value)}
-                style={{ 
+                style={{
                   padding: '4px 8px',
                   borderRadius: 6,
                   border: '1px solid var(--button-border)',
@@ -262,11 +272,11 @@ function SecuritySettings() {
           <div style={{ fontSize: 14, fontWeight: 500 }}>登录保护</div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>为了您的账户安全，建议定期更改密码。</div>
           <button
-            style={{ 
-              padding: '8px 12px', 
-              borderRadius: 8, 
-              border: '1px solid var(--button-border)', 
-              background: 'var(--button-bg)', 
+            style={{
+              padding: '8px 12px',
+              borderRadius: 8,
+              border: '1px solid var(--button-border)',
+              background: 'var(--button-bg)',
               color: 'var(--text)',
               fontSize: 13,
               width: 'fit-content',

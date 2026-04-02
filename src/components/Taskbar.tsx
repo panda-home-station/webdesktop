@@ -1,18 +1,12 @@
 import React, { useState, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { listApps } from '../apps/registry'
-import { openApp, showDesktop, logout, lockScreen } from '../sdk/desktop'
+import { openApp, showDesktop, lockScreen } from '../sdk/desktop'
 import { getAppContextMenu } from '../sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
 import { Monitor, LayoutGrid, User, Lock, LogOut } from 'lucide-react'
-
-// Mock user data for TrueNAS webdesktop
-const mockUser = {
-  username: 'root',
-  user_id: 1,
-  avatar_url: undefined
-}
+import { useAuthStore } from '../truenas/stores/auth.store'
 
 type WinItem = {
   id: string
@@ -115,7 +109,8 @@ const TaskbarIcon = memo(({
 
 export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [], onToggleQuickAgent }: Props) {
   const apps = listApps()
-  
+  const { user, logout } = useAuthStore()
+
   const byApp = useMemo(() => {
     const map: Record<string, WinItem[]> = {}
     for (const w of wins) {
@@ -160,7 +155,6 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
 
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const [accountMenu, setAccountMenu] = useState<{ x: number; y: number } | null>(null)
-  const user = mockUser
   
   const focusOrOpen = (appId: string) => {
     const appWins = byApp[appId] || []
@@ -458,11 +452,11 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
                 </div>
                 <div style={{ flex: 1, overflow: 'hidden' }}>
                   <div style={{ fontWeight: 600, fontSize: 15, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user?.username || '未登录'}
+                    {user?.pw_name || '未登录'}
                   </div>
                   <div style={{ fontSize: 12, color: '#64748b', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: user?.user_id ? '#10b981' : '#94a3b8' }} />
-                    {user?.user_id ? '在线' : '离线'}
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: user?.pw_uid ? '#10b981' : '#94a3b8' }} />
+                    {user?.pw_uid ? '在线' : '离线'}
                   </div>
                 </div>
               </div>
@@ -498,9 +492,10 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
               
               <button
                 style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#ef4444', transition: 'all 0.2s' }}
-                onClick={() => {
+                onClick={async () => {
                   setAccountMenu(null)
-                  logout()
+                  await logout()
+                  window.location.reload()
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}

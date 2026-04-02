@@ -1,7 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Sidebar } from '../../../src/components/Sidebar'
-import { WindowContext } from '../../../src/sdk/window'
-import { api } from '../../../src/api/client'
+import { Sidebar } from '@src/components/Sidebar'
+import { WindowContext } from '@src/sdk/window'
+import { getWallpaper, setWallpaper } from '@src/state/desktop'
+
+// Mock API for now - will be replaced with TrueNAS API
+const api = {
+  fsMkdir: async (path: string) => { },
+  fsList: async (path: string) => ({ entries: [] }),
+  fsUpload: async (path: string, file: File) => { },
+  fsDownloadUrl: (path: string) => '',
+  getSecuritySettings: async () => ({ idle_timeout: 0, idle_action: 'lock' }),
+  setSecuritySettings: async (settings: any) => { },
+}
 import { 
   Monitor,
   Users, 
