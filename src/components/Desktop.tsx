@@ -130,6 +130,8 @@ export default function Desktop() {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
   const { logout } = useAuthStore()
 
+  const closeMenu = useCallback(() => setMenu(null), [])
+
   const handleLogout = useCallback(async () => {
     closeMenu()
     await logout()
@@ -176,8 +178,6 @@ export default function Desktop() {
     e.preventDefault()
     setMenu({ x: e.clientX, y: e.clientY })
   }, [])
-
-  const closeMenu = useCallback(() => setMenu(null), [])
 
   return (
     <div 

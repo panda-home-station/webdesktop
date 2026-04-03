@@ -15,6 +15,26 @@ export interface LoginResultData {
 
 export class AuthService {
   /**
+   * Save authentication token
+   */
+  private saveToken(token: string): void {
+    const authStore = useAuthStore.getState();
+    authStore.setToken(token);
+    localStorage.setItem('token', token);
+  }
+
+  /**
+   * Initialize session after successful login
+   */
+  private initializeSession(userInfo: LoggedInUser): void {
+    const authStore = useAuthStore.getState();
+    authStore.setUser(userInfo);
+    authStore.setAuthenticated(true);
+    authStore.setHasTwoFactor(false);
+    sessionStorage.setItem('loginBannerDismissed', 'true');
+  }
+
+  /**
    * Login with username and password
    */
   async login(
@@ -24,7 +44,7 @@ export class AuthService {
   ): Promise<LoginResultData> {
     const params = otp
       ? { mechanism: LoginExMechanism.OtpToken, otp_token: otp }
-      : { mechanism: LoginExMechanism.PasswordPlain, username, password, login_options: { reconnect_token: true } };
+      : { mechanism: LoginExMechanism.PasswordPlain, username, password };
 
     const loginCall = otp
       ? truenasApi.call('auth.login_ex_continue', [params])
@@ -32,6 +52,16 @@ export class AuthService {
 
     const result = (await loginCall) as LoginExResponse;
     const loginResult = this.processLoginResult(result);
+
+    // If login successful, generate and save a token for future use
+    if (loginResult === LoginResult.Success && result.response_type === LoginExResponseType.Success) {
+      try {
+        const token = await truenasApi.call('auth.generate_token', [300, {}, true, true]) as string;
+        this.saveToken(token);
+      } catch (tokenError) {
+        console.error('Failed to generate token:', tokenError);
+      }
+    }
 
     return {
       loginResult,
@@ -51,10 +81,22 @@ export class AuthService {
     }
 
     try {
-      const params = { mechanism: LoginExMechanism.TokenPlain, token, login_options: { reconnect_token: true } };
+      const params = { mechanism: LoginExMechanism.TokenPlain, token };
       const result = (await truenasApi.call('auth.login_ex', [params])) as LoginExResponse;
 
-      return this.processLoginResult(result);
+      const loginResult = this.processLoginResult(result);
+
+      // If login successful, generate a new token for future use
+      if (loginResult === LoginResult.Success) {
+        try {
+          const newToken = await truenasApi.call('auth.generate_token', [300, {}, true, true]) as string;
+          this.saveToken(newToken);
+        } catch (tokenError) {
+          console.error('Failed to generate new token:', tokenError);
+        }
+      }
+
+      return loginResult;
     } catch (error) {
       console.error('Login with token failed:', error);
       return LoginResult.NoAccess;
@@ -72,9 +114,7 @@ export class AuthService {
       return;
     }
 
-    const authStore = useAuthStore.getState();
-    authStore.setToken(token);
-    localStorage.setItem('token', token);
+    this.saveToken(token);
   }
 
   /**
@@ -122,32 +162,6 @@ export class AuthService {
   }
 
   /**
-   * Initialize session after successful login
-   */
-  initializeSession(userInfo: LoggedInUser, reconnectToken: string | null): void {
-    const authStore = useAuthStore.getState();
-
-    // Check if user has webui access
-    if (!userInfo?.privilege?.webui_access) {
-      return;
-    }
-
-    // Set user data
-    authStore.setUser(userInfo);
-    authStore.setAuthenticated(true);
-    authStore.setHasTwoFactor(false);
-
-    // Store reconnect token
-    if (reconnectToken) {
-      authStore.setToken(reconnectToken);
-      localStorage.setItem('token', reconnectToken);
-    }
-
-    // Mark login banner as dismissed
-    sessionStorage.setItem('loginBannerDismissed', 'true');
-  }
-
-  /**
    * Process login result from API
    */
   private processLoginResult(loginResult: LoginExResponse): LoginResult {
@@ -156,11 +170,7 @@ export class AuthService {
         return LoginResult.NoAccess;
       }
 
-      const authStore = useAuthStore.getState();
-
-      // Initialize session with user data
-      this.initializeSession(loginResult.user_info, loginResult.reconnect_token);
-
+      this.initializeSession(loginResult.user_info);
       return LoginResult.Success;
     }
 

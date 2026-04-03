@@ -38,6 +38,8 @@ export class TrueNASWebSocketClient {
   private eventListeners = new Map<string, Set<(data: unknown) => void>>()
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private isConnected = false
+  private connectPromise: Promise<void> | null = null
+  private connectResolve: (() => void) | null = null
 
   constructor() {
     this.connect()
@@ -51,6 +53,11 @@ export class TrueNASWebSocketClient {
   }
 
   private connect(): void {
+    // Create a promise that resolves when connection is established
+    this.connectPromise = new Promise<void>((resolve) => {
+      this.connectResolve = resolve;
+    });
+
     try {
       const url = this.getWebSocketUrl();
       console.log('Connecting to WebSocket:', url);
@@ -61,13 +68,43 @@ export class TrueNASWebSocketClient {
       this.ws.onerror = this.handleError.bind(this);
     } catch (error) {
       console.error('WebSocket connection failed:', error);
+      this.connectResolve?.();
       this.scheduleReconnect();
     }
+  }
+
+  /**
+   * Wait until WebSocket is connected
+   */
+  async waitUntilConnected(): Promise<void> {
+    if (this.isConnected) {
+      return;
+    }
+
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+
+    // If connection was already established, return
+    return new Promise<void>((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (this.isConnected) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
   }
 
   private handleOpen(): void {
     this.isConnected = true;
     console.log('WebSocket connected');
+
+    // Resolve connection promise if waiting
+    if (this.connectResolve) {
+      this.connectResolve();
+      this.connectResolve = null;
+    }
 
     // Send core.set_options as required by TrueNAS
     this.call('core.set_options', [{ legacy_jobs: false }]).catch((error) => {
@@ -134,6 +171,11 @@ export class TrueNASWebSocketClient {
    * Make a call to TrueNAS API
    */
   async call(method: string, params?: unknown[]): Promise<unknown> {
+    // Wait for connection if not connected
+    if (!this.isConnected) {
+      await this.waitUntilConnected();
+    }
+
     return new Promise((resolve, reject) => {
       if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
         reject(new Error('WebSocket is not connected'));

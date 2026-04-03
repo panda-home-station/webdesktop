@@ -82,15 +82,10 @@ export enum AuthenticatorLoginLevel {
   Level2 = 'LEVEL_2',
 }
 
-export interface LoginExLoginOptions {
-  reconnect_token?: boolean;
-}
-
 export interface LoginSuccessResponse {
   response_type: LoginExResponseType.Success;
   user_info: LoggedInUser;
   authenticator: AuthenticatorLoginLevel;
-  reconnect_token: string | null;
 }
 
 export interface LoginAuthErrorResponse {
@@ -133,7 +128,6 @@ export interface LoginExPasswordQuery {
   mechanism: LoginExMechanism.PasswordPlain;
   username: string;
   password: string;
-  login_options?: LoginExLoginOptions;
 }
 
 export interface LoginExOtpTokenQuery {
@@ -144,7 +138,6 @@ export interface LoginExOtpTokenQuery {
 export interface LoginExAuthTokenQuery {
   mechanism: LoginExMechanism.TokenPlain;
   token: string;
-  login_options?: LoginExLoginOptions;
 }
 
 export interface LoginExApiKeyQuery {
