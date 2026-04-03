@@ -15,9 +15,7 @@ export default function App() {
   const [isLocked, setIsLocked] = useState(false)
   const { isAuthenticated, user } = useAuthStore()
 
-  const isAutoLoggingIn = useAutoLogin(isAuthenticated, () => {
-    // Callback for when auto-login completes (optional)
-  })
+  const isAutoLoggingIn = useAutoLogin(isAuthenticated)
 
   if (!isAuthenticated) {
     return (
