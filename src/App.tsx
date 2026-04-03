@@ -1,4 +1,3 @@
-import 'src/styles/common.css'
 import React, { useState } from 'react'
 import Desktop from './components/Desktop'
 import LoginContainer from './components/LoginContainer'
