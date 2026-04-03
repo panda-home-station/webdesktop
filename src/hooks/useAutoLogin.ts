@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../truenas/stores/auth.store'
 import { authService } from '../truenas/services/auth.service'
 import { LoginResult } from '../truenas/types/login-result.enum'
