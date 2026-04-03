@@ -97,6 +97,7 @@ function SmoothWallpaper({ src }: { src?: string }) {
 export default function App() {
   const [wallpaper, setWallpaperUrl] = useState(getWallpaper())
   const [isLocked, setIsLocked] = useState(false)
+  const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false)
   const { isAuthenticated, user } = useAuthStore()
 
   // Initialize WebSocket client on mount
@@ -145,9 +146,12 @@ export default function App() {
     if (savedToken && !isAuthenticated) {
       const authStore = useAuthStore.getState()
       authStore.setToken(savedToken)
+      setIsAutoLoggingIn(true)
 
       // Try to login with token
       authService.loginWithToken().then((result) => {
+        setIsAutoLoggingIn(false)
+
         if (result === LoginResult.Success) {
           // Login successful
           // Clean URL to remove token parameter
@@ -160,6 +164,8 @@ export default function App() {
           authStore.setToken(null)
           localStorage.removeItem('token')
         }
+      }).catch(() => {
+        setIsAutoLoggingIn(false)
       })
     }
   }, [isAuthenticated])
@@ -173,7 +179,7 @@ export default function App() {
     position: 'relative',
   }
 
-  // If not authenticated, show login form
+  // If not authenticated, show login form or loading state
   if (!isAuthenticated) {
     return (
       <div style={style} className="panda-desktop">
@@ -199,18 +205,61 @@ export default function App() {
               boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
             }}
           >
-            <div
-              style={{
-                fontSize: 24,
-                fontWeight: 600,
-                color: '#1e293b',
-                marginBottom: 24,
-                textAlign: 'center',
-              }}
-            >
-              TrueNAS Web Desktop
-            </div>
-            <LoginForm />
+            {isAutoLoggingIn ? (
+              // Show loading state when auto-logging in
+              <>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    marginBottom: 24,
+                    textAlign: 'center',
+                  }}
+                >
+                  TrueNAS Web Desktop
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 12,
+                    color: '#64748b',
+                    fontSize: 14,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 18,
+                      height: 18,
+                      border: '2px solid #e2e8f0',
+                      borderTopColor: '#3b82f6',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                    }}
+                  />
+                  <span>登录中...</span>
+                </div>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </>
+            ) : (
+              // Show login form
+              <>
+                <div
+                  style={{
+                    fontSize: 24,
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    marginBottom: 24,
+                    textAlign: 'center',
+                  }}
+                >
+                  TrueNAS Web Desktop
+                </div>
+                <LoginForm />
+              </>
+            )}
           </div>
         </div>
       </div>
