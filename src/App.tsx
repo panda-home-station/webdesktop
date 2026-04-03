@@ -194,73 +194,58 @@ export default function App() {
             zIndex: 1,
           }}
         >
-          <div
-            style={{
-              width: 380,
-              padding: 32,
-              borderRadius: 16,
-              background: 'rgba(255, 255, 255, 0.95)',
-              backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.2)',
-              boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
-            }}
-          >
-            {isAutoLoggingIn ? (
-              // Show loading state when auto-logging in
-              <>
+          {isAutoLoggingIn ? (
+            // Show loading state when auto-logging
+            <div
+              style={{
+                padding: 24,
+                borderRadius: 12,
+                background: 'rgba(0, 0, 0, 0.6)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 12,
+                  color: '#ffffff',
+                  fontSize: 14,
+                }}
+              >
                 <div
                   style={{
-                    fontSize: 24,
-                    fontWeight: 600,
-                    color: '#1e293b',
-                    marginBottom: 24,
-                    textAlign: 'center',
+                    width: 18,
+                    height: 18,
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    borderTopColor: '#ffffff',
+                    borderRadius: '50%',
+                    animation: 'spin 0.8s linear infinite',
                   }}
-                >
-                  TrueNAS Web Desktop
-                </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 12,
-                    color: '#64748b',
-                    fontSize: 14,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 18,
-                      height: 18,
-                      border: '2px solid #e2e8f0',
-                      borderTopColor: '#3b82f6',
-                      borderRadius: '50%',
-                      animation: 'spin 0.8s linear infinite',
-                    }}
-                  />
-                  <span>登录中...</span>
-                </div>
-                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-              </>
-            ) : (
-              // Show login form
-              <>
-                <div
-                  style={{
-                    fontSize: 24,
-                    fontWeight: 600,
-                    color: '#1e293b',
-                    marginBottom: 24,
-                    textAlign: 'center',
-                  }}
-                >
-                  TrueNAS Web Desktop
-                </div>
-                <LoginForm />
-              </>
-            )}
-          </div>
+                />
+                <span>登录中...</span>
+              </div>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : (
+            // Show login form
+            <div
+              style={{
+                width: 380,
+                padding: 32,
+                borderRadius: 16,
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                boxShadow: '0 20px 40px rgba(0, 0, 0, 0.15)',
+              }}
+            >
+              <LoginForm />
+            </div>
+          )}
         </div>
       </div>
     )
