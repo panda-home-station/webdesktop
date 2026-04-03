@@ -25,6 +25,27 @@ export interface IncomingMessage {
     code: number
     message: string
     data?: unknown
+    reason?: string
+    errno?: number
+    strerror?: string
+  }
+}
+
+/**
+ * Custom error class that preserves all TrueNAS error details
+ */
+export class TrueNASError extends Error {
+  constructor(
+    message: string,
+    public code?: number,
+    public data?: unknown,
+    public reason?: string,
+    public errno?: number,
+    public strerror?: string,
+    public errorResponse?: any
+  ) {
+    super(message)
+    this.name = 'TrueNASError'
   }
 }
 
@@ -126,9 +147,20 @@ export class TrueNASWebSocketClient {
         this.pendingRequests.delete(message.id);
 
         if (message.error) {
-          console.error('WebSocket error details:', message.error);
-          console.error('Error data:', JSON.stringify(message.error.data, null, 2));
-          reject(new Error(message.error.message || 'Unknown error'));
+          console.error('WebSocket error response:', JSON.stringify(message, null, 2));
+
+          // Create a TrueNASError with all details
+          const error = new TrueNASError(
+            message.error.message || message.error.strerror || 'Unknown error',
+            message.error.code,
+            message.error.data,
+            message.error.reason,
+            message.error.errno,
+            message.error.strerror,
+            message.error
+          );
+
+          reject(error);
         } else {
           resolve(message.result);
         }

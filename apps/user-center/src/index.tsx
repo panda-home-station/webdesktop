@@ -3,8 +3,16 @@ import { Sidebar } from '@src/components/Sidebar'
 import { WindowContext } from '@src/sdk/window'
 import { useAuthStore } from '@src/truenas/stores/auth.store'
 import Icon from '@mdi/react'
-import { mdiAccountCircleOutline, mdiImageOutline, mdiShieldLockOutline } from '@mdi/js'
+import {
+  mdiAccountCircleOutline,
+  mdiImageOutline,
+  mdiShieldLockOutline,
+  mdiKeyVariant,
+  mdiLockOutline
+} from '@mdi/js'
 import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '@src/state/desktop'
+import { ChangePasswordDialog } from './components/ChangePasswordDialog'
+import { UserApiKeys } from './components/UserApiKeys'
 
 // Mock API for now - will be replaced with TrueNAS API
 const api = {
@@ -16,7 +24,7 @@ const api = {
   setSecuritySettings: async (settings: any) => { },
 }
 
-type Item = 'profile' | 'wallpapers' | 'security'
+type Item = 'profile' | 'wallpapers' | 'security' | 'change-password' | 'api-keys'
 
 const WALL_DIR = '/AppData/Wallpapers'
 
@@ -25,9 +33,16 @@ export default function UserCenter() {
   const [active, setActive] = useState<string>('profile')
   const { user } = useAuthStore()
 
+  // Dialog states
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false)
+
   useEffect(() => {
     if (win && win.setTitle) {
-      const tabName = active === 'profile' ? '账户信息' : active === 'wallpapers' ? '主题与壁纸' : '安全'
+      const tabName = active === 'profile' ? '账户信息' :
+                       active === 'wallpapers' ? '主题与壁纸' :
+                       active === 'security' ? '安全设置' :
+                       active === 'change-password' ? '更改密码' :
+                       active === 'api-keys' ? '我的API Key' : ''
       win.setTitle(`User Center - ${tabName}`)
     }
   }, [active, win])
@@ -83,7 +98,9 @@ export default function UserCenter() {
         items={[
           { id: 'profile', label: '账户信息', icon: <Icon path={mdiAccountCircleOutline} size="20px" /> },
           { id: 'wallpapers', label: '主题与壁纸', icon: <Icon path={mdiImageOutline} size="20px" /> },
-          { id: 'security', label: '安全设置', icon: <Icon path={mdiShieldLockOutline} size="20px" /> }
+          { id: 'security', label: '安全设置', icon: <Icon path={mdiShieldLockOutline} size="20px" /> },
+          { id: 'change-password', label: '更改密码', icon: <Icon path={mdiLockOutline} size="20px" /> },
+          { id: 'api-keys', label: '我的API Key', icon: <Icon path={mdiKeyVariant} size="20px" /> }
         ]}
       />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 12, gap: 12 }}>
@@ -178,7 +195,24 @@ export default function UserCenter() {
         {active === 'security' && (
           <SecuritySettings />
         )}
+        {active === 'change-password' && (
+          <ChangePasswordSection />
+        )}
+        {active === 'api-keys' && (
+          <UserApiKeys />
+        )}
       </div>
+
+      {/* Dialogs */}
+      {showChangePasswordDialog && (
+        <ChangePasswordDialog
+          open={showChangePasswordDialog}
+          onClose={() => setShowChangePasswordDialog(false)}
+          onSuccess={() => {
+            // Password changed successfully
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -267,27 +301,48 @@ function SecuritySettings() {
             </div>
           </div>
         </div>
-
-        <div style={{ display: 'grid', gap: 6, marginTop: 10 }}>
-          <div style={{ fontSize: 14, fontWeight: 500 }}>登录保护</div>
-          <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>为了您的账户安全，建议定期更改密码。</div>
-          <button
-            style={{
-              padding: '8px 12px',
-              borderRadius: 8,
-              border: '1px solid var(--button-border)',
-              background: 'var(--button-bg)',
-              color: 'var(--text)',
-              fontSize: 13,
-              width: 'fit-content',
-              cursor: 'pointer'
-            }}
-            onClick={() => {}}
-          >
-            修改登录密码
-          </button>
-        </div>
       </div>
     </div>
+  )
+}
+
+function ChangePasswordSection() {
+  const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false)
+
+  return (
+    <>
+      <div style={{ padding: 16, display: 'grid', gap: 16 }}>
+        <div style={{ fontWeight: 700 }}>更改密码</div>
+        <div style={{ fontSize: 13, color: '#6b7280', lineHeight: 1.5 }}>
+          为了您的账户安全，请定期更改密码。
+        </div>
+        <button
+          onClick={() => setShowChangePasswordDialog(true)}
+          style={{
+            padding: '12px 16px',
+            borderRadius: 8,
+            border: 'none',
+            background: '#3b82f6',
+            color: '#fff',
+            fontSize: 14,
+            fontWeight: 500,
+            cursor: 'pointer',
+            width: 'fit-content',
+          }}
+        >
+          更改密码
+        </button>
+      </div>
+
+      {showChangePasswordDialog && (
+        <ChangePasswordDialog
+          open={showChangePasswordDialog}
+          onClose={() => setShowChangePasswordDialog(false)}
+          onSuccess={() => {
+            // Password changed successfully
+          }}
+        />
+      )}
+    </>
   )
 }
