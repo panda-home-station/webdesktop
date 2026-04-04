@@ -5,8 +5,9 @@ import { openApp, showDesktop, lockScreen } from '../sdk/desktop'
 import { getAppContextMenu } from '../sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
-import { Monitor, LayoutGrid, User, Lock, LogOut } from 'lucide-react'
+import { Monitor, LayoutGrid, User, Lock, LogOut, Bell } from 'lucide-react'
 import { useAuthStore } from '../truenas/stores/auth.store'
+import useAlertStore from '../truenas/stores/alert.store'
 
 type WinItem = {
   id: string
@@ -110,6 +111,7 @@ const TaskbarIcon = memo(({
 export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [], onToggleQuickAgent }: Props) {
   const apps = listApps()
   const { user, logout } = useAuthStore()
+  const unreadAlertCount = useAlertStore(state => state.getImportantUnreadAlertsCount())
 
   const byApp = useMemo(() => {
     const map: Record<string, WinItem[]> = {}
@@ -323,7 +325,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
         <button
           className="dock-item"
           title="通知"
-          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer' }}
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer', position: 'relative' }}
           onClick={() => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
             focusOrOpen('notifications')
@@ -331,10 +333,30 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
           onMouseEnter={(e) => showTip('通知', e.currentTarget)}
           onMouseLeave={hideTip}
         >
-          <svg width="22" height="22" viewBox="0 0 24 24">
-            <path d="M12 3a6 6 0 0 1 6 6v4l2 2H4l2-2V9a6 6 0 0 1 6-6z" fill="#3b82f6" />
-            <circle cx="12" cy="20" r="2" fill="#93c5fd" />
-          </svg>
+          <Bell size={22} color={unreadAlertCount > 0 ? '#ef4444' : '#3b82f6'} />
+          {unreadAlertCount > 0 && (
+            <span
+              style={{
+                position: 'absolute',
+                top: 2,
+                right: 2,
+                minWidth: '16px',
+                height: '16px',
+                padding: '0 4px',
+                borderRadius: '8px',
+                background: '#ef4444',
+                color: '#fff',
+                fontSize: '10px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: '2px solid rgba(255,255,255,0.9)',
+              }}
+            >
+              {unreadAlertCount > 99 ? '99+' : unreadAlertCount}
+            </span>
+          )}
         </button>
         <button
           className="dock-item"
