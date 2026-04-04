@@ -95,8 +95,19 @@ const AlertItem = React.memo(({ alert, onDismiss, onRestore }: {
             background: levelColor,
             flexShrink: 0,
           }}
-        />
-        <div
+        />        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 500,
+            color: levelColor,
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: levelColor + '15',
+            flexShrink: 0,
+          }}
+        >
+          {levelLabel}
+        </span>        <div
           style={{
             flex: 1,
             minWidth: 0,
@@ -109,19 +120,6 @@ const AlertItem = React.memo(({ alert, onDismiss, onRestore }: {
         >
           {alert.formatted || alert.text}
         </div>
-        <span
-          style={{
-            fontSize: '11px',
-            fontWeight: 500,
-            color: levelColor,
-            padding: '2px 6px',
-            borderRadius: '4px',
-            background: levelColor + '15',
-            flexShrink: 0,
-          }}
-        >
-          {levelLabel}
-        </span>
         <span
           style={{
             fontSize: '11px',
