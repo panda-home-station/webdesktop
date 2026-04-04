@@ -1,0 +1,10 @@
+{
+  "name": "apps",
+  "title": "应用",
+  "entry": "./src/App.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 600
+}

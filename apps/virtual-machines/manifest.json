@@ -1,0 +1,10 @@
+{
+  "name": "virtual-machines",
+  "title": "虚拟机",
+  "entry": "./src/App.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 600
+}

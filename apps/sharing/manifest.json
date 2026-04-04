@@ -1,0 +1,10 @@
+{
+  "name": "sharing",
+  "title": "共享",
+  "entry": "./src/App.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 600
+}

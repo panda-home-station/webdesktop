@@ -1,0 +1,10 @@
+{
+  "name": "reporting",
+  "title": "报告",
+  "entry": "./src/App.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 600
+}

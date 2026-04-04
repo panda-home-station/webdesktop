@@ -1,0 +1,10 @@
+{
+  "name": "data-protection",
+  "title": "数据保护",
+  "entry": "./src/App.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 600
+}

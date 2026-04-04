@@ -1,0 +1,10 @@
+{
+  "name": "storage",
+  "title": "存储",
+  "entry": "./src/App.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 600
+}
