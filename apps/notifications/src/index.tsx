@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import useAlertStore from '../../../src/truenas/stores/alert.store'
 import { Alert } from '../../../src/truenas/types/alert.interface'
 import { AlertLevel, alertLevelLabels } from '../../../src/truenas/types/alert.enum'
@@ -31,22 +31,6 @@ const getAlertLevelColor = (level: AlertLevel): string => {
   }
 }
 
-const getAlertLevelBgColor = (level: AlertLevel): string => {
-  switch (level) {
-    case AlertLevel.Emergency:
-    case AlertLevel.Critical:
-    case AlertLevel.Alert:
-    case AlertLevel.Error:
-      return 'rgba(239, 68, 68, 0.1)'
-    case AlertLevel.Warning:
-      return 'rgba(245, 158, 11, 0.1)'
-    case AlertLevel.Notice:
-    case AlertLevel.Info:
-    default:
-      return 'rgba(59, 130, 246, 0.1)'
-  }
-}
-
 const isCritical = (level: AlertLevel): boolean => {
   return [
     AlertLevel.Critical,
@@ -69,14 +53,13 @@ const AlertItem = React.memo(({ alert, onDismiss, onRestore }: {
   onDismiss: (id: string) => void
   onRestore: (id: string) => void
 }) => {
+  const [expanded, setExpanded] = useState(false)
   const levelColor = getAlertLevelColor(alert.level)
-  const levelBgColor = getAlertLevelBgColor(alert.level)
   const levelLabel = alertLevelLabels.get(alert.level) || alert.level
 
   const formatDate = (timestamp: { $date: number }): string => {
     const date = new Date(timestamp.$date)
     return new Intl.DateTimeFormat('zh-CN', {
-      year: 'numeric',
       month: '2-digit',
       day: '2-digit',
       hour: '2-digit',
@@ -87,56 +70,86 @@ const AlertItem = React.memo(({ alert, onDismiss, onRestore }: {
   return (
     <div
       style={{
-        padding: '16px',
-        borderRadius: '12px',
-        background: levelBgColor,
-        border: `1px solid ${levelColor}30`,
-        marginBottom: '12px',
+        borderRadius: '8px',
+        background: '#fff',
+        border: '1px solid #e2e8f0',
+        marginBottom: '8px',
         transition: 'all 0.2s ease',
+        cursor: 'pointer',
       }}
+      onClick={() => setExpanded(!expanded)}
     >
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '10px 12px',
+        }}
+      >
         <div
           style={{
-            marginTop: '4px',
-            width: '12px',
-            height: '12px',
+            width: '8px',
+            height: '8px',
             borderRadius: '50%',
             background: levelColor,
             flexShrink: 0,
           }}
         />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span
-              style={{
-                fontSize: '12px',
-                fontWeight: 600,
-                color: levelColor,
-                padding: '2px 8px',
-                borderRadius: '4px',
-                background: `${levelColor}20`,
-                textTransform: 'uppercase',
-              }}
-            >
-              {levelLabel}
-            </span>
-            <span
-              style={{
-                fontSize: '12px',
-                color: '#64748b',
-                marginLeft: 'auto',
-              }}
-            >
-              {formatDate(alert.datetime)}
-            </span>
-          </div>
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            fontSize: '13px',
+            color: '#1e293b',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {alert.formatted || alert.text}
+        </div>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 500,
+            color: levelColor,
+            padding: '2px 6px',
+            borderRadius: '4px',
+            background: levelColor + '15',
+            flexShrink: 0,
+          }}
+        >
+          {levelLabel}
+        </span>
+        <span
+          style={{
+            fontSize: '11px',
+            color: '#94a3b8',
+            flexShrink: 0,
+          }}
+        >
+          {formatDate(alert.datetime)}
+        </span>
+        {expanded ? <ChevronUp size={16} color="#64748b" /> : <ChevronDown size={16} color="#64748b" />}
+      </div>
+
+      {expanded && (
+        <div
+          style={{
+            borderTop: '1px solid #f1f5f9',
+            padding: '12px',
+            background: '#f8fafc',
+          }}
+        >
           <div
             style={{
-              fontSize: '14px',
-              color: '#1e293b',
-              lineHeight: 1.5,
-              marginBottom: '8px',
+              fontSize: '13px',
+              color: '#334155',
+              lineHeight: 1.6,
+              marginBottom: '10px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
             }}
           >
             {alert.formatted || alert.text}
@@ -146,66 +159,84 @@ const AlertItem = React.memo(({ alert, onDismiss, onRestore }: {
               style={{
                 fontSize: '12px',
                 color: '#64748b',
+                marginBottom: '10px',
               }}
             >
-              {alert.klass}
+              <strong>类型:</strong> {alert.klass}
             </div>
           )}
+          <div
+            style={{
+              fontSize: '11px',
+              color: '#94a3b8',
+              marginBottom: '10px',
+            }}
+          >
+            <div><strong>ID:</strong> {alert.id}</div>
+            <div><strong>来源:</strong> {alert.source}</div>
+            {alert.node && <div><strong>节点:</strong> {alert.node}</div>}
+          </div>
+          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+            {alert.dismissed ? (
+              <button
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: '#3b82f6',
+                  color: '#fff',
+                  border: 'none',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#2563eb'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#3b82f6'}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onRestore(alert.id)
+                }}
+              >
+                <RefreshCw size={12} />
+                重新打开
+              </button>
+            ) : (
+              <button
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  background: 'transparent',
+                  color: '#64748b',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9'
+                  e.currentTarget.style.borderColor = '#94a3b8'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent'
+                  e.currentTarget.style.borderColor = '#cbd5e1'
+                }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onDismiss(alert.id)
+                }}
+              >
+                <X size={12} />
+                忽略
+              </button>
+            )}
+          </div>
         </div>
-      </div>
-      <div style={{ display: 'flex', gap: '8px', marginTop: '12px', justifyContent: 'flex-end' }}>
-        {alert.dismissed ? (
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              background: '#3b82f6',
-              color: '#fff',
-              border: 'none',
-              fontSize: '13px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#2563eb'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#3b82f6'}
-            onClick={() => onRestore(alert.id)}
-          >
-            <RefreshCw size={14} />
-            重新打开
-          </button>
-        ) : (
-          <button
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 12px',
-              borderRadius: '6px',
-              background: 'transparent',
-              color: '#64748b',
-              border: '1px solid #cbd5e1',
-              fontSize: '13px',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#f1f5f9'
-              e.currentTarget.style.borderColor = '#94a3b8'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent'
-              e.currentTarget.style.borderColor = '#cbd5e1'
-            }}
-            onClick={() => onDismiss(alert.id)}
-          >
-            <X size={14} />
-            忽略
-          </button>
-        )}
-      </div>
+      )}
     </div>
   )
 })
@@ -225,9 +256,6 @@ export default function NotificationsApp() {
 
   const [severityFilter, setSeverityFilter] = useState<SeverityFilter>('all')
   const [showDismissed, setShowDismissed] = useState(false)
-
-  // Alerts are initialized in App.tsx via useAlertInit hook
-  // This component only fetches alerts when needed
 
   const filteredAlerts = useMemo(() => {
     let filtered = alerts
@@ -323,16 +351,15 @@ export default function NotificationsApp() {
         background: '#f8fafc',
       }}
     >
-      {/* Header */}
       <div
         style={{
-          padding: '16px',
+          padding: '12px 16px',
           borderBottom: '1px solid #e2e8f0',
           background: '#fff',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <h2 style={{ fontSize: '18px', fontWeight: 600, margin: 0, color: '#1e293b' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#1e293b' }}>
             通知中心
           </h2>
           <button
@@ -340,12 +367,12 @@ export default function NotificationsApp() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              padding: '8px 12px',
-              borderRadius: '8px',
+              padding: '6px 10px',
+              borderRadius: '6px',
               background: '#f1f5f9',
               color: '#475569',
               border: 'none',
-              fontSize: '13px',
+              fontSize: '12px',
               cursor: 'pointer',
               transition: 'all 0.2s ease',
             }}
@@ -353,19 +380,18 @@ export default function NotificationsApp() {
             onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
             onClick={fetchAlerts}
           >
-            <RefreshCw size={16} />
+            <RefreshCw size={14} />
             刷新
           </button>
         </div>
 
-        {/* Severity Filters */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           {Object.entries(alertCounts).map(([filter, count]) => (
             <button
               key={filter}
               style={{
-                padding: '6px 12px',
-                borderRadius: '20px',
+                padding: '4px 10px',
+                borderRadius: '16px',
                 background:
                   (showDismissed && filter === 'dismissed') ||
                   (!showDismissed && filter === severityFilter)
@@ -377,7 +403,7 @@ export default function NotificationsApp() {
                     ? '#fff'
                     : '#475569',
                 border: 'none',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 500,
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
@@ -410,12 +436,12 @@ export default function NotificationsApp() {
               {count > 0 && (
                 <span
                   style={{
-                    minWidth: '18px',
-                    height: '18px',
-                    padding: '0 6px',
-                    borderRadius: '9px',
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    fontSize: '11px',
+                    minWidth: '16px',
+                    height: '16px',
+                    padding: '0 5px',
+                    borderRadius: '8px',
+                    background: 'rgba(255,255,255, 0.3)',
+                    fontSize: '10px',
                     fontWeight: 600,
                     display: 'flex',
                     alignItems: 'center',
@@ -430,12 +456,11 @@ export default function NotificationsApp() {
         </div>
       </div>
 
-      {/* Content */}
       <div
         style={{
           flex: 1,
           overflow: 'auto',
-          padding: '16px',
+          padding: '12px',
         }}
       >
         {isLoading && filteredAlerts.length === 0 ? (
@@ -449,7 +474,7 @@ export default function NotificationsApp() {
               color: '#64748b',
             }}
           >
-            <RefreshCw size={32} style={{ marginBottom: '16px', animation: 'spin 1s linear infinite' }} />
+            <RefreshCw size={28} style={{ marginBottom: '12px', animation: 'spin 1s linear infinite' }} />
             <p>加载通知中...</p>
           </div>
         ) : error ? (
@@ -464,12 +489,12 @@ export default function NotificationsApp() {
             }}
           >
             <p>加载通知失败</p>
-            <p style={{ fontSize: '14px', color: '#64748b' }}>{error}</p>
+            <p style={{ fontSize: '13px', color: '#64748b' }}>{error}</p>
             <button
               style={{
-                marginTop: '16px',
-                padding: '8px 16px',
-                borderRadius: '8px',
+                marginTop: '12px',
+                padding: '6px 14px',
+                borderRadius: '6px',
                 background: '#3b82f6',
                 color: '#fff',
                 border: 'none',
@@ -491,7 +516,7 @@ export default function NotificationsApp() {
               color: '#64748b',
             }}
           >
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔔</div>
+            <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔔</div>
             <p>暂无通知</p>
           </div>
         ) : (
@@ -505,18 +530,17 @@ export default function NotificationsApp() {
               />
             ))}
 
-            {/* Action Buttons */}
             {filteredAlerts.length > 0 && (
-              <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '12px', justifyContent: 'center' }}>
                 {showDismissed ? (
                   <button
                     style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
                       background: '#3b82f6',
                       color: '#fff',
                       border: 'none',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                     }}
@@ -529,12 +553,12 @@ export default function NotificationsApp() {
                 ) : (
                   <button
                     style={{
-                      padding: '8px 16px',
-                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
                       background: '#f1f5f9',
-                      color: '#475569',
+                      color: '#4kt569',
                       border: '1px solid #cbd5e1',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
                     }}
