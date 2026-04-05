@@ -14,7 +14,7 @@ import {
 } from '@mdi/js'
 import { showDesktop, openLauncher } from '../sdk/desktop'
 import { mdiFolderOutline, mdiViewGridOutline, mdiMonitor } from '@mdi/js'
-import { useAuthStore } from '../truenas/stores/auth.store'
+import { useAuthStore } from '../truenas/stores/auth'
 
 function SmoothWallpaper({ src }: { src?: string }) {
   const [cur, setCur] = useState<string | null>(null)

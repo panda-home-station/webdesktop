@@ -8,7 +8,7 @@ import { useWebSocketInit } from './hooks/useWebSocketInit'
 import { useWallpaper } from './hooks/useWallpaper'
 import { useAutoLogin } from './hooks/useAutoLogin'
 import { useAlertInit } from './hooks/useAlertInit'
-import { useAuthStore } from './truenas/stores/auth.store'
+import { useAuthStore } from './truenas/stores/auth'
 
 export default function App() {
   useWebSocketInit()

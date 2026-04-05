@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { truenasApi } from '@src/truenas/api'
-import { useAuthStore } from '@src/truenas/stores/auth.store'
+import { useAuthStore } from '@src/truenas/stores/auth'
 import { ApiKeyForm } from './ApiKeyForm'
 import { KeyCreatedDialog } from './KeyCreatedDialog'
 

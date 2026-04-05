@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAuthStore } from '../truenas/stores/auth.store'
-import { authService } from '../truenas/services/auth.service'
+import { useAuthStore } from '../truenas/stores/auth'
+import { authService } from '../truenas/services/auth'
 import { LoginResult } from '../truenas/types/login-result.enum'
 
 export function useAutoLogin(isAuthenticated: boolean) {

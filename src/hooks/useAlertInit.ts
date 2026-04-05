@@ -3,8 +3,8 @@
  */
 
 import { useEffect } from 'react'
-import { useAuthStore } from '../truenas/stores/auth.store'
-import useAlertStore from '../truenas/stores/alert.store'
+import { useAuthStore } from '../truenas/stores/auth'
+import useAlertStore from '../truenas/stores/alert'
 
 export function useAlertInit() {
   const { isAuthenticated } = useAuthStore()

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useContext } from 'react'
 import { Sidebar } from '@src/components/Sidebar'
 import { WindowContext } from '@src/sdk/window'
-import { useAuthStore } from '@src/truenas/stores/auth.store'
+import { useAuthStore } from '@src/truenas/stores/auth'
 import Icon from '@mdi/react'
 import {
   mdiAccountCircleOutline,

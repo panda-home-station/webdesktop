@@ -11,6 +11,41 @@ const api = {
   fsDownloadUrl: (path: string) => '',
   getSecuritySettings: async () => ({ idle_timeout: 0, idle_action: 'lock' }),
   setSecuritySettings: async (settings: any) => { },
+  getDeviceInfo: async () => ({
+    device_id: 'PNAS-001',
+    device_name: 'Panda Home Station',
+    hardware: {
+      cpu: 'Intel Core i5-12400 3.00 GHz',
+      memory: '16 GB DDR4-3200',
+      gpu: 'Intel UHD Graphics 620',
+      memory_slots: [],
+    },
+    system_version: '1.0.0',
+    uptime: '0 days 1 hour 30 minutes',
+    system_time: '2024-01-15 12:30:00',
+    system_time_ts: 1705313000,
+    network: {
+      ip: '192.168.1.100',
+      transfer: 'Tx: 0.0 MB/s Rx: 0.0 MB/s',
+    },
+    system_disk: {
+      name: 'System',
+      used: '100 GB',
+      total: '256 GB',
+      percent: '39',
+    },
+    data_disk: {
+      name: 'Data',
+      used: '1.2 TB',
+      total: '4.0 TB',
+      percent: '30',
+    },
+    y_disks: [
+      { name: 'Samsung 970 EVO', is_rotational: false, size: '1TB' },
+      { name: 'WD Red Plus', is_rotational: false, size: '4TB' },
+      { name: 'WD Red Plus', is_rotational: false, size: '4TB' },
+    ],
+  }),
 }
 import { 
   Monitor,

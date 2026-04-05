@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react'
-import useAlertStore from '../../../src/truenas/stores/alert.store'
-import { Alert } from '../../../src/truenas/types/alert.interface'
-import { AlertLevel, alertLevelLabels } from '../../../src/truenas/types/alert.enum'
-import { truenasApi } from '../../../src/truenas/api'
+import useAlertStore from '@src/truenas/stores/alert'
+import { Alert } from '@src/truenas/types/alert.interface'
+import { AlertLevel, alertLevelLabels } from '@src/truenas/types/alert.enum'
+import { truenasApi } from '@src/truenas/api'
 import { X, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react'
 
 type SeverityFilter = 'all' | 'critical' | 'warning' | 'info' | 'dismissed'

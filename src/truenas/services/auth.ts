@@ -1,5 +1,5 @@
 import { truenasApi } from '../api';
-import { useAuthStore } from '../stores/auth.store';
+import { useAuthStore } from '../stores/auth';
 import { LoginResult } from '../types/login-result.enum';
 import {
   LoginExMechanism,

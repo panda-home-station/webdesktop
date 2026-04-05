@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Modal, ModalProps } from '@src/components/Modal'
 import { truenasApi } from '@src/truenas/api'
-import { useAuthStore } from '@src/truenas/stores/auth.store'
+import { useAuthStore } from '@src/truenas/stores/auth'
 
 interface ChangePasswordDialogProps extends Omit<ModalProps, 'children'> {
   onSuccess?: () => void
