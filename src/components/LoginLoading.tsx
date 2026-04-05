@@ -14,7 +14,7 @@ export default function LoginLoading() {
         }}
       >
         <div className="spinner" />
-        <span>登录中...</span>
+        <span>加载中...</span>
       </div>
     </div>
   )
