@@ -1,5 +1,11 @@
+/**
+ * Wallpaper Hook
+ *
+ * Manages desktop wallpaper
+ */
+
 import { useEffect, useState } from 'react'
-import { getWallpaper } from '../state/desktop'
+import { getWallpaper, setWallpaper } from '../state/desktop'
 
 type WallpaperEvent = {
   detail?: {
@@ -33,4 +39,16 @@ export function useWallpaper() {
   }, [])
 
   return wallpaper
+}
+
+export function useWallpaperActions() {
+  return {
+    setWallpaper: (path: string) => {
+      setWallpaper(path)
+    },
+    resetWallpaper: () => {
+      const { resetWallpaper } = import('../state/desktop')
+      resetWallpaper()
+    },
+  }
 }
