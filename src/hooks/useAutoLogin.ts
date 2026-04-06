@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../truenas/stores/auth'
 import { authService } from '../truenas/services/auth'
 import { LoginResult } from '../truenas/types/login-result.enum'
+import { persistentStorage } from '../state/persistence'
 
 export function useAutoLogin(isAuthenticated: boolean) {
   const hasAttemptedAutoLogin = useRef(false)
@@ -24,8 +25,8 @@ export function useAutoLogin(isAuthenticated: boolean) {
       authService.setQueryToken(tokenParam)
     }
 
-    // Check for saved token in localStorage
-    const savedToken = localStorage.getItem('token')
+    // Check for saved token in persistent storage
+    const savedToken = persistentStorage.get<string | null>('token')
     if (!savedToken) {
       return
     }
@@ -48,7 +49,7 @@ export function useAutoLogin(isAuthenticated: boolean) {
       } else {
         // Token login failed, clear it
         authStore.setToken(null)
-        localStorage.removeItem('token')
+        persistentStorage.remove('token')
       }
     }).catch(() => {
       setIsAutoLoggingIn(false)

@@ -7,6 +7,7 @@ import {
   LoginExResponseType,
   LoggedInUser,
 } from '../types/auth.interface';
+import { persistentStorage, sessionStorage as phsSessionStorage } from '../../state/persistence';
 
 export interface LoginResultData {
   loginResult: LoginResult;
@@ -20,7 +21,7 @@ export class AuthService {
   private saveToken(token: string): void {
     const authStore = useAuthStore.getState();
     authStore.setToken(token);
-    localStorage.setItem('token', token);
+    persistentStorage.set('token', token);
   }
 
   /**
@@ -31,7 +32,7 @@ export class AuthService {
     authStore.setUser(userInfo);
     authStore.setAuthenticated(true);
     authStore.setHasTwoFactor(false);
-    sessionStorage.setItem('loginBannerDismissed', 'true');
+    phsSessionStorage.set('loginBannerDismissed', true);
   }
 
   /**
@@ -89,7 +90,7 @@ export class AuthService {
       // If login successful, generate a new token for future use
       if (loginResult === LoginResult.Success) {
         try {
-          const newToken = await truenasApi.call('auth.generate_token', 300, {}, true) as string;
+          const newToken = await truenasApi.call('auth.generate_token', 300, {}, true, true) as string;
           this.saveToken(newToken);
         } catch (tokenError) {
           console.error('Failed to generate new token:', tokenError);

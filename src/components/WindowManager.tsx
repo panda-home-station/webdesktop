@@ -1,12 +1,12 @@
-import React, { useCallback, useRef, useState, useEffect } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { listApps, loadApp } from '../apps/registry'
 import { requestPermission } from '../sdk/permissions'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
 import { QuickAgentDialog } from './QuickAgentDialog'
-import { subscribeOpenApp, setMaximizedWindow, subscribeWinAction, subscribeShowDesktop, subscribeLauncher, setAnimating } from '../sdk/desktop'
-import { getPersistWins, setPersistWins, getPersistZOrder, setPersistZOrder } from '../state/windows'
+import { subscribeOpenApp, subscribeWinAction, subscribeShowDesktop, subscribeLauncher } from '../sdk/desktop'
+import { useWindowsStore } from '../state/windows-store'
 import { Loader2 } from 'lucide-react'
 
 type Win = {

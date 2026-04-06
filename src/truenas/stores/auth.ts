@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { LoggedInUser } from '../types/auth.interface';
 import { truenasApi } from '../api';
+import { createTypedStore, sessionStorage as phsSessionStorage } from '../../state/persistence';
+
+// Create typed stores for persistent data
+const tokenStore = createTypedStore<string | null>('token', null);
+const loginBannerDismissedStore = createTypedStore<boolean>('loginBannerDismissed', false);
 
 interface AuthState {
   // User state
@@ -30,12 +35,12 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
-  // Initial state
+  // Initial state - load token from persistent storage
   user: null,
   isAuthenticated: false,
   isLoading: false,
   hasTwoFactor: false,
-  token: null,
+  token: tokenStore.get(),
   loginError: null,
 
   // Actions
@@ -43,7 +48,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
   setLoading: (isLoading) => set({ isLoading }),
   setHasTwoFactor: (hasTwoFactor) => set({ hasTwoFactor }),
- setToken: (token) => set({ token }),
+  setToken: (token) => {
+    set({ token });
+    // Persist token
+    tokenStore.set(token);
+  },
   setLoginError: (error) => set({ loginError: error }),
 
   // Logout method
@@ -78,8 +87,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       loginError: null,
     });
 
-    // Clear session storage
-    sessionStorage.removeItem('loginBannerDismissed');
-    localStorage.removeItem('token');
+    // Clear session and persistent storage
+    loginBannerDismissedStore.remove();
+    tokenStore.remove();
   },
 }));
