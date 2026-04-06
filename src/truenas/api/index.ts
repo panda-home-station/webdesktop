@@ -5,16 +5,21 @@
  * Ported from Angular webui's ApiService.
  */
 
-import { TrueNASWebSocketClient } from './websocket-client'
+import { TrueNASWebSocketClient, ConnectionState } from './websocket-client'
 
 let wsClient: TrueNASWebSocketClient | null = null
 
-export function initTrueNASClient(): TrueNASWebSocketClient {
+export function initTrueNASClient(config?: {
+  initialReconnectDelay?: number
+  maxReconnectDelay?: number
+  backoffFactor?: number
+  heartbeatInterval?: number
+  connectionTimeout?: number
+  maxRetries?: number
+  debug?: boolean
+}): TrueNASWebSocketClient {
   if (!wsClient) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = window.location.host
-    const url = `${protocol}//${host}/api/current`
-    wsClient = new TrueNASWebSocketClient(url)
+    wsClient = new TrueNASWebSocketClient(config)
   }
   return wsClient
 }
@@ -53,6 +58,46 @@ export const truenasApi = {
   subscribe(event: string, callback: (data: unknown) => void): () => void {
     const client = getTrueNASClient()
     return client.subscribe(event, callback)
+  },
+
+  /**
+   * Subscribe to connection state changes
+   */
+  onConnectionStateChange(callback: (state: ConnectionState) => void): () => void {
+    const client = getTrueNASClient()
+    return client.onConnectionStateChange(callback)
+  },
+
+  /**
+   * Get current connection state
+   */
+  getConnectionState(): ConnectionState {
+    const client = getTrueNASClient()
+    return client.getConnectionState()
+  },
+
+  /**
+   * Check if WebSocket is connected
+   */
+  connected(): boolean {
+    const client = getTrueNASClient()
+    return client.connected()
+  },
+
+  /**
+   * Disconnect WebSocket
+   */
+  disconnect(): void {
+    const client = getTrueNASClient()
+    client.disconnect()
+  },
+
+  /**
+   * Get reconnection statistics
+   */
+  getReconnectStats() {
+    const client = getTrueNASClient()
+    return client.getReconnectStats()
   },
 }
 

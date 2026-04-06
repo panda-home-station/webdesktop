@@ -5,5 +5,5 @@ export const environment: TrueNASEnvironment = {
   remote,
   build: 'development',
   buildYear: new Date().getFullYear(),
-  production: false,
+  production: import.meta.env.PROD,
 };
