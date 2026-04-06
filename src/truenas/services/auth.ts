@@ -47,8 +47,8 @@ export class AuthService {
       : { mechanism: LoginExMechanism.PasswordPlain, username, password };
 
     const loginCall = otp
-      ? truenasApi.call('auth.login_ex_continue', [params])
-      : truenasApi.call('auth.login_ex', [params]);
+      ? truenasApi.call('auth.login_ex_continue', params)
+      : truenasApi.call('auth.login_ex', params);
 
     const result = (await loginCall) as LoginExResponse;
     const loginResult = this.processLoginResult(result);
@@ -56,7 +56,7 @@ export class AuthService {
     // If login successful, generate and save a token for future use
     if (loginResult === LoginResult.Success && result.response_type === LoginExResponseType.Success) {
       try {
-        const token = await truenasApi.call('auth.generate_token', [300, {}, true, true]) as string;
+        const token = await truenasApi.call('auth.generate_token', 300, {}, true, true) as string;
         this.saveToken(token);
       } catch (tokenError) {
         console.error('Failed to generate token:', tokenError);
@@ -82,14 +82,14 @@ export class AuthService {
 
     try {
       const params = { mechanism: LoginExMechanism.TokenPlain, token };
-      const result = (await truenasApi.call('auth.login_ex', [params])) as LoginExResponse;
+      const result = (await truenasApi.call('auth.login_ex', params)) as LoginExResponse;
 
       const loginResult = this.processLoginResult(result);
 
       // If login successful, generate a new token for future use
       if (loginResult === LoginResult.Success) {
         try {
-          const newToken = await truenasApi.call('auth.generate_token', [300, {}, true, true]) as string;
+          const newToken = await truenasApi.call('auth.generate_token', 300, {}, true) as string;
           this.saveToken(newToken);
         } catch (tokenError) {
           console.error('Failed to generate new token:', tokenError);

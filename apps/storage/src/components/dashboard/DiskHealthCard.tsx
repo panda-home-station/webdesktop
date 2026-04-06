@@ -27,7 +27,7 @@ export default function DiskHealthCard({ disks }: DiskHealthCardProps) {
     d.type !== 'HDD' && d.type !== 'SSD' && d.type !== 'NVMe'
   ).length;
 
-  const withAlerts = disks.filter((d) => d.alerts.length > 0).length;
+  const withAlerts = disks.filter((d) => d.alerts && d.alerts.length > 0).length;
 
   return (
     <div style={styles.card}>

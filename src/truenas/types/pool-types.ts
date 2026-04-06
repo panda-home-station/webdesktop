@@ -27,7 +27,7 @@ export interface PoolScanUpdate {
   end_time: ApiTimestamp;
   errors: number;
   function: PoolScanFunction;
-  pause: ApiTimestamp;
+  pause: ApiTimestamp | null;
   percentage: number;
   start_time: ApiTimestamp;
   state: PoolScanState;
@@ -79,11 +79,58 @@ export interface Pool {
    * Available with extra is_upgraded=true
    */
   is_upgraded?: boolean;
+
+  /**
+   * Pool size in bytes
+   */
   size: number;
-  algorithm: ZfsProperty<string, string>;
+
+  /**
+   * Formatted size string (available with is_upgraded)
+   */
+  size_str?: string;
+
+  /**
+   * Allocated space in bytes (available with is_upgraded)
+   */
+  allocated?: number;
+
+  /**
+   * Formatted allocated string (available with is_upgraded)
+   */
+  allocated_str?: string;
+
+  /**
+   * Free space in bytes (available with is_upgraded)
+   */
+  free?: number;
+
+  /**
+   * Formatted free string (available with is_upgraded)
+   */
+  free_str?: string;
+
+  /**
+   * Freeing space in bytes (available with is_upgraded)
+   */
+  freeing?: number;
+
+  /**
+   * Formatted freeing string (available with is_upgraded)
+   */
+  freeing_str?: number;
+
+  /**
+   * Fragmentation percentage (available with is_upgraded)
+   */
+  fragmentation?: number;
+
+  algorithm?: ZfsProperty<string, string>;
   dedup_table_quota: string | null;
+  dedup_table: number | null;
   dedup_table_size: number;
   all_sed?: boolean;
+  warning?: boolean;
 }
 
 /**
@@ -109,10 +156,8 @@ export interface PoolInstance {
   free: number;
   freeing: number;
   fragmentation: string;
-  autoreplace: ZfsProperty<string>;
   autotrim: ZfsProperty<string>;
-  compression: ZfsProperty<string>;
-  dedicated: ZfsProperty<string>;
+  topology: PoolTopology;
 }
 
 /**

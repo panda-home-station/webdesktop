@@ -40,8 +40,9 @@ export const truenasApi = {
 
   /**
    * Call a TrueNAS API method
+   * Accepts multiple arguments (like webui's api.call(method, ...params))
    */
-  async call(method: string, params?: unknown[]): Promise<unknown> {
+  async call(method: string, ...params: unknown[]): Promise<unknown> {
     const client = getTrueNASClient()
     return client.call(method, params)
   },

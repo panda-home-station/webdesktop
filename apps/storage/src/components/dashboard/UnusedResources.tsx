@@ -66,7 +66,7 @@ function DiskItem({ disk }: DiskItemProps) {
       </div>
 
       {/* Alerts */}
-      {disk.alerts.length > 0 && (
+      {disk.alerts && disk.alerts.length > 0 && (
         <div style={styles.alertsBadge}>
           {disk.alerts.length}
         </div>

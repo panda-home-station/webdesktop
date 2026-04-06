@@ -70,8 +70,10 @@ export function getTotalPoolUsed(pools: any[]): number {
 
 // Get pool used percentage
 export function getPoolUsedPercentage(pool: any): number {
-  const used = pool.size?.used || 0;
-  const allocated = pool.size?.allocated || 0;
+  // When is_upgraded is true, pool.allocated and pool.free are available
+  const allocated = pool.allocated || 0;
+  const free = pool.free || 0;
+  const used = allocated - free;
   return calculatePercentage(used, allocated);
 }
 

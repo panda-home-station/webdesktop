@@ -56,14 +56,14 @@ function PoolCard({ pool }: PoolCardProps) {
         <div style={styles.titleSection}>
           <h3 style={styles.poolName}>{pool.name}</h3>
           <StatusBadge
-            status={getPoolStatusLabel(pool)}
-            color={getPoolHealthColor(pool)}
+            status={getPoolStatusLabel(pool.status)}
+            color={getPoolHealthColor(pool.status)}
           />
         </div>
 
         <div style={styles.capacitySection}>
           <span style={styles.capacityLabel}>Capacity</span>
-          <span style={styles.capacityValue}>{formatBytes(pool.size)}</span>
+          <span style={styles.capacityValue}>{pool.size_str || formatBytes(pool.size)}</span>
         </div>
       </div>
 
@@ -95,8 +95,8 @@ function PoolCard({ pool }: PoolCardProps) {
           <DetailRow label="GUID" value={pool.guid} />
           <DetailRow label="Path" value={pool.path} />
           <DetailRow label="Encryption" value={pool.encrypt ? 'Yes' : 'No'} />
-          <DetailRow label="Auto Trim" value={pool.autotrim.value} />
-          <DetailRow label="Deduplication" value={pool.dedup_table_quota || 'Off'} />
+          <DetailRow label="Auto Trim" value={pool.autotrim?.value || pool.autotrim} />
+          <DetailRow label="Deduplication" value={pool.dedup_table_quota || pool.dedup_table || 'Off'} />
           {pool.dedup_table_size > 0 && (
             <DetailRow label="Dedup Size" value={formatBytes(pool.dedup_table_size)} />
           )}
