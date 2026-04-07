@@ -1,96 +1,114 @@
-# TrueNAS WebUI - React Version
+# CLAUDE.md
 
-This is a React-based TrueNAS web interface built on the webdesktop framework. This project migrates the original Angular webui to a modern React implementation.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+# TrueNAS WebDesktop
+
+React-based TrueNAS web interface providing a full desktop environment. Migrates the original Angular webui to React.
 
 ## Project Overview
 
-**Branch**: `truenas`
-**Status**: Framework setup complete, migrating API layer
+- **Branch**: `truenas`
+- **Stack**: React 18 + Vite + TypeScript + Zustand
+- **Backend**: WebSocket with JSON-RPC 2.0 protocol (TrueNAS middleware)
 
-### Architecture
+## Development Commands
 
-- **UI Framework**: webdesktop (React 18 + Vite)
-  - Window management system
-  - Desktop environment (Desktop, Taskbar, Launcher)
-  - Modern UI components (glassmorphism, animations)
-  
-- **Backend Communication**: WebSocket (TrueNAS API)
-  - Ported from Angular webui's WebSocketHandlerService
-  - JSON-RPC 2.0 protocol
+```bash
+npm run dev        # Start dev server at http://localhost:5173
+npm run build      # Production build
+npm run test       # Run tests with vitest
+npm run lint       # ESLint check
+npm run lint:fix   # Auto-fix linting
+```
 
-### Directory Structure
+## Architecture
+
+### Desktop Environment
+The app renders a full desktop with:
+- **Desktop.tsx**: Main desktop component with wallpaper, context menu, app launcher
+- **WindowManager.tsx**: Manages window z-order, dragging, resizing
+- **Window.tsx**: Individual window chrome (titlebar, controls)
+- **Taskbar.tsx**: Bottom taskbar with open windows and system tray
+- **Launcher.tsx**: Application launcher/menu
+
+### Window State Management
+Zustand store at [src/state/windows-store.ts](src/state/windows-store.ts) manages:
+- Window positions, sizes, maximized/minimized states
+- Z-order for focus management
+- Persistence to localStorage
+
+### SDK Event System
+[sdk/desktop.ts](src/sdk/desktop.ts) provides a pub/sub system for desktop-wide events:
+- `openApp(id)` / `subscribeOpenApp(callback)` - App launch
+- `showDesktop()` / `subscribeShowDesktop(callback)` - Minimize all windows
+- `openLauncher()` / `subscribeLauncher(callback)` - Toggle launcher
+- `logout()` / `lockScreen()` - Session management
+
+### App Loading System
+Apps are defined in `apps/*/manifest.json` and loaded dynamically:
+- [apps/registry.ts](src/apps/registry.ts) scans manifests and creates app definitions
+- `listApps()` returns all registered apps
+- `loadApp(id)` dynamically imports and returns the app component
+
+Each app directory contains:
+```
+apps/<app-name>/
+├── manifest.json   # App metadata (name, title, entry, icon, capabilities)
+├── src/
+│   └── index.tsx   # App component
+```
+
+### TrueNAS WebSocket API
+[truenas/api/websocket-client.ts](src/truenas/api/websocket-client.ts) implements:
+- JSON-RPC 2.0 protocol over WebSocket
+- Exponential backoff reconnection
+- Heartbeat/keepalive mechanism
+- Event subscription system
+- Connection state management (Connected/Connecting/Reconnecting/Disconnected/Error)
+
+### TrueNAS API Service
+[truenas/api/index.ts](src/truenas/api/index.ts) wraps the WebSocket client with typed API methods:
+- `truenasApi.call(method, params)` - Make API call
+- `truenasApi.subscribe(event, callback)` - Subscribe to events
+- `truenasApi.init()` - Initialize connection
+
+### State Stores (Zustand)
+- `useWindowsStore` - Window management
+- `useAuthStore` - Authentication state
+- `useAlertStore` - Alert state
+- `usePoolManagerStore` - Storage pool management
+- `useDiskStore` - Disk management
+- `useToastStore` - Toast notifications
+
+### App Layouts
+Pre-built layouts in [apps/layouts/](src/apps/layouts/):
+- `SidebarLayout.tsx` - Left sidebar + main content (for 3-5 sub-items)
+- `TabsLayout.tsx` - Top tabs + content (for equal-priority sub-items)
+
+## Directory Structure
 
 ```
 src/
-├── components/      # UI framework components (Desktop, WindowManager, Taskbar, etc.)
-├── truenas/         # TrueNAS-specific code
-│   ├── api/          # WebSocket client and API service
-│   ├── helpers/       # Utilities (to be migrated)
-│   ├── interfaces/     # Type definitions (to be migrated)
-│   └── types/        # TypeScript types (to be migrated)
-├── apps/            # TrueNAS applications as desktop apps
-│   ├── system-settings/
-│   └── user-center/
-├── sdk/             # Desktop SDK (placeholder)
-└── state/           # State management (placeholder)
+├── components/           # Core desktop UI (Desktop, Window, Taskbar, Launcher)
+├── truenas/             # TrueNAS integration
+│   ├── api/             # WebSocket client and API service
+│   ├── services/        # API service methods (auth, pool, disk, dataset, alert)
+│   ├── stores/          # Zustand stores (auth, alerts, pool, disk, vdevs)
+│   ├── types/           # TypeScript type definitions
+│   └── utils/           # Utility functions (storage, dataset, topology)
+├── apps/                # Desktop applications
+│   ├── layouts/         # Reusable app layouts
+│   ├── registry.ts      # Dynamic app loader
+│   └── <app-name>/      # Individual apps
+├── sdk/                 # Desktop SDK (event pub/sub)
+├── state/               # Global state (windows-store, toast, desktop)
+├── hooks/               # Custom React hooks
+└── environments/       # Environment configuration
 ```
 
-## Development
+## Migration Notes
 
-### Start Dev Server
-```bash
-npm run dev
-```
-Access at http://localhost:5173
-
-### Build
-```bash
-npm run build
-```
-
-### Test
-```bash
-npm test
-```
-
-## Migration Progress
-
-### ✅ Completed
-- Create truenas branch
-- Remove original webdesktop business apps
-- Remove original REST API layer
-- Set up TrueNAS API structure
-- Create WebSocket client placeholder
-- Simplify App.tsx
-
-### 🚧 In Progress
-- Migrating TrueNAS WebSocket API service
-- Porting type definitions from webui
-
-### 📋 Planned
-- Port authentication system
-- Create Dashboard app
-- Port other TrueNAS modules (Storage, Settings, etc.)
-
-## TrueNAS API Usage
-
-```typescript
-import { truenasApi } from './truenas/api'
-
-// Initialize WebSocket client
-truenasApi.init()
-
-// Call API method
-const result = await truenasApi.call('system.info')
-
-// Subscribe to events
-const unsubscribe = truenasApi.subscribe('system.config.changed', (data) => {
-  console.log('Config changed:', data)
-})
-```
-
-## Notes
-
-- Original webui is in Angular at `../webui/`
-- This is a complete rewrite in React, not a direct translation
-- Focus on modern UI/UX with desktop-like interface
+- Original webui is Angular at `../webui/` - not a direct translation
+- Focus on desktop-like UX with window management
+- See `plan.md` for detailed app migration mapping (Storage, Datasets, Sharing, VMs, etc.)
