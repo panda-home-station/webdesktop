@@ -6,8 +6,8 @@ import { getAppContextMenu } from '../sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
 import { Monitor, LayoutGrid, User, Lock, LogOut, Bell } from 'lucide-react'
-import { useAuthStore } from '../truenas/stores/auth'
-import useAlertStore from '../truenas/stores/alert'
+import { useAuthStore } from '@truenas/stores/auth'
+import useAlertStore from '@truenas/stores/alert'
 
 type WinItem = {
   id: string

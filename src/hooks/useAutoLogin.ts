@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { useAuthStore } from '../truenas/stores/auth'
-import { authService } from '../truenas/services/auth'
-import { LoginResult } from '../truenas/types/login-result.enum'
+import { useAuthStore } from '@truenas/stores/auth'
+import { authService } from '@truenas/services/auth'
+import { LoginResult } from '@truenas/types/login-result.enum'
 import { persistentStorage } from '../state/persistence'
 
-export function useAutoLogin(isAuthenticated: boolean) {
+export function useAutoLogin(isAuthenticated: boolean, wsInitialized: boolean) {
   const hasAttemptedAutoLogin = useRef(false)
   const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false)
 
   useEffect(() => {
+    // Wait for WebSocket to be initialized
+    if (!wsInitialized) {
+      return
+    }
+
     // Don't auto-login if already authenticated or already attempted
     if (isAuthenticated || hasAttemptedAutoLogin.current) {
       return
@@ -54,7 +59,7 @@ export function useAutoLogin(isAuthenticated: boolean) {
     }).catch(() => {
       setIsAutoLoggingIn(false)
     })
-  }, [isAuthenticated])
+  }, [isAuthenticated, wsInitialized])
 
   return isAutoLoggingIn
 }

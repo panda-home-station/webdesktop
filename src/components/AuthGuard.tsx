@@ -4,7 +4,7 @@
  * Wraps authentication flow and manages login state
  */
 
-import { useAuthStore } from '../truenas/stores/auth'
+import { useAuthStore } from '@truenas/stores/auth'
 import { useAutoLogin } from '../hooks/useAutoLogin'
 import LoginContainer from './LoginContainer'
 import LoginLoading from './LoginLoading'
@@ -13,6 +13,7 @@ import { ErrorBoundary } from './ErrorBoundary'
 interface AuthGuardProps {
   children: React.ReactNode
   onUnauthenticated?: () => React.ReactNode
+  wsInitialized?: boolean
 }
 
 /**
@@ -23,9 +24,10 @@ interface AuthGuardProps {
 export default function AuthGuard({
   children,
   onUnauthenticated,
+  wsInitialized = true,
 }: AuthGuardProps) {
   const { isAuthenticated, user } = useAuthStore()
-  const isAutoLoggingIn = useAutoLogin(isAuthenticated)
+  const isAutoLoggingIn = useAutoLogin(isAuthenticated, wsInitialized)
 
   if (!isAuthenticated) {
     // Render custom unauthenticated UI or default login

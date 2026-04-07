@@ -15,7 +15,7 @@ import { useWallpaper } from './hooks/useWallpaper'
 
 export default function App() {
   // Initialize services
-  useWebSocketInit()
+  const wsInitialized = useWebSocketInit()
   useAlertInit()
 
   const wallpaper = useWallpaper()
@@ -24,7 +24,7 @@ export default function App() {
     <ErrorBoundary>
       <div className="fullScreen panda-app">
         <SmoothWallpaper src={wallpaper} />
-        <AuthGuard>
+        <AuthGuard wsInitialized={wsInitialized}>
           <DesktopShell />
         </AuthGuard>
       </div>

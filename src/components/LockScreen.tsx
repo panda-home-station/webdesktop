@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { User, LogOut, ArrowRight, Loader2 } from 'lucide-react'
-import { useAuthStore } from '../truenas/stores/auth'
+import { useAuthStore } from '@truenas/stores/auth'
 
 interface LockScreenProps {
   onUnlock: () => void

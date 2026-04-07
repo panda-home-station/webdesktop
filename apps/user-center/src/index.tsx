@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState, useContext } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useContext, useCallback } from 'react'
 import { Sidebar } from '@src/components/Sidebar'
-import { WindowContext } from '@src/sdk/window'
+import { WindowContext, useWindow } from '@src/sdk/window'
 import { useAuthStore } from '@src/truenas/stores/auth'
 import Icon from '@mdi/react'
 import {
@@ -29,23 +29,38 @@ type Item = 'profile' | 'wallpapers' | 'security' | 'change-password' | 'api-key
 const WALL_DIR = '/AppData/Wallpapers'
 
 export default function UserCenter() {
-  const win = useContext(WindowContext)
+  const win = useWindow()
   const [active, setActive] = useState<string>('profile')
   const { user } = useAuthStore()
 
   // Dialog states
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false)
 
+  // Track last title to prevent duplicate calls
+  const lastTitleRef = useRef('')
+  const lastActiveRef = useRef('')
+
+  // Update window title based on active tab
   useEffect(() => {
-    if (win && win.setTitle) {
-      const tabName = active === 'profile' ? '账户信息' :
-                       active === 'wallpapers' ? '主题与壁纸' :
-                       active === 'security' ? '安全设置' :
-                       active === 'change-password' ? '更改密码' :
-                       active === 'api-keys' ? '我的API Key' : ''
-      win.setTitle(`User Center - ${tabName}`)
+    // Only update if active tab (not window object) actually changed
+    if (lastActiveRef.current === active) {
+      return
     }
-  }, [active, win])
+    lastActiveRef.current = active
+
+    const tabName = active === 'profile' ? '账户信息' :
+                     active === 'wallpapers' ? '主题与壁纸' :
+                     active === 'security' ? '安全设置' :
+                     active === 'change-password' ? '更改密码' :
+                     active === 'api-keys' ? '我的API Key' : ''
+    const newTitle = `User Center - ${tabName}`
+
+    // Only update if title actually changed
+    if (lastTitleRef.current !== newTitle) {
+      lastTitleRef.current = newTitle
+      win.setTitle(newTitle)
+    }
+  }, [active])
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 

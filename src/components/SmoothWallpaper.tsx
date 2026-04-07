@@ -4,27 +4,25 @@ interface SmoothWallpaperProps {
   src?: string
 }
 
+const DEFAULT_WALLPAPER = '/wallpaper_default.webp'
+
 export default function SmoothWallpaper({ src }: SmoothWallpaperProps) {
-  const [cur, setCur] = useState<string | null>(null)
+  const [cur, setCur] = useState<string | null>(src || DEFAULT_WALLPAPER)
   const [next, setNext] = useState<string | null>(null)
   const [fadeIn, setFadeIn] = useState(false)
 
   useEffect(() => {
-    if (!src) {
-      setCur(null)
-      setNext(null)
-      setFadeIn(false)
-      return
-    }
-    if (cur === src || next === src) return
+    const wallpaperSrc = src || DEFAULT_WALLPAPER
+
+    if (cur === wallpaperSrc || next === wallpaperSrc) return
 
     const img = new Image()
-    img.src = src
+    img.src = wallpaperSrc
     img.decode?.().then(() => {
-      setNext(src)
+      setNext(wallpaperSrc)
       requestAnimationFrame(() => setFadeIn(true))
     }).catch(() => {
-      setNext(src)
+      setNext(wallpaperSrc)
       requestAnimationFrame(() => setFadeIn(true))
     })
   }, [src, cur, next])
@@ -38,14 +36,14 @@ export default function SmoothWallpaper({ src }: SmoothWallpaperProps) {
   }, [next])
 
   return (
-    <div className="wallpaperContainer">
+    <div className="wallpaperContainer" style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
       {cur && (
         <img
           src={cur}
           decoding="async"
           draggable={false}
           className="wallpaperImage"
-          style={{ opacity: 1 }}
+          style={{ opacity: 1, position: 'fixed', inset: 0, zIndex: 0 }}
           alt=""
         />
       )}
@@ -59,6 +57,9 @@ export default function SmoothWallpaper({ src }: SmoothWallpaperProps) {
           style={{
             opacity: fadeIn ? 1 : 0,
             transition: 'opacity 220ms ease',
+            position: 'fixed',
+            inset: 0,
+            zIndex: 0,
           }}
           alt=""
         />

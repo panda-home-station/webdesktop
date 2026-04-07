@@ -14,7 +14,7 @@ import {
 } from '@mdi/js'
 import { showDesktop, openLauncher } from '../sdk/desktop'
 import { mdiFolderOutline, mdiViewGridOutline, mdiMonitor } from '@mdi/js'
-import { useAuthStore } from '../truenas/stores/auth'
+import { useAuthStore } from '@truenas/stores/auth'
 
 function SmoothWallpaper({ src }: { src?: string }) {
   const [cur, setCur] = useState<string | null>(null)
@@ -55,7 +55,7 @@ function SmoothWallpaper({ src }: { src?: string }) {
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         inset: 0,
         zIndex: 0,
         pointerEvents: 'none',
@@ -68,7 +68,7 @@ function SmoothWallpaper({ src }: { src?: string }) {
           decoding="async"
           draggable={false}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             inset: 0,
             width: '100%',
             height: '100%',
@@ -88,7 +88,7 @@ function SmoothWallpaper({ src }: { src?: string }) {
           draggable={false}
           onTransitionEnd={onTransitionEnd}
           style={{
-            position: 'absolute',
+            position: 'fixed',
             inset: 0,
             width: '100%',
             height: '100%',

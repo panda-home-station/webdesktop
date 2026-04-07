@@ -6,11 +6,12 @@
  */
 
 import React, { useState } from 'react'
-import { useAuthStore } from '../../truenas/stores/auth'
+import { useAuthStore } from '@truenas/stores/auth'
 import Desktop from './Desktop'
 import LockScreen from './LockScreen'
 import SmoothWallpaper from './SmoothWallpaper'
-import { useWallpaper, setWallpaper } from '../hooks/useWallpaper'
+import { useWallpaper } from '../hooks/useWallpaper'
+import { setWallpaper } from '../state/desktop'
 import { ErrorBoundary } from './ErrorBoundary'
 import { lockScreen, showDesktop as showDesktopFn, openLauncher as openLauncherFn, openApp as openAppFn } from '../sdk/desktop'
 
@@ -42,7 +43,6 @@ export default function DesktopShell({ children }: DesktopShellProps) {
   const handleLogout = async () => {
     const authStore = useAuthStore.getState()
     await authStore.logout()
-    window.location.reload()
   }
 
   /**

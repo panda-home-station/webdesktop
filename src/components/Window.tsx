@@ -59,6 +59,17 @@ export default function Window({
 }: WinProps) {
   if (minimized) return null
 
+  // Validate numeric values to prevent NaN
+  const safeX = Number.isFinite(x) ? x : 60
+  const safeY = Number.isFinite(y) ? y : 60
+  const safeW = Number.isFinite(w) ? w : 600
+  const safeH = Number.isFinite(h) ? h : 400
+
+  // Log invalid values for debugging
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) {
+    console.warn('Invalid window dimensions:', { id, x, y, w, h })
+  }
+
   const winRef = useRef<HTMLDivElement>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
@@ -82,8 +93,8 @@ export default function Window({
     
     let dragStartX = e.clientX
     let dragStartY = e.clientY
-    let dragInitX = x
-    let dragInitY = y
+    let dragInitX = safeX
+    let dragInitY = safeY
     let isDraggingMaximized = maximized
     let hasRestored = false
 
@@ -96,7 +107,7 @@ export default function Window({
     if (winRef.current) {
       // 仅对当前拖拽的窗口禁用昂贵的特效，以保证其移动的绝对流畅
       winRef.current.style.boxShadow = 'none'
-      winRef.current.style.willChange = 'transform, width, height'
+      winRef.current.style.willChange = 'transform'
     }
 
     setDragging(true)
@@ -107,22 +118,25 @@ export default function Window({
       
       if (isDraggingMaximized && !hasRestored) {
         if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-           const rect = restoreRect || { w: 800, h: 600, x: 100, y: 100 }
-           const currentW = w
+           const rect = restoreRect || { w: Math.min(safeW, 800), h: Math.min(safeH, 600), x: safeX, y: safeY }
+           const currentW = safeW || 800
            const offsetX = dragStartX - dragInitX
-           const percent = offsetX / currentW
-           const newW = rect.w
-           const newH = rect.h
+           // Prevent division by zero
+           const percent = currentW > 0 ? offsetX / currentW : 0
+           const newW = Number.isFinite(rect.w) ? rect.w : Math.min(safeW, 800)
+           const newH = Number.isFinite(rect.h) ? rect.h : Math.min(safeH, 600)
+           const baseX = Number.isFinite(rect.x) ? rect.x : safeX
+           const baseY = Number.isFinite(rect.y) ? rect.y : safeY
            const newX = ev.clientX - (newW * percent)
            const newY = ev.clientY - (dragStartY - dragInitY)
 
            if (onDragFromMaximized) {
              onDragFromMaximized(id, newX, newY, newW, newH)
            }
-           
+
            hasRestored = true
            isDraggingMaximized = false
-           
+
            // Reset drag base
            dragStartX = ev.clientX
            dragStartY = ev.clientY
@@ -130,7 +144,7 @@ export default function Window({
            dragInitY = newY
            lastDx = 0
            lastDy = 0
-           
+
            if (winRef.current) {
              // Force update styles to match restored state immediately
              winRef.current.style.width = `${newW}px`
@@ -147,7 +161,7 @@ export default function Window({
       // Calculate boundaries
       const W = window.innerWidth
       const H = window.innerHeight
-      const currentW = hasRestored ? (restoreRect?.w || 800) : w
+      const currentW = hasRestored ? (restoreRect?.w || 800) : safeW
       
       const rawX = dragInitX + dx
       const rawY = dragInitY + dy
@@ -194,14 +208,14 @@ export default function Window({
         // Restore styles if we didn't actually drag
         if (winRef.current) {
            winRef.current.style.boxShadow = 'var(--win-shadow)'
-           winRef.current.style.willChange = 'transform'
+           winRef.current.style.willChange = 'auto'
         }
         return
       }
 
       const W = window.innerWidth
       const H = window.innerHeight
-      const currentW = hasRestored ? (restoreRect?.w || 800) : w
+      const currentW = hasRestored ? (restoreRect?.w || 800) : safeW
 
       const rawX = dragInitX + lastDx
       const rawY = dragInitY + lastDy
@@ -221,10 +235,10 @@ export default function Window({
         
         // Restore styles
         winRef.current.style.boxShadow = 'var(--win-shadow)'
-        winRef.current.style.willChange = 'transform'
+        winRef.current.style.willChange = 'auto'
       }
       
-      if (nx !== x || ny !== y || hasRestored) {
+      if (nx !== safeX || ny !== safeY || hasRestored) {
         onMove(id, nx, ny)
       }
     }
@@ -239,10 +253,10 @@ export default function Window({
     if (maximized) return
     const startX = e.clientX
     const startY = e.clientY
-    const initW = w
-    const initH = h
-    const initX = x
-    const initY = y
+    const initW = safeW
+    const initH = safeH
+    const initX = safeX
+    const initY = safeY
 
     const move = (ev: MouseEvent) => {
       const dx = ev.clientX - startX
@@ -338,10 +352,10 @@ export default function Window({
       ref={winRef}
       style={{
         position: 'absolute',
-        top: maximized ? 0 : y,
-        left: maximized ? x : x, // x is already calculated for maximized in WindowManager
-        width: maximized ? 'calc(100% - ' + x + 'px)' : w, 
-        height: maximized ? '100%' : h,
+        top: maximized ? 0 : safeY,
+        left: maximized ? safeX : safeX,
+        width: maximized ? 'calc(100% - ' + safeX + 'px)' : safeW,
+        height: maximized ? '100%' : safeH,
         display: 'flex',
         flexDirection: 'column',
         background: maximized ? 'var(--win-bg)' : 'transparent',

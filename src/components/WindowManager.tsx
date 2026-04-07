@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
@@ -27,7 +27,7 @@ export default function WindowManager() {
     changeWindowTitle,
     toggleLauncher,
     toggleQuickAgent,
-.showDesktop: _showDesktop,
+    showDesktop: _showDesktop,
     getApp,
     getAppMinDimensions,
   } = useWindowSystem({
@@ -58,7 +58,6 @@ export default function WindowManager() {
     }
 
     // Use AppLoader for async loading
-    const { openWindow } = useWindowSystem()
     const content = Comp ? <Comp /> : <AppLoader appId={id} />
 
     openWindow({
@@ -74,7 +73,6 @@ export default function WindowManager() {
   }
 
   const handleOpenFullApp = (messages: any[]) => {
-    const { openWindow } = useWindowSystem()
     openWindow({
       appId: 'agent',
       args: { initialMessages: messages },
@@ -162,7 +160,6 @@ export default function WindowManager() {
         onMinimize={minimizeWindow}
         onOpenLauncher={toggleLauncher}
         onOpenApp={(id, args) => {
-          const { openWindow } = useWindowSystem()
           openWindow({ appId: id, args })
         }}
         isLauncherOpen={showLauncher}
@@ -186,21 +183,22 @@ export default function WindowManager() {
 function AppLoader({ appId, args, onLoaded }: { appId: string; args?: any; onLoaded?: () => void }) {
   const [Comp, setComp] = useState<React.ComponentType<any> | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const { loadApp } = import('../apps/registry')
 
   useEffect(() => {
     let mounted = true
-    loadApp(appId)
-      .then((C) => {
-        if (mounted) {
-          setComp(() => C)
-          onLoaded?.()
-        }
-      })
-      .catch((err) => {
-        console.error(`Failed to load app ${appId}:`, err)
-        if (mounted) setError(err.message)
-      })
+    import('../apps/registry').then(({ loadApp }) => {
+      loadApp(appId)
+        .then((C) => {
+          if (mounted) {
+            setComp(() => C)
+            onLoaded?.()
+          }
+        })
+        .catch((err) => {
+          console.error(`Failed to load app ${appId}:`, err)
+          if (mounted) setError(err.message)
+        })
+    })
     return () => { mounted = false }
   }, [appId])
 

@@ -19,25 +19,29 @@
 .panda-auth {
   align-items: center;
   justify-content: center;
+  background: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 /* Wallpaper */
 .wallpaperContainer {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+  pointer-events: none !important;
   transform: translateZ(0);
 }
 
 .wallpaperImage {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
+  position: fixed !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  object-position: center !important;
   transform: translateZ(0);
+  z-index: 0 !important;
 }
 
 /* Loading Spinner */
@@ -59,9 +63,10 @@
 
 .loginCard {
   width: 380px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  position: relative;
 }
 
 .loadingCard {

@@ -19,7 +19,7 @@
 }
 
 .panda-desktop {
-  background: var(--desktop-bg);
+  background: transparent;
   color: var(--text);
   position: relative;
   overflow: hidden;

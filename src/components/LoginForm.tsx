@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
-import { authService } from '../../truenas/services/auth'
-import { useAuthStore } from '../../truenas/stores/auth'
-import { LoginResult } from '../truenas/types/login-result.enum'
-import { LoginExResponseType, LoginRedirectResponse } from '../truenas/types/auth.interface'
+import { authService } from '@truenas/services/auth'
+import { useAuthStore } from '@truenas/stores/auth'
+import { LoginResult } from '@truenas/types/login-result.enum'
+import { LoginExResponseType, LoginRedirectResponse } from '@truenas/types/auth.interface'
 
 type Props = {
   onSuccess?: () => void

@@ -172,7 +172,6 @@ class StorageManager {
   /**
    * Get all keys with this prefix
    */
- */
   keys(): string[] {
     const result: string[] = []
     for (let i = 0; i < this.storage.length; i++) {

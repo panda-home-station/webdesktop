@@ -105,7 +105,7 @@ export function Toast({ id, type, title, description, duration, onClose, action 
         borderRadius: 12,
         boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
         minWidth: 320,
-        maxWidth maxWidth: 480,
+        maxWidth: 480,
         animation: 'toast-slide-in 0.3s ease-out',
       }}
     >
@@ -168,7 +168,7 @@ export function Toast({ id, type, title, description, duration, onClose, action 
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'transparent'
-'            }}
+            }}
           >
             {action.label}
           </button>
@@ -189,7 +189,7 @@ export function Toast({ id, type, title, description, duration, onClose, action 
           transition: 'background 0.2s',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(backs, backs, backs, 0.1)'
+          e.currentTarget.style.background = 'rgba(0,0,0,0.1)'
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.background = 'transparent'

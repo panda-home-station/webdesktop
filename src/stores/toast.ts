@@ -59,7 +59,7 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 
     // Add toast
     set((prev) => {
-      const newToasts = [id, ...toast, { id }]
+      const newToasts = [{ id, ...toast }, ...prev.toasts]
 
       // Remove oldest if exceeding max
       if (newToasts.length > state.maxToasts) {
