@@ -36,7 +36,17 @@ export default function SmoothWallpaper({ src }: SmoothWallpaperProps) {
   }, [next])
 
   return (
-    <div className="wallpaperContainer" style={{ position: 'fixed', inset: 0, zIndex: 0 }}>
+    <div
+      className="wallpaperContainer"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 0,
+        background: `var(--desktop-bg, linear-gradient(135deg, #eef3ff 0%, #e6edff 100%))`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
       {cur && (
         <img
           src={cur}
