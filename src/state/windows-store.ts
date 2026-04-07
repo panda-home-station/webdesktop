@@ -58,10 +58,14 @@ const clampWindow = (window: WindowState, screenW: number, screenH: number, minW
   const dockGap = 0
   const statusH = 0
 
+  // Ensure screen dimensions are valid numbers
+  const safeScreenW = Number.isFinite(screenW) ? screenW : 1920
+  const safeScreenH = Number.isFinite(screenH) ? screenH : 1080
+
   if (window.maximized) {
     const x = dockLeft + dockWidth + dockGap
-    const wmax = Math.max(minW, screenW - x)
-    const hmax = screenH - statusH
+    const wmax = Math.max(minW, safeScreenW - x)
+    const hmax = safeScreenH - statusH
     if (window.w !== wmax || window.h !== hmax || window.x !== x || window.y !== 0) {
       return { ...window, w: wmax, h: hmax, x, y: 0 }
     }
@@ -75,16 +79,16 @@ const clampWindow = (window: WindowState, screenW: number, screenH: number, minW
   const currentY = window.y
 
   // Force shrink if larger than viewport, but not smaller than minW/minH
-  if (currentW > screenW) currentW = Math.max(minW, screenW)
-  if (currentH > screenH) currentH = Math.max(minH, screenH)
+  if (currentW > safeScreenW) currentW = Math.max(minW, safeScreenW)
+  if (currentH > safeScreenH) currentH = Math.max(minH, safeScreenH)
 
   // Allow dragging out of bounds but with limits
   // Left/Right: keep 30px visible
   // Top: >= -1 (allow covering 1px border/gap)
   const limitMinX = 30 - currentW
-  const limitMaxX = screenW - 30
+  const limitMaxX = safeScreenW - 30
   const limitMinY = -1
-  const limitMaxY = screenH - 30 - statusH
+  const limitMaxY = safeScreenH - 30 - statusH
 
   const nx = Math.max(limitMinX, Math.min(currentX, limitMaxX))
   const ny = Math.max(limitMinY, Math.min(currentY, limitMaxY))
@@ -104,25 +108,27 @@ export const useWindowsStore = create<WindowsStore>()(
       maxRestoredWindow: null,
       animating: false,
 
-      addWindow: (window) => {
-        const id = window.id || `${window.appId}-${Date.now()}`
+      addWindow: (winData) => {
+        const id = winData.id || `${winData.appId}-${Date.now()}`
         const newWindow: WindowState = {
           id,
-          title: window.title,
-          appId: window.appId,
-          iconUrl: window.iconUrl,
-          x: window.x ?? 60,
-          y: window.y ?? 60,
-          w: window.w ?? 600,
-          h: window.h ?? 400,
-          minimized: window.minimized ?? false,
-          maximized: window.maximized ?? false,
-          prev: window.prev,
-          content: window.content,
+          title: winData.title,
+          appId: winData.appId,
+          iconUrl: winData.iconUrl,
+          x: winData.x ?? 60,
+          y: winData.y ?? 60,
+          w: winData.w ?? 600,
+          h: winData.h ?? 400,
+          minimized: winData.minimized ?? false,
+          maximized: winData.maximized ?? false,
+          prev: winData.prev,
+          content: winData.content,
         }
 
         // Clamp to screen bounds
-        const clamped = clampWindow(newWindow, window.innerWidth, window.innerHeight, 300, 200)
+        const screenW = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1920
+        const screenH = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 1080
+        const clamped = clampWindow(newWindow, screenW, screenH, 300, 200)
 
         set((state) => ({
           windows: [...state.windows, clamped],
@@ -162,25 +168,25 @@ export const useWindowsStore = create<WindowsStore>()(
 
       maximizeWindow: (id) => {
         const state = get()
-        const window = state.windows.find((w) => w.id === id)
-        if (!window) return
+        const win = state.windows.find((w) => w.id === id)
+        if (!win) return
 
         const dockLeft = 12
         const dockWidth = 60
         const dockGap = 0
-        const H = window.innerHeight
-        const W = window.innerWidth
+        const H = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 1080
+        const W = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1920
 
-        if (!window.maximized) {
+        if (!win.maximized) {
           // Maximize
-          const prev = { x: window.x, y: window.y, w: window.w, h: window.h }
+          const prev = { x: win.x, y: win.y, w: win.w, h: win.h }
           const x = dockLeft + dockWidth + dockGap
           const wmax = Math.max(300, W - x)
           get().updateWindow(id, { prev, x, y: 0, w: wmax, h: H, maximized: true })
         } else {
           // Restore
-          const p = window.prev ?? { x: 60, y: 60, w: 600, h: 400 }
-          const restored = clampWindow({ ...window, x: p.x, y: p.y, w: p.w, h: p.h }, W, H, 300, 200)
+          const p = win.prev ?? { x: 60, y: 60, w: 600, h: 400 }
+          const restored = clampWindow({ ...win, x: p.x, y: p.y, w: p.w, h: p.h }, W, H, 300, 200)
           get().updateWindow(id, { ...restored, maximized: false, prev: undefined })
         }
 
@@ -189,22 +195,26 @@ export const useWindowsStore = create<WindowsStore>()(
 
       moveWindow: (id, x, y) => {
         const state = get()
-        const window = state.windows.find((w) => w.id === id)
-        if (!window) return
+        const win = state.windows.find((w) => w.id === id)
+        if (!win) return
 
-        const clamped = clampWindow({ ...window, x, y }, window.innerWidth, window.innerHeight, 300, 200)
+        const screenW = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1920
+        const screenH = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 1080
+        const clamped = clampWindow({ ...win, x, y }, screenW, screenH, 300, 200)
         get().updateWindow(id, { x: clamped.x, y: clamped.y })
       },
 
       resizeWindow: (id, w, h, x, y) => {
         const state = get()
-        const window = state.windows.find((win) => win.id === id)
-        if (!window) return
+        const win = state.windows.find((winItem) => winItem.id === id)
+        if (!win) return
 
+        const screenW = typeof globalThis.window !== 'undefined' ? globalThis.window.innerWidth : 1920
+        const screenH = typeof globalThis.window !== 'undefined' ? globalThis.window.innerHeight : 1080
         const clamped = clampWindow(
-          { ...window, w, h, x: x ?? window.x, y: y ?? window.y },
-          window.innerWidth,
-          window.innerHeight,
+          { ...win, w, h, x: x ?? win.x, y: y ?? win.y },
+          screenW,
+          screenH,
           300,
           200
         )
@@ -264,6 +274,7 @@ export const useWindowsStore = create<WindowsStore>()(
           h: w.h,
           minimized: w.minimized,
           maximized: w.maximized,
+          prev: w.prev, // Also save prev to restore maximized windows correctly
         })),
         zOrder: state.zOrder,
       }),
