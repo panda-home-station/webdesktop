@@ -8,7 +8,7 @@
 import { create } from 'zustand'
 import { Alert } from '../types/alert.interface'
 import { AlertLevel } from '../types/alert.enum'
-import { truenasApi } from '../api'
+import { truenasApi } from '../../truenas/api'
 
 export interface AlertsState {
   alerts: Alert[]

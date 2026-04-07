@@ -1,5 +1,5 @@
 import React from 'react'
-import { SidebarLayout, SidebarItem } from '../../../src/apps/layouts/SidebarLayout'
+import { SidebarLayout, SidebarItem } from '@desktop/layouts/SidebarLayout'
 
 export default function System() {
   const renderComingSoon = (title: string, description?: string) => (

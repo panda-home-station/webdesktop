@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState, useContext, useCallback } from 'react'
-import { Sidebar } from '@src/components/Sidebar'
-import { WindowContext, useWindow } from '@src/sdk/window'
-import { useAuthStore } from '@src/truenas/stores/auth'
+import { Sidebar } from '@desktop/components/Sidebar'
+import { WindowContext, useWindow } from '@shared/sdk/window'
+import { useAuthStore } from '@truenas/stores/auth'
 import Icon from '@mdi/react'
 import {
   mdiAccountCircleOutline,
@@ -10,7 +10,7 @@ import {
   mdiKeyVariant,
   mdiLockOutline
 } from '@mdi/js'
-import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '@src/state/desktop'
+import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpaper } from '@desktop/state/desktop'
 import { ChangePasswordDialog } from './components/ChangePasswordDialog'
 import { UserApiKeys } from './components/UserApiKeys'
 

@@ -1,5 +1,5 @@
 {
-  "name": "apps",
+  "name": "appstore",
   "title": "应用",
   "entry": "./src/App.tsx",
   "icons": {

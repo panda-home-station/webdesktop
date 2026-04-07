@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { api } from '../api/client'
-import { clearPersistState } from '../state/windows'
+import { clearPersistState } from './state/windows-store'
 
 type Props = {
   onDone?: () => void

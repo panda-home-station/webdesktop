@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import Icon from '@mdi/react'
 import { mdiAbTesting } from '@mdi/js'
-import { getAppContextMenu, setDragging, subscribeDragging } from '../sdk/desktop'
-import { WindowContext } from '../sdk/window'
+import { getAppContextMenu, setDragging, subscribeDragging } from '../../shared/sdk/desktop'
+import { WindowContext } from '../../shared/sdk/window'
 
 export interface WinProps {
   id: string

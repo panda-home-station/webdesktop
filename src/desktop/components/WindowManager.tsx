@@ -3,8 +3,8 @@ import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
 import { QuickAgentDialog } from './QuickAgentDialog'
-import { setMaximizedWindow } from '../sdk/desktop'
-import { useWindowSystem } from '../hooks/useWindowSystem'
+import { setMaximizedWindow } from '../../shared/sdk/desktop'
+import { useWindowSystem } from '../../shared/hooks/useWindowSystem'
 import { Loader2 } from 'lucide-react'
 
 export default function WindowManager() {
@@ -187,7 +187,7 @@ function AppLoader({ appId, args, onLoaded }: { appId: string; args?: any; onLoa
 
   useEffect(() => {
     let mounted = true
-    import('../apps/registry').then(({ loadApp }) => {
+    import('../../framework/registry').then(({ loadApp }) => {
       loadApp(appId)
         .then((C) => {
           if (mounted) {

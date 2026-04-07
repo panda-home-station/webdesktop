@@ -1,5 +1,5 @@
 import React from 'react'
-import { TabsLayout, TabItem } from '../../../src/apps/layouts/TabsLayout'
+import { TabsLayout, TabItem } from '@desktop/layouts/TabsLayout'
 
 export default function VirtualMachines() {
   const renderComingSoon = (title: string, description?: string) => (

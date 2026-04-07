@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import WindowManager from './WindowManager'
 import { getWallpaper, setWallpaper } from '../state/desktop'
-import { openApp } from '../sdk/desktop'
-import { listApps } from '../apps/registry'
+import { openApp } from '../../shared/sdk/desktop'
+import { listApps } from '../../framework/registry'
 import Icon from '@mdi/react'
 import {
   mdiRefresh,
@@ -11,7 +11,7 @@ import {
   mdiAccountCircleOutline,
   mdiChevronRight,
 } from '@mdi/js'
-import { showDesktop, openLauncher } from '../sdk/desktop'
+import { showDesktop, openLauncher } from '../../shared/sdk/desktop'
 import { mdiFolderOutline, mdiViewGridOutline, mdiMonitor } from '@mdi/js'
 
 function SmoothWallpaper({ src }: { src?: string }) {

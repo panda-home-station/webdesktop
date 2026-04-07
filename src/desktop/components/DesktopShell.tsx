@@ -10,10 +10,10 @@ import { useAuthStore } from '@truenas/stores/auth'
 import Desktop from './Desktop'
 import LockScreen from './LockScreen'
 import SmoothWallpaper from './SmoothWallpaper'
-import { useWallpaper } from '../hooks/useWallpaper'
+import { useWallpaper } from '../../shared/hooks/useWallpaper'
 import { setWallpaper } from '../state/desktop'
 import { ErrorBoundary } from './ErrorBoundary'
-import { lockScreen, showDesktop as showDesktopFn, openLauncher as openLauncherFn, openApp as openAppFn } from '../sdk/desktop'
+import { lockScreen, showDesktop as showDesktopFn, openLauncher as openLauncherFn, openApp as openAppFn } from '../../shared/sdk/desktop'
 
 interface DesktopShellProps {
   children?: React.ReactNode

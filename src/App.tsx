@@ -5,14 +5,14 @@
  * Orchestrates authentication and desktop environments
  */
 
-import { ErrorBoundary } from './components/ErrorBoundary'
-import AuthGuard from './components/AuthGuard'
-import DesktopShell from './components/DesktopShell'
-import { useWebSocketInit } from './hooks/useWebSocketInit'
-import { useAlertInit } from './hooks/useAlertInit'
-import SmoothWallpaper from './components/SmoothWallpaper'
-import { useWallpaper } from './hooks/useWallpaper'
-import AppLoading from './components/AppLoading'
+import { ErrorBoundary } from './desktop/components/ErrorBoundary'
+import AuthGuard from './desktop/components/AuthGuard'
+import DesktopShell from './desktop/components/DesktopShell'
+import { useWebSocketInit } from './shared/hooks/useWebSocketInit'
+import { useAlertInit } from './shared/hooks/useAlertInit'
+import SmoothWallpaper from './desktop/components/SmoothWallpaper'
+import { useWallpaper } from './shared/hooks/useWallpaper'
+import AppLoading from './desktop/components/AppLoading'
 
 export default function App() {
   // Initialize services

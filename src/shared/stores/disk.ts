@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { diskService } from '../services/disk';
+import { diskService } from '../../truenas/services/disk';
 import { StorageDashboardDisk } from '../types/disk-types';
 
 interface DiskState {

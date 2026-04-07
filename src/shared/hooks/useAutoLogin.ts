@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '@truenas/stores/auth'
 import { authService } from '@truenas/services/auth'
 import { LoginResult } from '@truenas/types/login-result.enum'
-import { persistentStorage } from '../state/persistence'
+import { persistentStorage } from '../../desktop/state/persistence'
 
 export function useAutoLogin(isAuthenticated: boolean, wsInitialized: boolean) {
   const hasAttemptedAutoLogin = useRef(false)

@@ -1,13 +1,13 @@
 import { truenasApi } from '../api';
-import { useAuthStore } from '../stores/auth';
-import { LoginResult } from '../types/login-result.enum';
+import { useAuthStore } from '../../shared/stores/auth';
+import { LoginResult } from '../../shared/types/login-result.enum';
 import {
   LoginExMechanism,
   LoginExResponse,
   LoginExResponseType,
   LoggedInUser,
-} from '../types/auth.interface';
-import { persistentStorage, sessionStorage as phsSessionStorage } from '../../state/persistence';
+} from '../../shared/types/auth.interface';
+import { persistentStorage, sessionStorage as phsSessionStorage } from '../../desktop/state/persistence';
 
 export interface LoginResultData {
   loginResult: LoginResult;

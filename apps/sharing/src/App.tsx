@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { TabsLayout, TabItem } from '../../../src/apps/layouts/TabsLayout'
+import { TabsLayout, TabItem } from '@desktop/layouts/TabsLayout'
 
 interface Share {
   name: string

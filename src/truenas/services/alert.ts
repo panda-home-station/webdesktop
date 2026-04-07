@@ -6,8 +6,8 @@
  */
 
 import { truenasApi } from '../api'
-import { Alert } from '../types/alert.interface'
-import useAlertStore from '../stores/alert'
+import { Alert } from '../../shared/types/alert.interface'
+import useAlertStore from '../../shared/stores/alert'
 
 export class AlertService {
   private initialized = false

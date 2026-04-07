@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState, memo } from 'react'
-import { listApps } from '../apps/registry'
-import { requestPermission } from '../sdk/permissions'
-import { setAnimating, setLauncherOpen } from '../sdk/desktop'
+import { listApps } from '../../framework/registry'
+import { requestPermission } from '../../shared/sdk/permissions'
+import { setAnimating, setLauncherOpen } from '../../shared/sdk/desktop'
 
 type Props = {
   onOpen: (id: string, title: string, Comp?: React.ComponentType<any>, iconUrl?: string) => void

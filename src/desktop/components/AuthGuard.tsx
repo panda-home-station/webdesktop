@@ -5,7 +5,7 @@
  */
 
 import { useAuthStore } from '@truenas/stores/auth'
-import { useAutoLogin } from '../hooks/useAutoLogin'
+import { useAutoLogin } from '../../shared/hooks/useAutoLogin'
 import LoginContainer from './LoginContainer'
 import LoginLoading from './LoginLoading'
 import { ErrorBoundary } from './ErrorBoundary'

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { SidebarLayout, SidebarItem } from '../../../src/apps/layouts/SidebarLayout'
+import { SidebarLayout, SidebarItem } from '@desktop/layouts/SidebarLayout'
 
 interface Dataset {
   name: string

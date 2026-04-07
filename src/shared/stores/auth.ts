@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { LoggedInUser } from '../types/auth.interface';
-import { truenasApi } from '../api';
-import { createTypedStore, sessionStorage as phsSessionStorage } from '../../state/persistence';
+import { truenasApi } from '../../truenas/api';
+import { createTypedStore, sessionStorage as phsSessionStorage } from '../../desktop/state/persistence';
 
 // Create typed stores for persistent data
 const tokenStore = createTypedStore<string | null>('token', null);

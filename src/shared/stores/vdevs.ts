@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { poolService } from '../services/pool';
+import { poolService } from '../../truenas/services/pool';
 import { VDevItem, TopologyDisk } from '../types/storage-types';
 import { VDevType } from '../types/vdev-enum-types';
 

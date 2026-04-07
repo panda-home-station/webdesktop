@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react'
-import { Sidebar } from '@src/components/Sidebar'
-import { WindowContext } from '@src/sdk/window'
-import { getWallpaper, setWallpaper } from '@src/state/desktop'
+import { Sidebar } from '@desktop/components/Sidebar'
+import { WindowContext } from '@shared/sdk/window'
+import { getWallpaper, setWallpaper } from '@desktop/state/desktop'
 
 // Mock API for now - will be replaced with TrueNAS API
 const api = {

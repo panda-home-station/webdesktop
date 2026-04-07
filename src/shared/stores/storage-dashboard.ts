@@ -4,9 +4,9 @@
  */
 
 import { create } from 'zustand';
-import { poolService } from '../services/pool';
-import { diskService } from '../services/disk';
-import { datasetService } from '../services/dataset';
+import { poolService } from '../../truenas/services/pool';
+import { diskService } from '../../truenas/services/disk';
+import { datasetService } from '../../truenas/services/dataset';
 import { Pool } from '../types/pool-types';
 import { StorageDashboardDisk } from '../types/disk-types';
 import { Dataset } from '../types/dataset-types';

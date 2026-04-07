@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { getWallpaper, setWallpaper } from '../state/desktop'
+import { getWallpaper, setWallpaper } from '../../desktop/state/desktop'
 
 type WallpaperEvent = {
   detail?: {
@@ -47,7 +47,7 @@ export function useWallpaperActions() {
       setWallpaper(path)
     },
     resetWallpaper: () => {
-      const { resetWallpaper } = import('../state/desktop')
+      const { resetWallpaper } = import('../../desktop/state/desktop')
       resetWallpaper()
     },
   }

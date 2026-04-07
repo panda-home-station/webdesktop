@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Modal, ModalProps } from '@src/components/Modal'
+import { Modal, ModalProps } from '@desktop/components/Modal'
 
 interface KeyCreatedDialogProps extends Omit<ModalProps, 'children'> {
   apiKey: string
