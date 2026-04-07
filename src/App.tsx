@@ -21,8 +21,6 @@ export default function App() {
 
   const wallpaper = useWallpaper()
 
-  console.log('[Debug] App: rendering with wsInitialized =', wsInitialized)
-
   return (
     <ErrorBoundary>
       <div className="fullScreen panda-app">
