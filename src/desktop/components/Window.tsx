@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import Icon from '@mdi/react'
 import { mdiAbTesting } from '@mdi/js'
-import { getAppContextMenu, setDragging, subscribeDragging } from '../../shared/sdk/desktop'
 import { WindowContext } from '../../shared/sdk/window'
 
 export interface WinProps {
@@ -110,8 +109,6 @@ export default function Window({
       winRef.current.style.willChange = 'transform'
     }
 
-    setDragging(true)
-
     const move = (ev: MouseEvent) => {
       const dx = ev.clientX - dragStartX
       const dy = ev.clientY - dragStartY
@@ -198,7 +195,6 @@ export default function Window({
     const up = () => {
       document.removeEventListener('mousemove', move)
       document.removeEventListener('mouseup', up)
-      setDragging(false)
       if (rafId) {
         cancelAnimationFrame(rafId)
         rafId = null
@@ -391,10 +387,6 @@ export default function Window({
         onContextMenu={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          const items = getAppContextMenu(appId, { x: e.clientX, y: e.clientY, target: e.currentTarget })
-          if (items && items.length > 0) {
-            setMenu({ x: e.clientX, y: e.clientY, items })
-          }
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
@@ -448,10 +440,6 @@ export default function Window({
         onContextMenu={(e) => {
           e.preventDefault()
           e.stopPropagation()
-          const items = getAppContextMenu(appId, { x: e.clientX, y: e.clientY, target: e.currentTarget })
-          if (items && items.length > 0) {
-            setMenu({ x: e.clientX, y: e.clientY, items })
-          }
         }}
         style={{
         flex: 1,

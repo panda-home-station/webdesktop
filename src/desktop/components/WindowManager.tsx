@@ -3,7 +3,6 @@ import Launcher from './Launcher'
 import Taskbar from './Taskbar'
 import Window from './Window'
 import { QuickAgentDialog } from './QuickAgentDialog'
-import { setMaximizedWindow } from '../../shared/sdk/desktop'
 import { useWindowSystem } from '../hooks/useWindowSystem'
 import { Loader2 } from 'lucide-react'
 
@@ -79,16 +78,6 @@ export default function WindowManager() {
       args: { initialMessages: messages },
     })
   }
-
-  // Update maximized window in SDK
-  React.useEffect(() => {
-    const maxWin = windows.find((w) => w.maximized && w.id === zOrder[zOrder.length - 1])
-    if (maxWin) {
-      setMaximizedWindow({ id: maxWin.id, title: maxWin.title })
-    } else {
-      setMaximizedWindow(null)
-    }
-  }, [windows, zOrder])
 
   return (
     <div style={{ position: 'relative', flex: 1 }}>

@@ -1,8 +1,8 @@
 /**
  * Desktop SDK
  *
- * Placeholder for desktop functionality
- * Will be implemented when migrating specific features
+ * Event-based pub/sub system for desktop operations.
+ * Provides cross-component communication for window/app management.
  */
 
 const logoutCallbacks: Array<() => void> = []
@@ -11,11 +11,6 @@ const openAppCallbacks: Array<(id: string, args?: any) => void> = []
 const winActionCallbacks: Array<(id: string, action: string) => void> = []
 const showDesktopCallbacks: Array<() => void> = []
 const launcherCallbacks: Array<() => void> = []
-
-let dragging = false
-let maximizedWindow: { id: string; title: string } | null = null
-let animating = false
-let launcherOpen = false
 
 export function subscribeLogout(callback: () => void): () => void {
   logoutCallbacks.push(callback)
@@ -83,34 +78,4 @@ export function subscribeLauncher(callback: () => void): () => void {
 
 export function openLauncher() {
   launcherCallbacks.forEach(cb => cb())
-}
-
-export function getFileTasks() {
-  return []
-}
-
-export function subscribeDragging(callback: (isDragging: boolean) => void): () => void {
-  // TODO: Implement drag subscription
-  return () => {}
-}
-
-export function setDragging(isDragging: boolean) {
-  dragging = isDragging
-}
-
-export function getAppContextMenu(appId: string, context: { x: number; y: number; target: HTMLElement }): Array<{ label: string; onClick?: () => void }> {
-  // TODO: Implement context menu based on appId
-  return []
-}
-
-export function setMaximizedWindow(win: { id: string; title: string } | null) {
-  maximizedWindow = win
-}
-
-export function setAnimating(isAnimating: boolean) {
-  animating = isAnimating
-}
-
-export function setLauncherOpen(isOpen: boolean) {
-  launcherOpen = isOpen
 }

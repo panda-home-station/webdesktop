@@ -2,7 +2,6 @@ import React, { useState, useMemo, memo } from 'react'
 import { createPortal } from 'react-dom'
 import { listApps } from '../../framework/registry'
 import { openApp, showDesktop, lockScreen } from '../../shared/sdk/desktop'
-import { getAppContextMenu } from '../../shared/sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
 import { Monitor, LayoutGrid, User, Lock, LogOut, Bell } from 'lucide-react'
@@ -231,10 +230,6 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
       onContextMenu={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        const items = getAppContextMenu('dock', { x: e.clientX, y: e.clientY, target: e.currentTarget })
-        if (items && items.length > 0) {
-          setMenu({ x: e.clientX, y: e.clientY, items })
-        }
       }}
     >
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
