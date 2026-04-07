@@ -6,12 +6,13 @@
  */
 
 import React, { useState } from 'react'
-import { useAuthStore } from '../truenas/stores/auth'
+import { useAuthStore } from '../../truenas/stores/auth'
 import Desktop from './Desktop'
 import LockScreen from './LockScreen'
 import SmoothWallpaper from './SmoothWallpaper'
-import { useWallpaper } from '../hooks/useWallpaper'
+import { useWallpaper, setWallpaper } from '../hooks/useWallpaper'
 import { ErrorBoundary } from './ErrorBoundary'
+import { lockScreen, showDesktop as showDesktopFn, openLauncher as openLauncherFn, openApp as openAppFn } from '../sdk/desktop'
 
 interface DesktopShellProps {
   children?: React.ReactNode
@@ -99,55 +100,11 @@ export function useDesktopState() {
  * Provides desktop-related actions
  */
 export function useDesktopActions() {
-  /**
-   * Set wallpaper
-   */
-  const setWallpaper = (path: string) => {
-    import('../hooks/useWallpaper').then(({ setWallpaper: setWallpaperFn }) => {
-      setWallpaperFn(path)
-    })
-  }
-
-  /**
-   * Toggle lock screen
-   */
-  const toggleLockScreen = () => {
-    import('../sdk/desktop').then(({ lockScreen }) => {
-      lockScreen()
-    })
-  }
-
-  /**
-   * Show desktop (minimize all windows)
-   */
-  const showDesktop = () => {
-    import('../sdk/desktop').then(({ showDesktop: showDesktopFn }) => {
-      showDesktopFn()
-    })
-  }
-
-  /**
-   * Open launcher
-   */
-  const openLauncher = () => {
-    import('../sdk/desktop').then(({ openLauncher: openLauncherFn }) => {
-      openLauncherFn()
-    })
-  }
-
-  /**
-   * Open app
-   */
-  const openApp = async (id: string, args?: any) => {
-    const { openApp: openAppFn } = await import('../sdk/desktop')
-    openAppFn(id, args)
-  }
-
   return {
     setWallpaper,
-    toggleLockScreen,
-    showDesktop,
-    openLauncher,
-    openApp,
+    toggleLockScreen: lockScreen,
+    showDesktop: showDesktopFn,
+    openLauncher: openLauncherFn,
+    openApp: openAppFn,
   }
 }
