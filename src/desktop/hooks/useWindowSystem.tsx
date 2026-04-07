@@ -6,7 +6,7 @@
 
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { listApps, loadApp, AppDef } from '../../framework/registry'
-import { useWindowsStore, WindowState } from '../../desktop/state/windows-store'
+import { useWindowsStore, WindowState } from '../state/windows-store'
 import { requestPermission } from '../../shared/sdk/permissions'
 import { subscribeOpenApp, subscribeWinAction, subscribeShowDesktop, subscribeLauncher } from '../../shared/sdk/desktop'
 import { Loader2 } from 'lucide-react'

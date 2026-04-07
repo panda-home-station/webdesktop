@@ -4,7 +4,7 @@ import Taskbar from './Taskbar'
 import Window from './Window'
 import { QuickAgentDialog } from './QuickAgentDialog'
 import { setMaximizedWindow } from '../../shared/sdk/desktop'
-import { useWindowSystem } from '../../shared/hooks/useWindowSystem'
+import { useWindowSystem } from '../hooks/useWindowSystem'
 import { Loader2 } from 'lucide-react'
 
 export default function WindowManager() {
