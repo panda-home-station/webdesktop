@@ -36,13 +36,11 @@ export default function UserCenter() {
   // Dialog states
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false)
 
-  // Track last title to prevent duplicate calls
-  const lastTitleRef = useRef('')
+  // Track last active tab to prevent duplicate title updates
   const lastActiveRef = useRef('')
 
   // Update window title based on active tab
   useEffect(() => {
-    // Only update if active tab (not window object) actually changed
     if (lastActiveRef.current === active) {
       return
     }
@@ -53,13 +51,7 @@ export default function UserCenter() {
                      active === 'security' ? '安全设置' :
                      active === 'change-password' ? '更改密码' :
                      active === 'api-keys' ? '我的API Key' : ''
-    const newTitle = `User Center - ${tabName}`
-
-    // Only update if title actually changed
-    if (lastTitleRef.current !== newTitle) {
-      lastTitleRef.current = newTitle
-      win.setTitle(newTitle)
-    }
+    win.setTitle(`User Center - ${tabName}`)
   }, [active])
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
