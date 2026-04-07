@@ -58,6 +58,13 @@ export class AlertService {
   }
 
   /**
+   * Refresh alerts (called from WebSocket events when panel is open)
+   */
+  refreshAlerts(): void {
+    this.fetchAlerts()
+  }
+
+  /**
    * Dismiss an alert
    */
   async dismissAlert(id: string): Promise<void> {
@@ -146,7 +153,7 @@ export class AlertService {
           if (event.fields) {
             if (isPanelOpen) {
               // If panel is open, refresh all alerts
-              this.fetchAlerts()
+              this.refreshAlerts()
             } else {
               // Otherwise just add the new alert
               store.addAlert(event.fields)
@@ -157,7 +164,7 @@ export class AlertService {
           if (event.fields) {
             if (isPanelOpen) {
               // If panel is open, refresh all alerts
-              this.fetchAlerts()
+              this.refreshAlerts()
             } else {
               // Otherwise update the alert
               store.updateAlert(event.fields.id, event.fields)
@@ -168,7 +175,7 @@ export class AlertService {
           // Remove the alert from local state
           // Note: event.id is the internal event ID, not the alert UUID
           // We need to refresh or handle differently
-          this.fetchAlerts()
+          this.refreshAlerts()
           break
       }
     })

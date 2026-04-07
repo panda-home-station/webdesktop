@@ -8,7 +8,7 @@
 import { create } from 'zustand'
 import { Alert } from '../types/alert.interface'
 import { AlertLevel } from '../types/alert.enum'
-import { getAlertService } from '../../truenas/services/alert'
+import { truenasApi } from '../../truenas/api'
 
 export interface AlertsState {
   alerts: Alert[]
@@ -199,10 +199,14 @@ const useAlertStore = create<AlertsState>((set, get) => ({
 
   fetchAlerts: async () => {
     try {
-      await getAlertService().fetchAlerts()
+      set({ isLoading: true, error: null })
+      const result = await truenasApi.call('alert.list') as Alert[]
+      get().setAlerts(result)
     } catch (error) {
       console.error('Failed to fetch alerts:', error)
       get().setError(error instanceof Error ? error.message : 'Failed to fetch alerts')
+    } finally {
+      set({ isLoading: false })
     }
   },
 }))

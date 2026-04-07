@@ -13,7 +13,9 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "generate:test": "tsx scripts/generate-component-tests.ts",
+    "generate:test:list": "tsx scripts/generate-component-tests.ts --list"
   },
   "dependencies": {
     "@mdi/js": "^7.4.47",
@@ -36,17 +38,21 @@
     "@testing-library/jest-dom": "^5.6.3",
     "@testing-library/react": "^14.0.0",
     "@testing-library/user-event": "^14.0.0",
+    "@types/node": "^25.5.2",
     "@typescript-eslint/eslint-plugin": "^8.58.0",
     "@typescript-eslint/parser": "^8.58.0",
     "@typescript-eslint/type-utils": "^8.58.0",
     "@typescript-eslint/typescript-estree": "^8.58.0",
     "@typescript-eslint/utils": "^8.58.0",
     "@vitejs/plugin-react": "^4.3.3",
+    "@vitest/coverage-v8": "^4.1.3",
     "eslint": "^8.45.0",
     "eslint-plugin-react": "^7.32.0",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "jsdom": "^29.0.2",
     "prettier": "^3.0.0",
     "prettier-plugin-organize-imports": "^3.1.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.6.2",
     "vite": "^7.2.7",
     "vitest": "^4.1.2"

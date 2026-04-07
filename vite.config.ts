@@ -77,5 +77,22 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 5173,
     },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: ['./src/test/setup.ts'],
+      include: ['src/**/*.{test,spec}.{ts,tsx}'],
+      coverage: {
+        reporter: ['text', 'json', 'html'],
+        exclude: [
+          'node_modules/**',
+          'src/test/**',
+          '**/*.d.ts',
+          '**/*.interface.ts',
+          '**/*.enum.ts',
+          'vite.config.ts',
+        ],
+      },
+    },
   };
 });
