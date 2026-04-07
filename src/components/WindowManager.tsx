@@ -30,6 +30,7 @@ export default function WindowManager() {
     showDesktop: _showDesktop,
     getApp,
     getAppMinDimensions,
+    openWindow,
   } = useWindowSystem({
     onAgentAppOpen: () => {
       // Agent app opened handler
