@@ -12,6 +12,7 @@ import { useWebSocketInit } from './hooks/useWebSocketInit'
 import { useAlertInit } from './hooks/useAlertInit'
 import SmoothWallpaper from './components/SmoothWallpaper'
 import { useWallpaper } from './hooks/useWallpaper'
+import AppLoading from './components/AppLoading'
 
 export default function App() {
   // Initialize services
@@ -20,13 +21,19 @@ export default function App() {
 
   const wallpaper = useWallpaper()
 
+  console.log('[Debug] App: rendering with wsInitialized =', wsInitialized)
+
   return (
     <ErrorBoundary>
       <div className="fullScreen panda-app">
         <SmoothWallpaper src={wallpaper} />
-        <AuthGuard wsInitialized={wsInitialized}>
-          <DesktopShell />
-        </AuthGuard>
+        {wsInitialized ? (
+          <AuthGuard>
+            <DesktopShell />
+          </AuthGuard>
+        ) : (
+          <AppLoading />
+        )}
       </div>
     </ErrorBoundary>
   )

@@ -8,6 +8,9 @@ export function useAutoLogin(isAuthenticated: boolean, wsInitialized: boolean) {
   const hasAttemptedAutoLogin = useRef(false)
   const [isAutoLoggingIn, setIsAutoLoggingIn] = useState(false)
 
+  // Determine if we should show loading state immediately when auto-login should happen
+  const shouldAutoLogin = wsInitialized && !isAuthenticated && !hasAttemptedAutoLogin.current
+
   useEffect(() => {
     // Wait for WebSocket to be initialized
     if (!wsInitialized) {
@@ -60,6 +63,14 @@ export function useAutoLogin(isAuthenticated: boolean, wsInitialized: boolean) {
       setIsAutoLoggingIn(false)
     })
   }, [isAuthenticated, wsInitialized])
+
+  // If we should auto-login but haven't started yet, show loading immediately
+  if (shouldAutoLogin) {
+    const savedToken = persistentStorage.get<string | null>('token')
+    if (savedToken) {
+      return true // Show loading state
+    }
+  }
 
   return isAutoLoggingIn
 }

@@ -10,11 +10,9 @@ import {
   mdiCogOutline,
   mdiAccountCircleOutline,
   mdiChevronRight,
-  mdiLogout,
 } from '@mdi/js'
 import { showDesktop, openLauncher } from '../sdk/desktop'
 import { mdiFolderOutline, mdiViewGridOutline, mdiMonitor } from '@mdi/js'
-import { useAuthStore } from '@truenas/stores/auth'
 
 function SmoothWallpaper({ src }: { src?: string }) {
   const [cur, setCur] = useState<string | null>(null)
@@ -128,16 +126,7 @@ export default function Desktop() {
   const [wallpaper, setWallpaperUrl] = useState<string>(getWallpaper())
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
-  const { logout } = useAuthStore()
-
   const closeMenu = useCallback(() => setMenu(null), [])
-
-  const handleLogout = useCallback(async () => {
-    closeMenu()
-    await logout()
-    // Reload page to return to login screen
-    window.location.reload()
-  }, [logout, closeMenu])
 
   const allApps = useMemo(() => {
     return listApps().filter(a => !['file-manager', 'system-settings', 'user-center'].includes(a.id))
@@ -357,20 +346,6 @@ export default function Desktop() {
               >
                 <Icon path={mdiAccountCircleOutline} size={0.85} />
                 我的账号
-              </button>
-              <button
-                style={{
-                  ...menuItemStyle,
-                  background: hoverIndex === 6 ? hoverColor : 'transparent',
-                }}
-                onClick={handleLogout}
-                onMouseEnter={() => setHoverIndex(6)}
-                onMouseLeave={() => setHoverIndex(null)}
-                onFocus={() => setHoverIndex(6)}
-                onBlur={() => setHoverIndex(null)}
-              >
-                <Icon path={mdiLogout} size={0.85} />
-                退出登录
               </button>
             </div>
           </div>

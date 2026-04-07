@@ -29,6 +29,8 @@ export default function AuthGuard({
   const { isAuthenticated, user } = useAuthStore()
   const isAutoLoggingIn = useAutoLogin(isAuthenticated, wsInitialized)
 
+  console.log('[Debug] AuthGuard: isAuthenticated =', isAuthenticated, 'isAutoLoggingIn =', isAutoLoggingIn)
+
   if (!isAuthenticated) {
     // Render custom unauthenticated UI or default login
     if (onUnauthenticated) {
