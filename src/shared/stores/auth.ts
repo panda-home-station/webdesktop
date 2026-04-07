@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { LoggedInUser } from '../types/auth.interface';
-import { truenasApi } from '../../truenas/api';
+import { authService } from '../../truenas/services/auth';
 import { createTypedStore, sessionStorage as phsSessionStorage } from '../../desktop/state/persistence';
 
 // Create typed stores for persistent data
@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Logout method
   logout: async () => {
     try {
-      await truenasApi.call('auth.logout');
+      await authService.logout();
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
@@ -69,8 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Refresh user method
   refreshUser: async () => {
     try {
-      const user = await truenasApi.call('auth.me') as LoggedInUser;
-      set({ user });
+      await authService.refreshUser();
     } catch (error) {
       console.error('Failed to refresh user:', error);
       throw error;

@@ -191,6 +191,22 @@ export class AuthService {
 
     return LoginResult.IncorrectDetails;
   }
+
+  /**
+   * Logout user
+   */
+  async logout(): Promise<void> {
+    await truenasApi.call('auth.logout');
+  }
+
+  /**
+   * Refresh user info
+   */
+  async refreshUser(): Promise<void> {
+    const user = await truenasApi.call('auth.me') as LoggedInUser;
+    const authStore = useAuthStore.getState();
+    authStore.setUser(user);
+  }
 }
 
 // Export singleton instance
