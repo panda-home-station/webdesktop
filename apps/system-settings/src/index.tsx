@@ -105,7 +105,7 @@ export default function SystemSettings() {
     const fetchInfo = () => {
       api.getDeviceInfo().then(data => {
         setDeviceInfo(data)
-        try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch {}
+        try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch (e) { /* ignore */ }
       }).catch(console.error)
     }
     

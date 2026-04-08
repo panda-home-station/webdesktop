@@ -104,3 +104,71 @@ function getLayoutLabel(layout: CreateVdevLayout): string {
       return String(layout);
   }
 }
+
+interface VdevItemProps {
+  vdev: {
+    id: string;
+    type: CreateVdevLayout;
+    disks: string[];
+  };
+  index: number;
+}
+
+function VdevItem({ vdev, index }: VdevItemProps) {
+  return (
+    <div style={styles.vdevItem}>
+      <span>VDEV {index + 1}: {vdev.disks.length} disks ({getLayoutLabel(vdev.type)})</span>
+    </div>
+  );
+}
+
+const styles = {
+  container: {
+    padding: '24px',
+    maxWidth: '800px',
+  } as React.CSSProperties,
+  title: {
+    margin: '0 0 8px',
+    fontSize: '20px',
+    fontWeight: 600,
+    color: '#1a1a1a',
+  } as React.CSSProperties,
+  subtitle: {
+    margin: '0 0 24px',
+    fontSize: '14px',
+    color: '#666',
+  } as React.CSSProperties,
+  layoutButtons: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '24px',
+    flexWrap: 'wrap' as const,
+  } as React.CSSProperties,
+  layoutButton: {
+    padding: '12px 20px',
+    backgroundColor: '#1976d2',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: 500,
+    cursor: 'pointer',
+  } as React.CSSProperties,
+  vdevList: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: '12px',
+    marginBottom: '16px',
+  } as React.CSSProperties,
+  vdevItem: {
+    padding: '12px 16px',
+    backgroundColor: '#f5f5f5',
+    borderRadius: '6px',
+    fontSize: '14px',
+  } as React.CSSProperties,
+  error: {
+    color: '#d32f2f',
+    fontSize: '14px',
+    marginTop: '8px',
+  } as React.CSSProperties,
+};

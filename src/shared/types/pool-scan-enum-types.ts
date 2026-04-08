@@ -24,14 +24,14 @@ export enum PoolScanState {
 /**
  * Get scan function label
  */
-export function getPoolScanFunctionLabel(function: PoolScanFunction): string {
-  switch (function) {
+export function getPoolScanFunctionLabel(fn: PoolScanFunction): string {
+  switch (fn) {
     case PoolScanFunction.Scrub:
       return 'Scrub';
     case PoolScanFunction.Resilver:
       return 'Resilver';
     default:
-      return function;
+      return fn;
   }
 }
 

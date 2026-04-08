@@ -164,14 +164,16 @@ export const useToastStore = create<ToastStore>((set, get) => ({
  */
 import React, { createContext, useContext, ReactNode } from 'react'
 
+type ToastStoreState = ReturnType<typeof useToastStore>
+
 interface ToastContextValue {
-  showToast: typeof useToastStore.getState().showToast
-  showSuccess: typeof useToastStore.getState().showSuccess
-  showInfo: typeof useToastStore.getState().showInfo
-  showWarning: typeof useToastStore.getState().showWarning
-  showError: typeof useToastStore.getState().showError
-  dismissToast: typeof useToastStore.getState().dismissToast
-  dismissAllToasts: typeof useToastStore.getState().dismissAllToasts
+  showToast: ToastStoreState['showToast']
+  showSuccess: ToastStoreState['showSuccess']
+  showInfo: ToastStoreState['showInfo']
+  showWarning: ToastStoreState['showWarning']
+  showError: ToastStoreState['showError']
+  dismissToast: ToastStoreState['dismissToast']
+  dismissAllToasts: ToastStoreState['dismissAllToasts']
 }
 
 const ToastContext = createContext<ToastContextValue | null>(null)

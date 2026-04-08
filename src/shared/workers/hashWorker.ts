@@ -170,15 +170,15 @@ function compute(req: Req) {
   ;(self as any).postMessage({ type: 'result', ok: true, hex })
 }
 
-;(self as any).onmessage = (e: MessageEvent) => {
+(self as any).onmessage = (e: MessageEvent) => {
   const req = e.data as Req
   if (!req || req.type !== 'sha256' || !(req.file instanceof File)) {
-    ;(self as any).postMessage({ type: 'result', ok: false })
+    (self as any).postMessage({ type: 'result', ok: false })
     return
   }
   try {
     compute(req)
   } catch {
-    ;(self as any).postMessage({ type: 'result', ok: false })
+    (self as any).postMessage({ type: 'result', ok: false })
   }
 }

@@ -50,6 +50,7 @@ const GlassTile = memo(({ children, color, active, activeColor = '#2563eb' }: { 
     {children}
   </div>
 ))
+GlassTile.displayName = 'GlassTile'
 
 const TaskbarIcon = memo(({ 
   id, 
@@ -106,6 +107,7 @@ const TaskbarIcon = memo(({
     </button>
   )
 })
+TaskbarIcon.displayName = 'TaskbarIcon'
 
 export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [], onToggleQuickAgent }: Props) {
   const apps = listApps()
@@ -404,9 +406,9 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
                   style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
                   onClick={() => {
                     setMenu(null)
-                    try {
-                      it.onClick && it.onClick()
-                    } catch {}
+                    if (it.onClick) {
+                      it.onClick()
+                    }
                   }}
                   onMouseEnter={e => {
                     e.currentTarget.style.background = '#94a3b8'

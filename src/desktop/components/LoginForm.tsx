@@ -48,8 +48,8 @@ export default function LoginForm({ onSuccess, onClose }: Props) {
         setHasTwoFactor(false)
         setPassword('')
         setOtp('')
-        onSuccess && onSuccess()
-        onClose && onClose()
+        if (onSuccess) onSuccess()
+        if (onClose) onClose()
       } else if (loginResult === LoginResult.NoOtp) {
         // OTP required
         setPassword('')

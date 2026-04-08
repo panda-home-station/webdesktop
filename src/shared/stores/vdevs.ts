@@ -46,7 +46,7 @@ export const useVdevsStore = create<VdevsState>((set, get) => ({
         const diskDictionary: Record<string, TopologyDisk> = {};
 
         // Flatten disks into dictionary
-        function traverse(items: VDevItem[]) {
+        const traverse = (items: VDevItem[]) => {
           items.forEach(item => {
             if (item.type === VDevType.Disk) {
               diskDictionary[item.guid] = item as TopologyDisk;
@@ -54,7 +54,7 @@ export const useVdevsStore = create<VdevsState>((set, get) => ({
               traverse(item.children);
             }
           });
-        }
+        };
         traverse(topology);
 
         set({

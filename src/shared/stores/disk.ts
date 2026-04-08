@@ -50,21 +50,13 @@ export const useDiskStore = create<DiskState>((set, get) => ({
 
   // Update disk
   updateDisk: async (id, params) => {
-    try {
-      await diskService.update(id, params);
-      await get().loadDisks();
-    } catch (error) {
-      throw error;
-    }
+    await diskService.update(id, params);
+    await get().loadDisks();
   },
 
   // Wipe disk
   wipeDisk: async (id) => {
-    try {
-      await diskService.wipe(id);
-      await get().loadDisks();
-    } catch (error) {
-      throw error;
-    }
+    await diskService.wipe(id);
+    await get().loadDisks();
   },
 }));

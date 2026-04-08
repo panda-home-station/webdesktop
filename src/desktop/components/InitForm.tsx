@@ -37,7 +37,7 @@ export default function InitForm({ onDone }: Props) {
       await api.login(username, password)
       setOk(true)
       setTimeout(() => {
-        onDone && onDone()
+        if (onDone) onDone()
       }, 1000)
     } catch (err) {
       setError('初始化或登录失败')

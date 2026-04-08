@@ -70,6 +70,7 @@ const AppItem = memo(({ a, onOpen, onClose }: {
     </button>
   )
 })
+AppItem.displayName = 'AppItem'
 
 export default function Launcher({ isOpen, onOpen, onClose }: Props & { isOpen: boolean }) {
   const [q, setQ] = useState('')

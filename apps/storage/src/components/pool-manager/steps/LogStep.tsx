@@ -27,7 +27,7 @@ export default function LogStep() {
       <div style={styles.infoBox}>
         <p style={styles.infoText}>
           <strong>Note:</strong> The log device should be a dedicated fast drive.
-          Data loss may occur if the log device fails before it's synced to the pool.
+          Data loss may occur if the log device fails before it{'\'s'} synced to the pool.
         </p>
       </div>
 

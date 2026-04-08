@@ -88,11 +88,7 @@ export const useStorageDashboardStore = create<StorageDashboardState>((set, get)
 
   // Create pool
   createPool: async (params) => {
-    try {
-      await poolService.create(params);
-      await get().loadDashboard();
-    } catch (error) {
-      throw error;
-    }
+    await poolService.create(params);
+    await get().loadDashboard();
   },
 }));

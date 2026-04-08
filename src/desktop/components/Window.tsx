@@ -56,19 +56,6 @@ export default function Window({
   minH = 200,
   isActive
 }: WinProps) {
-  if (minimized) return null
-
-  // Validate numeric values to prevent NaN
-  const safeX = Number.isFinite(x) ? x : 60
-  const safeY = Number.isFinite(y) ? y : 60
-  const safeW = Number.isFinite(w) ? w : 600
-  const safeH = Number.isFinite(h) ? h : 400
-
-  // Log invalid values for debugging
-  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) {
-    console.warn('Invalid window dimensions:', { id, x, y, w, h })
-  }
-
   const winRef = useRef<HTMLDivElement>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
@@ -82,6 +69,19 @@ export default function Window({
     maximize: () => onMaximize(id),
     isActive: !!isActive
   }), [id, appId, onTitleChange, onClose, onMinimize, onMaximize, isActive])
+
+  if (minimized) return null
+
+  // Validate numeric values to prevent NaN
+  const safeX = Number.isFinite(x) ? x : 60
+  const safeY = Number.isFinite(y) ? y : 60
+  const safeW = Number.isFinite(w) ? w : 600
+  const safeH = Number.isFinite(h) ? h : 400
+
+  // Log invalid values for debugging
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) {
+    console.warn('Invalid window dimensions:', { id, x, y, w, h })
+  }
 
   const handleMouseDown = () => {
     onFocus(id)
@@ -464,9 +464,9 @@ export default function Window({
                     style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
                     onClick={() => {
                       closeMenu()
-                      try {
-                        it.onClick && it.onClick()
-                      } catch {}
+                      if (it.onClick) {
+                        it.onClick()
+                      }
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.background = '#e5e7eb'

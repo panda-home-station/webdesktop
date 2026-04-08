@@ -159,7 +159,7 @@ function getDeduplicationLabel(deduplication: string): string {
     case 'VERIFY':
       return 'Enabled (with verification)';
     default:
-      Deduplication: return deduplication;
+      return deduplication;
   }
 }
 

@@ -526,7 +526,6 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
       unsubLauncher()
       window.removeEventListener('keydown', onKey)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     openWindow,
     minimizeWindow,

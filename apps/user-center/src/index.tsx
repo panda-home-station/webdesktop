@@ -71,7 +71,9 @@ export default function UserCenter() {
       setBusy(true)
       try {
         await api.fsMkdir(WALL_DIR)
-      } catch {}
+      } catch (e) {
+        // ignore
+      }
       try {
         const rs = await api.fsList(WALL_DIR)
         setEntries(rs.entries)
@@ -84,16 +86,20 @@ export default function UserCenter() {
   }, [active])
 
   useEffect(() => {
-    ;(async () => {
+    (async () => {
       try {
         const url = getDesktopWallpaper()
         if (url) {
           try {
             const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
             window.dispatchEvent(ev)
-          } catch {}
+          } catch (e) {
+            // ignore
+          }
         }
-      } catch {}
+      } catch (e) {
+        // ignore
+      }
     })()
   }, [])
 
