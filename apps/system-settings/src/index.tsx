@@ -14,10 +14,14 @@ import {
   MemoryStick,
 } from 'lucide-react'
 import { systemService } from '@truenas/services/system'
+import { poolService } from '@truenas/services/pool'
+import { diskService } from '@truenas/services/disk'
 import type {
   SystemInfo,
   ReportingRealtimeUpdate,
 } from '@shared/types/system-types'
+import type { Pool } from '@shared/types/pool-types'
+import type { Disk } from '@shared/types/disk-types'
 
 // Format bytes to human readable string
 function formatBytes(bytes: number): string {
@@ -81,17 +85,6 @@ function getNetworkInfo(
   }
 }
 
-// Get storage pools info
-function getPoolsInfo(pools: Record<string, { available: number; used: number; total: number }> | null): { used: string; total: string; percent: string }[] {
-  if (!pools) return []
-  return Object.entries(pools).map(([name, data]) => ({
-    name,
-    used: formatBytes(data.used),
-    total: formatBytes(data.total),
-    percent: data.total > 0 ? ((data.used / data.total) * 100).toFixed(0) : '0',
-  }))
-}
-
 const TABS = [
   { id: 'device', label: '关于本机', icon: <Info size={20} /> },
   { id: 'users', label: '用户与账户', icon: <Users size={20} /> },
@@ -109,6 +102,8 @@ export default function SystemSettings() {
   // Static system info (fetched once)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
   const [networkInterfaces, setNetworkInterfaces] = useState<NetworkInterfaceFromApi[]>([])
+  const [pools, setPools] = useState<Pool[]>([])
+  const [disks, setDisks] = useState<Disk[]>([])
 
   // Realtime data (continuously updated)
   const [realtime, setRealtime] = useState<ReportingRealtimeUpdate | null>(null)
@@ -132,15 +127,19 @@ export default function SystemSettings() {
 
     async function fetchStaticData() {
       try {
-        const [sysInfo, ifaces] = await Promise.all([
+        const [sysInfo, ifaces, poolsData, disksData] = await Promise.all([
           systemService.getSystemInfo(),
           systemService.getNetworkInterfaces(),
+          poolService.query([], { extra: { is_upgraded: true } }),
+          diskService.query(),
         ])
 
         if (cancelled) return
 
         setSystemInfo(sysInfo)
         setNetworkInterfaces(ifaces as NetworkInterfaceFromApi[])
+        setPools(poolsData as Pool[])
+        setDisks(disksData as Disk[])
         setLoading(false)
       } catch (err) {
         if (cancelled) return
@@ -186,6 +185,8 @@ export default function SystemSettings() {
             systemInfo={systemInfo}
             realtime={realtime}
             networkInterfaces={networkInterfaces}
+            pools={pools}
+            disks={disks}
             loading={loading}
             error={error}
           />
@@ -200,6 +201,8 @@ function TabContent({
   systemInfo,
   realtime,
   networkInterfaces,
+  pools,
+  disks,
   loading,
   error,
 }: {
@@ -207,12 +210,14 @@ function TabContent({
   systemInfo: SystemInfo | null
   realtime: ReportingRealtimeUpdate | null
   networkInterfaces: NetworkInterfaceFromApi[]
+  pools: Pool[]
+  disks: Disk[]
   loading: boolean
   error: string | null
 }) {
   switch (id) {
     case 'device':
-      return <DeviceInfo systemInfo={systemInfo} realtime={realtime} networkInterfaces={networkInterfaces} loading={loading} error={error} />
+      return <DeviceInfo systemInfo={systemInfo} realtime={realtime} networkInterfaces={networkInterfaces} pools={pools} disks={disks} loading={loading} error={error} />
     case 'users': return <UserManagement />
     case 'storage': return <StorageManagement />
     case 'disk': return <DiskInfo />
@@ -356,12 +361,16 @@ function DeviceInfo({
   systemInfo,
   realtime,
   networkInterfaces,
+  pools,
+  disks,
   loading,
   error,
 }: {
   systemInfo: SystemInfo | null
   realtime: ReportingRealtimeUpdate | null
   networkInterfaces: NetworkInterfaceFromApi[]
+  pools: Pool[]
+  disks: Disk[]
   loading: boolean
   error: string | null
 }) {
@@ -458,7 +467,31 @@ function DeviceInfo({
   // Get dynamic data
   const cpuUsage = getCpuUsage(realtime)
   const networkInfo = getNetworkInfo(networkInterfaces)
-  const poolsInfo = getPoolsInfo(realtime?.pools || null)
+
+  // Compute pool info from pools API
+  const poolsOverview = pools.map(pool => {
+    const total = pool.size
+    const used = pool.allocated || (total - (pool.free || 0))
+    const free = pool.free || (total - used)
+    const percent = total > 0 ? ((used / total) * 100).toFixed(1) : '0'
+    return {
+      name: pool.name,
+      status: pool.healthy ? 'Healthy' : (pool.status_detail || pool.status),
+      isHealthy: pool.healthy,
+      total,
+      used,
+      free,
+      percent,
+      totalStr: formatBytes(total),
+      usedStr: formatBytes(used),
+      freeStr: formatBytes(free),
+      // Count VDEVs by type
+      dataVdevs: pool.topology?.data?.length || 0,
+    }
+  })
+
+  // Disk overview
+  const diskCount = disks.length
 
   // Physical memory
   const physmemGb = (systemInfo.physmem / (1024 ** 3)).toFixed(1)
@@ -541,15 +574,27 @@ function DeviceInfo({
       </SpecGroup>
 
       <SpecGroup title="存储空间">
-        {poolsInfo.length > 0 ? (
-          poolsInfo.map((pool, index) => (
-            <DiskRow
-              key={pool.name}
-              name={pool.name}
-              data={{ used: pool.used, total: pool.total, percent: pool.percent }}
-              isLast={index === poolsInfo.length - 1}
-            />
-          ))
+        {poolsOverview.length > 0 ? (
+          <>
+            {poolsOverview.map((pool) => (
+              <PoolRow
+                key={pool.name}
+                name={pool.name}
+                status={pool.status}
+                isHealthy={pool.isHealthy}
+                usedStr={pool.usedStr}
+                totalStr={pool.totalStr}
+                freeStr={pool.freeStr}
+                percent={pool.percent}
+                isLast={false}
+              />
+            ))}
+            {diskCount > 0 && (
+              <div style={{ padding: '12px 20px', borderTop: '1px solid #f3f4f6', fontSize: 12, color: '#6b7280' }}>
+                共 {diskCount} 个硬盘 · {poolsOverview.length} 个存储池
+              </div>
+            )}
+          </>
         ) : (
           <div style={{ padding: '16px 20px', color: '#6b7280', fontSize: 13 }}>
             No pools available
@@ -581,23 +626,47 @@ function SpecRow({ label, value, action }: { label: string, value: React.ReactNo
   )
 }
 
-function DiskRow({ name, data, isLast }: { name: string, data: { used: string; total: string; percent: string }, isLast?: boolean }) {
+function PoolRow({ name, status, isHealthy, usedStr, totalStr, freeStr, percent, isLast }: {
+  name: string
+  status: string
+  isHealthy: boolean
+  usedStr: string
+  totalStr: string
+  freeStr: string
+  percent: string
+  isLast?: boolean
+}) {
   return (
     <div style={{ padding: '16px 20px', borderBottom: isLast ? 'none' : '1px solid #f3f4f6' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-        <div style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{name}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{name}</div>
+          <span style={{
+            fontSize: 11,
+            padding: '2px 6px',
+            borderRadius: 4,
+            background: isHealthy ? '#dcfce7' : '#fef3c7',
+            color: isHealthy ? '#166534' : '#92400e',
+          }}>
+            {status}
+          </span>
+        </div>
         <div style={{ fontSize: 13, color: '#6b7280' }}>
-          {data.used} / {data.total}
+          {usedStr} / {totalStr}
         </div>
       </div>
       <div style={{ height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
         <div style={{
-          width: `${data.percent}%`,
+          width: `${percent}%`,
           height: '100%',
-          background: Number(data.percent) > 90 ? '#ef4444' : '#3b82f6',
+          background: Number(percent) > 90 ? '#ef4444' : Number(percent) > 75 ? '#f59e0b' : '#3b82f6',
           borderRadius: 4,
           transition: 'width 0.5s ease-out'
         }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6, fontSize: 11, color: '#9ca3af' }}>
+        <span>已用: {usedStr}</span>
+        <span>空闲: {freeStr}</span>
       </div>
     </div>
   )
