@@ -93,6 +93,7 @@ const styles = {
     fontSize: '18px',
     fontWeight: 600,
     color: '#1a1a1a',
+    transform: 'translateZ(0)',
   } as React.CSSProperties,
   badge: {
     padding: '4px 10px',

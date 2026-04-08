@@ -196,6 +196,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+    transform: 'translateZ(0)',
   } as React.CSSProperties,
   poolName: {
     margin: 0,

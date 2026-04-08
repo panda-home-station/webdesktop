@@ -126,7 +126,7 @@ export default function UserCenter() {
         {active === 'profile' && (
           <div style={{ padding: 16, display: 'grid', gap: 10 }}>
             <div style={{ fontWeight: 700 }}>账户信息</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, transform: 'translateZ(0)' }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: '#64748b', color: '#fff', display: 'grid', placeItems: 'center', fontWeight: 700 }}>
                 {(user?.pw_name || 'U').slice(0, 1).toUpperCase()}
               </div>

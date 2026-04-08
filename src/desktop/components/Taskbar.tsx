@@ -482,7 +482,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
               
               {/* Menu Items */}
               <button
-                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#334155', transition: 'all 0.2s' }}
+                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#334155', transition: 'all 0.2s', transform: 'translateZ(0)' }}
                 onClick={() => {
                   setAccountMenu(null)
                   focusOrOpen('user-center')
@@ -495,7 +495,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
               </button>
               
               <button
-                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#334155', transition: 'all 0.2s' }}
+                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#334155', transition: 'all 0.2s', transform: 'translateZ(0)' }}
                 onClick={() => {
                   setAccountMenu(null)
                   lockScreen()
@@ -510,7 +510,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
               <div style={{ height: 1, background: 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
               
               <button
-                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#ef4444', transition: 'all 0.2s' }}
+                style={{ width: '100%', padding: '10px 12px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10, color: '#ef4444', transition: 'all 0.2s', transform: 'translateZ(0)' }}
                 onClick={async () => {
                   setAccountMenu(null)
                   await logout()

@@ -57,6 +57,7 @@ export default function Window({
   isActive
 }: WinProps) {
   const winRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const closeMenu = useCallback(() => setMenu(null), [])
 
@@ -103,10 +104,15 @@ export default function Window({
     let rafId: number | null = null
 
     // Performance optimization: remove heavy styles during drag
+    // NOTE: will-change is NOT set here - it's set only when actual drag movement starts
+    // to avoid subtle visual shifts from layer recomposition
     if (winRef.current) {
       // 仅对当前拖拽的窗口禁用昂贵的特效，以保证其移动的绝对流畅
       winRef.current.style.boxShadow = 'none'
-      winRef.current.style.willChange = 'transform'
+    }
+    // Remove contain from content div to avoid GPU compositing conflict with translate3d
+    if (contentRef.current) {
+      contentRef.current.style.contain = 'none'
     }
 
     const move = (ev: MouseEvent) => {
@@ -177,9 +183,15 @@ export default function Window({
       const newDx = clampedX - dragInitX
       const newDy = clampedY - dragInitY
 
-      lastDx = newDx
-      lastDy = newDy
+      // Round to prevent sub-pixel jitter during slow dragging
+      lastDx = Math.round(newDx)
+      lastDy = Math.round(newDy)
       
+      // Only enable will-change when actually dragging (not just on initial click)
+      if (winRef.current && winRef.current.style.willChange !== 'transform') {
+        winRef.current.style.willChange = 'transform'
+      }
+
       if (!rafId) {
         rafId = requestAnimationFrame(() => {
           if (winRef.current) {
@@ -206,6 +218,9 @@ export default function Window({
            winRef.current.style.boxShadow = 'var(--win-shadow)'
            winRef.current.style.willChange = 'auto'
         }
+        if (contentRef.current) {
+          contentRef.current.style.contain = 'size layout paint style'
+        }
         return
       }
 
@@ -228,10 +243,14 @@ export default function Window({
       if (winRef.current) {
         winRef.current.style.transform = ''
         winRef.current.style.transition = ''
-        
+
         // Restore styles
         winRef.current.style.boxShadow = 'var(--win-shadow)'
         winRef.current.style.willChange = 'auto'
+      }
+
+      if (contentRef.current) {
+        contentRef.current.style.contain = 'size layout paint style'
       }
       
       if (nx !== safeX || ny !== safeY || hasRestored) {
@@ -389,13 +408,13 @@ export default function Window({
           e.stopPropagation()
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, transform: 'translateZ(0)' }}>
           {iconUrl ? (
-            <img src={iconUrl} alt="" width={18} height={18} style={{ borderRadius: 4, transform: 'translateZ(0)', backfaceVisibility: 'hidden' }} />
+            <img src={iconUrl} alt="" width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
           ) : (
-            <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)' }} />
+            <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)', flexShrink: 0 }} />
           )}
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 16, transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}>{title}</span>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 16 }}>{title}</span>
         </div>
         <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
           <button
@@ -437,6 +456,7 @@ export default function Window({
 
       {/* Content */}
       <div
+        ref={contentRef}
         onContextMenu={(e) => {
           e.preventDefault()
           e.stopPropagation()
@@ -461,7 +481,7 @@ export default function Window({
                 {menu.items.map((it, idx) => (
                   <button
                     key={idx}
-                    style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}
+                    style={{ width: '100%', padding: '8px 10px', border: 'none', background: 'transparent', textAlign: 'left', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, transform: 'translateZ(0)' }}
                     onClick={() => {
                       closeMenu()
                       if (it.onClick) {

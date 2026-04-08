@@ -272,7 +272,7 @@ function Row({
         }}>
           {label}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}>
           <div style={{ fontSize: 17, color: '#8e8e93' }}>{value}</div>
           {onClick && <ChevronRight size={16} color="#c7c7cc" />}
         </div>
@@ -360,7 +360,7 @@ function DeviceInfo({ info }: { info: DeviceInfo | null }) {
   return (
     <div style={{ paddingBottom: 40 }}>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32, gap: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32, gap: 20, transform: 'translateZ(0)' }}>
         <div style={{
           width: 64,
           height: 64,
@@ -377,10 +377,10 @@ function DeviceInfo({ info }: { info: DeviceInfo | null }) {
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#111827' }}>{info.device_name}</h1>
           <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
                <Cpu size={14} /> {info.hardware.cpu.split(' ')[0]}
              </span>
-             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4 }}>
+             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
                <MemoryStick size={14} /> {info.hardware.memory.split(' ')[0]} {info.hardware.memory.split(' ')[1]}
              </span>
           </div>
@@ -454,7 +454,7 @@ function DeviceInfo({ info }: { info: DeviceInfo | null }) {
       <SpecGroup title="网络连接">
         <SpecRow label="IP 地址" value={info.network.ip} />
         <SpecRow label="连接状态" value={
-          <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}>
             ● 已连接
           </span>
         } />
@@ -572,10 +572,10 @@ function StorageManagement() {
             <div style={{ width: '15%', height: '100%', background: '#ff9500' }} />
           </div>
           <div style={{ display: 'flex', gap: 16, marginTop: 20, fontSize: 13, color: '#6c6c70', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#007aff' }} /> 文档 (30%)</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#34c759' }} /> 图片 (20%)</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff9500' }} /> 视频 (15%)</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#e5e5ea' }} /> 空闲 (35%)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#007aff' }} /> 文档 (30%)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#34c759' }} /> 图片 (20%)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ff9500' }} /> 视频 (15%)</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}><div style={{ width: 10, height: 10, borderRadius: '50%', background: '#e5e5ea' }} /> 空闲 (35%)</div>
           </div>
         </div>
       </Section>

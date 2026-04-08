@@ -117,7 +117,8 @@ const menuItemStyle: React.CSSProperties = {
   color: 'inherit',
   fontSize: 14,
   fontFamily: 'inherit',
-  boxSizing: 'border-box'
+  boxSizing: 'border-box',
+  transform: 'translateZ(0)'
 }
 
 const hoverColor = '#d1d5db'
