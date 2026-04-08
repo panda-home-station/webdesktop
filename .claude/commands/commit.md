@@ -5,9 +5,10 @@
 ## 提交流程
 
 ### 1. Code Review（必须）
-在 `.claude/review.md` 中查看 code review 指南，对变更进行检查。
 
-**必须检查项目：**
+详细检查项见 [.claude/commands/review.md](.claude/commands/review.md)。
+
+**核心检查：**
 - [ ] 代码逻辑正确，无死代码
 - [ ] 无硬编码密钥或凭证
 - [ ] TypeScript 类型正确
@@ -25,12 +26,12 @@
 ```
 
 ### 2. Test（必须）
-运行测试确保所有测试通过。
+
+详细要求见 [.claude/commands/test.md](.claude/commands/test.md)。
 
 **必须运行：**
 ```bash
-npm run test -- --run
-npm run test:coverage -- --run
+npm run regression
 ```
 
 **必须满足：**
@@ -48,6 +49,7 @@ npm run test:coverage -- --run
 ```
 
 ### 3. Commit（仅在 Review 和 Test 都通过后）
+
 执行 git commit。
 
 ```bash
