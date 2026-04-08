@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useContext, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@desktop/components/Sidebar'
-import { WindowContext } from '@shared/sdk/window'
 import {
   Users,
   HardDrive,
@@ -23,6 +22,7 @@ import type {
 import type { Pool } from '@shared/types/pool-types'
 import type { Disk } from '@shared/types/disk-types'
 import { UserManagement } from './components/UserManagement'
+import { Section, Switch } from './components/shared'
 
 // Format bytes to human readable string
 function formatBytes(bytes: number): string {
@@ -96,9 +96,7 @@ const TABS = [
 ]
 
 export default function SystemSettings() {
-  const win = useContext(WindowContext)
   const [activeTab, setActiveTab] = useState('device')
-  const lastTitleRef = useRef<string>('')
 
   // Static system info (fetched once)
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
@@ -112,15 +110,6 @@ export default function SystemSettings() {
   // Loading states
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (win && win.setTitle) {
-      if (lastTitleRef.current !== 'Settings') {
-        lastTitleRef.current = 'Settings'
-        win.setTitle('Settings')
-      }
-    }
-  }, [win])
 
   // Fetch static data on mount
   useEffect(() => {
@@ -228,45 +217,7 @@ function TabContent({
   }
 }
 
-// iPad Style Components
-
-function Section({ title, children, footer }: { title?: string; children: React.ReactNode; footer?: React.ReactNode }) {
-  return (
-    <div style={{ marginBottom: 32 }}>
-      {title && (
-        <h3 style={{
-          fontSize: 13,
-          fontWeight: 400,
-          color: '#6c6c70',
-          marginBottom: 8,
-          paddingLeft: 16,
-          textTransform: 'uppercase'
-        }}>
-          {title}
-        </h3>
-      )}
-      <div style={{
-        background: '#fff',
-        borderRadius: 10,
-        overflow: 'hidden',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
-      }}>
-        {children}
-      </div>
-      {footer && (
-        <div style={{
-          fontSize: 13,
-          color: '#6c6c70',
-          marginTop: 8,
-          paddingLeft: 16,
-          lineHeight: 1.4
-        }}>
-          {footer}
-        </div>
-      )}
-    </div>
-  )
-}
+// iOS Style Components
 
 function Row({
   label,
@@ -316,42 +267,6 @@ function Row({
           {onClick && <ChevronRight size={16} color="#c7c7cc" />}
         </div>
       </div>
-    </div>
-  )
-}
-
-function Switch({ checked, onChange }: { checked: boolean; onChange: (c: boolean) => void }) {
-  return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation()
-        onChange(!checked)
-      }}
-      style={{
-        width: 51,
-        height: 31,
-        background: checked ? '#34c759' : '#e9e9ea',
-        borderRadius: 31,
-        position: 'relative',
-        cursor: 'pointer',
-        transition: 'background 0.3s ease',
-        boxSizing: 'border-box',
-        border: checked ? 'none' : '2px solid #e9e9ea'
-      }}
-    >
-      <div
-        style={{
-          width: 27,
-          height: 27,
-          background: '#fff',
-          borderRadius: '50%',
-          position: 'absolute',
-          top: 2,
-          left: checked ? 22 : 2,
-          transition: 'all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-        }}
-      />
     </div>
   )
 }
@@ -761,3 +676,4 @@ function RemoteAccess() {
     </div>
   )
 }
+

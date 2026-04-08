@@ -6,7 +6,6 @@ import {
 import { UserForm } from './UserForm'
 import {
   User as UserIcon,
-  Shield,
   Lock,
   Mail,
   Shell,
@@ -14,48 +13,21 @@ import {
   CheckCircle,
   Wifi,
   Terminal,
-  Search,
   Plus,
   Trash2,
   Edit2,
 } from 'lucide-react'
-
-// iOS-style color palette
-const colors = {
-  background: '#f2f2f7',
-  cardBg: '#ffffff',
-  primary: '#007aff',
-  success: '#34c759',
-  warning: '#ff9500',
-  danger: '#ff3b30',
-  text: '#1c1c1e',
-  textSecondary: '#8e8e93',
-  textTertiary: '#6c6c70',
-  border: '#e5e5ea',
-  divider: '#c6c6c8',
-}
-
-// Status badge component
-function StatusBadge({ status }: { status: 'active' | 'locked' | 'disabled' }) {
-  const config = {
-    active: { bg: '#e8f5e9', color: colors.success, label: '正常' },
-    locked: { bg: '#ffebee', color: colors.danger, label: '已锁定' },
-    disabled: { bg: '#fff3e0', color: colors.warning, label: '已禁用' },
-  }
-  const { bg, color, label } = config[status]
-  return (
-    <span style={{
-      padding: '4px 10px',
-      backgroundColor: bg,
-      color: color,
-      borderRadius: 6,
-      fontSize: 13,
-      fontWeight: 500,
-    }}>
-      {label}
-    </span>
-  )
-}
+import {
+  Card,
+  SearchInput,
+  StatsCard,
+  DeleteConfirm,
+  EmptyState,
+  LoadingSkeleton,
+  Badge,
+  StatusBadge,
+} from '../shared'
+import { colors } from '../../styles/theme'
 
 // User card component
 function UserCard({
@@ -85,13 +57,7 @@ function UserCard({
     user.locked ? 'locked' : user.password_disabled ? 'disabled' : 'active'
 
   return (
-    <div style={{
-      background: colors.cardBg,
-      borderRadius: 10,
-      padding: 16,
-      marginBottom: 12,
-      boxShadow: '0 1px 2px rgba(0,0,0,0.02)',
-    }}>
+    <Card>
       {/* Header with avatar and name */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
         <div style={{
@@ -117,203 +83,83 @@ function UserCard({
             @{user.username}
           </div>
         </div>
-        <StatusBadge status={status} />
+        {StatusBadge[status]()}
       </div>
 
       {/* Info rows */}
       <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '10px 12px',
-          borderBottom: '1px solid ' + colors.border,
-        }}>
-          <UserIcon size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
-          <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>UID</span>
-          <span style={{ fontSize: 14, color: colors.textSecondary }}>{user.uid}</span>
-        </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '10px 12px',
-          borderBottom: '1px solid ' + colors.border,
-        }}>
-          <Home size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
-          <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>主目录</span>
-          <span style={{ fontSize: 14, color: colors.textSecondary, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {user.home}
-          </span>
-        </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '10px 12px',
-          borderBottom: '1px solid ' + colors.border,
-        }}>
-          <Shell size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
-          <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>Shell</span>
-          <span style={{ fontSize: 14, color: colors.textSecondary }}>{user.shell}</span>
-        </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '10px 12px',
-        }}>
-          <Mail size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
-          <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>邮箱</span>
-          <span style={{ fontSize: 14, color: colors.textSecondary }}>
-            {user.email || '-'}
-          </span>
-        </div>
+        <InfoRow icon={<UserIcon size={16} />} label="UID" value={user.uid} />
+        <InfoRow icon={<Home size={16} />} label="主目录" value={user.home} />
+        <InfoRow icon={<Shell size={16} />} label="Shell" value={user.shell} />
+        <InfoRow icon={<Mail size={16} />} label="邮箱" value={user.email || '-'} border={false} />
       </div>
 
       {/* Feature badges */}
       <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-        {user.smb && (
-          <span style={{
-            padding: '4px 8px',
-            backgroundColor: '#e3f2fd',
-            color: colors.primary,
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}>
-            <CheckCircle size={12} /> SMB
-          </span>
-        )}
-        {user.ssh_password_enabled && (
-          <span style={{
-            padding: '4px 8px',
-            backgroundColor: '#e8f5e9',
-            color: colors.success,
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}>
-            <Wifi size={12} /> SSH
-          </span>
-        )}
-        {user.sudo_commands?.length > 0 && (
-          <span style={{
-            padding: '4px 8px',
-            backgroundColor: '#fff3e0',
-            color: colors.warning,
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}>
-            <Terminal size={12} /> Sudo
-          </span>
-        )}
-        {user.builtin && (
-          <span style={{
-            padding: '4px 8px',
-            backgroundColor: '#f3e5f5',
-            color: '#7b1fa2',
-            borderRadius: 4,
-            fontSize: 12,
-            fontWeight: 500,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 4,
-          }}>
-            <Lock size={12} /> 内置
-          </span>
-        )}
+        {user.smb && <Badge label="SMB" bgColor="#e3f2fd" textColor={colors.primary} icon={<CheckCircle size={12} />} />}
+        {user.ssh_password_enabled && <Badge label="SSH" bgColor="#e8f5e9" textColor={colors.success} icon={<Wifi size={12} />} />}
+        {user.sudo_commands?.length > 0 && <Badge label="Sudo" bgColor="#fff3e0" textColor={colors.warning} icon={<Terminal size={12} />} />}
+        {user.builtin && <Badge label="内置" bgColor="#f3e5f5" textColor="#7b1fa2" icon={<Lock size={12} />} />}
       </div>
 
       {/* Action buttons */}
       {!user.builtin && !user.immutable && (
         <div style={{ display: 'flex', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid ' + colors.border }}>
-          <button
-            onClick={onEdit}
-            style={{
-              flex: 1,
-              padding: '10px 16px',
-              backgroundColor: colors.primary,
-              color: '#fff',
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
-          >
-            <Edit2 size={16} /> 编辑
-          </button>
-          <button
-            onClick={onDelete}
-            style={{
-              padding: '10px 16px',
-              backgroundColor: '#ffebee',
-              color: colors.danger,
-              border: 'none',
-              borderRadius: 8,
-              fontSize: 15,
-              fontWeight: 500,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 6,
-            }}
-          >
-            <Trash2 size={16} />
-          </button>
+          <ActionButton onClick={onEdit} icon={<Edit2 size={16} />} label="编辑" primary />
+          <ActionButton onClick={onDelete} icon={<Trash2 size={16} />} label="" danger />
         </div>
       )}
-    </div>
+    </Card>
   )
 }
 
-// Empty state component
-function EmptyState({ hasSearch }: { hasSearch: boolean }) {
+function InfoRow({ icon, label, value, border = true }: { icon: React.ReactNode; label: string; value: React.ReactNode; border?: boolean }) {
   return (
     <div style={{
-      textAlign: 'center',
-      padding: '60px 20px',
-      color: colors.textSecondary,
+      display: 'flex',
+      alignItems: 'center',
+      padding: '10px 12px',
+      borderBottom: border ? '1px solid ' + colors.border : 'none',
     }}>
-      <UserIcon size={48} color={colors.divider} style={{ marginBottom: 16 }} />
-      <div style={{ fontSize: 17, marginBottom: 8 }}>
-        {hasSearch ? '未找到匹配的用户' : '暂无用户'}
-      </div>
-      <div style={{ fontSize: 14, color: colors.textTertiary }}>
-        {hasSearch ? '请尝试其他搜索条件' : '点击上方按钮创建第一个用户'}
-      </div>
+      <div style={{ color: colors.textSecondary, marginRight: 10 }}>{icon}</div>
+      <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>{label}</span>
+      <span style={{ fontSize: 14, color: colors.textSecondary }}>{value}</span>
     </div>
   )
 }
 
-// Loading skeleton
-function LoadingSkeleton() {
+function ActionButton({ onClick, icon, label, primary, danger }: {
+  onClick: () => void
+  icon: React.ReactNode
+  label: string
+  primary?: boolean
+  danger?: boolean
+}) {
+  const bgColor = danger ? '#ffebee' : primary ? colors.primary : colors.background
+  const textColor = danger ? colors.danger : primary ? '#fff' : colors.text
+
   return (
-    <div style={{ padding: 20 }}>
-      {[1, 2, 3].map((i) => (
-        <div key={i} style={{
-          background: colors.cardBg,
-          borderRadius: 10,
-          padding: 16,
-          marginBottom: 12,
-          height: 200,
-          animation: 'pulse 1.5s infinite',
-        }} />
-      ))}
-      <style>{`@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }`}</style>
-    </div>
+    <button
+      onClick={onClick}
+      style={{
+        flex: danger ? 'none' : 1,
+        padding: '10px 16px',
+        backgroundColor: bgColor,
+        color: textColor,
+        border: 'none',
+        borderRadius: 8,
+        fontSize: 15,
+        fontWeight: 500,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+      }}
+    >
+      {icon}
+      {label}
+    </button>
   )
 }
 
@@ -325,7 +171,6 @@ export function UserList() {
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<User | null>(null)
-  const [deleteLoading, setDeleteLoading] = useState(false)
 
   const loadUsers = useCallback(async () => {
     try {
@@ -371,16 +216,9 @@ export function UserList() {
 
   const handleDelete = async () => {
     if (!deleteConfirm) return
-    try {
-      setDeleteLoading(true)
-      await userService.delete(deleteConfirm.id)
-      setDeleteConfirm(null)
-      loadUsers()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '删除失败')
-    } finally {
-      setDeleteLoading(false)
-    }
+    await userService.delete(deleteConfirm.id)
+    setDeleteConfirm(null)
+    loadUsers()
   }
 
   const handleFormSuccess = () => {
@@ -400,66 +238,18 @@ export function UserList() {
       <div style={{ marginBottom: 16 }}>
         {/* Stats row */}
         <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-          <div style={{
-            flex: 1,
-            background: colors.background,
-            borderRadius: 8,
-            padding: '12px 16px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: colors.primary }}>{totalUsers}</div>
-            <div style={{ fontSize: 12, color: colors.textSecondary }}>总用户</div>
-          </div>
-          <div style={{
-            flex: 1,
-            background: colors.background,
-            borderRadius: 8,
-            padding: '12px 16px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: colors.success }}>{localUsers}</div>
-            <div style={{ fontSize: 12, color: colors.textSecondary }}>本地用户</div>
-          </div>
-          <div style={{
-            flex: 1,
-            background: colors.background,
-            borderRadius: 8,
-            padding: '12px 16px',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: 24, fontWeight: 700, color: colors.text }}>{builtinUsers}</div>
-            <div style={{ fontSize: 12, color: colors.textSecondary }}>内置账户</div>
-          </div>
+          <StatsCard label="总用户" value={totalUsers} color={colors.primary} />
+          <StatsCard label="本地用户" value={localUsers} color={colors.success} />
+          <StatsCard label="内置账户" value={builtinUsers} color={colors.text} />
         </div>
 
         {/* Search and Add */}
-        <div style={{ display: 'flex', gap: 12 }}>
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            background: colors.cardBg,
-            borderRadius: 10,
-            padding: '8px 14px',
-            border: '1px solid ' + colors.border,
-          }}>
-            <Search size={18} color={colors.textSecondary} />
-            <input
-              type="text"
-              placeholder="搜索用户..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                flex: 1,
-                border: 'none',
-                background: 'transparent',
-                marginLeft: 10,
-                fontSize: 16,
-                outline: 'none',
-                color: colors.text,
-              }}
-            />
-          </div>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 12 }}>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="搜索用户..."
+          />
           <button
             onClick={() => {
               setEditingUser(null)
@@ -486,7 +276,7 @@ export function UserList() {
 
       {/* Content */}
       <div>
-        {loading && <LoadingSkeleton />}
+        {loading && <LoadingSkeleton count={3} height={200} />}
 
         {error && (
           <div style={{
@@ -502,7 +292,7 @@ export function UserList() {
         )}
 
         {!loading && !error && filteredUsers.length === 0 && (
-          <EmptyState hasSearch={!!search} />
+          <EmptyState title={search ? '未找到匹配的用户' : '暂无用户'} description={search ? '请尝试其他搜索条件' : '点击上方按钮创建第一个用户'} />
         )}
 
         {!loading && !error && filteredUsers.map((user) => (
@@ -529,84 +319,13 @@ export function UserList() {
 
       {/* Delete Confirmation */}
       {deleteConfirm && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000,
-            background: 'rgba(0,0,0,0.4)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setDeleteConfirm(null)
-          }}
-        >
-          <div style={{
-            width: 300,
-            background: '#fff',
-            borderRadius: 14,
-            padding: 20,
-            textAlign: 'center',
-          }}>
-            <div style={{
-              width: 60,
-              height: 60,
-              borderRadius: '50%',
-              backgroundColor: '#ffebee',
-              margin: '0 auto 16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <Trash2 size={28} color={colors.danger} />
-            </div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 600, color: colors.text }}>
-              删除用户
-            </h3>
-            <p style={{ margin: '0 0 20px', fontSize: 14, color: colors.textSecondary, lineHeight: 1.5 }}>
-              确定要删除用户 <strong>{deleteConfirm.username}</strong> 吗？此操作无法撤销。
-            </p>
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                style={{
-                  flex: 1,
-                  padding: '12px 20px',
-                  backgroundColor: colors.background,
-                  color: colors.text,
-                  border: 'none',
-                  borderRadius: 10,
-                  fontSize: 16,
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                取消
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleteLoading}
-                style={{
-                  flex: 1,
-                  padding: '12px 20px',
-                  backgroundColor: colors.danger,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: 10,
-                  fontSize: 16,
-                  fontWeight: 500,
-                  cursor: deleteLoading ? 'not-allowed' : 'pointer',
-                  opacity: deleteLoading ? 0.7 : 1,
-                }}
-              >
-                {deleteLoading ? '删除中...' : '删除'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteConfirm
+          open={true}
+          title="删除用户"
+          itemName={deleteConfirm.username}
+          onConfirm={handleDelete}
+          onCancel={() => setDeleteConfirm(null)}
+        />
       )}
     </div>
   )
