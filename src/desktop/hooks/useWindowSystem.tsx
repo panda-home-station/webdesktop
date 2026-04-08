@@ -4,7 +4,7 @@
  * Centralized hook for managing window lifecycle and operations
  */
 
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { listApps, loadApp, AppDef } from '../../framework/registry'
 import { useWindowsStore, WindowState } from '../state/windows-store'
 import { requestPermission } from '../../shared/sdk/permissions'
@@ -124,7 +124,8 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
   // Track loading apps to prevent double-clicks
   const loadingApps = useRef(new Set<string>())
 
-  const apps = listApps()
+  // Memoize apps to ensure stable reference
+  const apps = useMemo(() => listApps(), [])
 
   /**
    * Get app definition by ID
@@ -376,25 +377,40 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
 
   /**
    * Handle window title change
+   * Use ref to access windowsStore to prevent dependency changes that cause infinite loops
    */
+  const windowsStoreRef = useRef(windowsStore)
+  windowsStoreRef.current = windowsStore
+
   const changeWindowTitle = useCallback(
     (id: string, title: string) => {
-      windowsStore.updateWindow(id, { title })
+      windowsStoreRef.current.updateWindow(id, { title })
     },
-    [windowsStore]
+    [] // Stable - no dependencies to prevent re-creation
   )
 
-  // Initialize persisted windows
+  // Initialize persisted windows - run only once on mount
+  const initRef = useRef(false)
   useEffect(() => {
+    if (initRef.current) return
+    initRef.current = true
+
+    // Capture stable references at effect creation time
+    const windowsRef = windowsStore.windows
+    const getAppRef = getApp
+
     const loadPersistedWindows = async () => {
-      const windows = windowsStore.windows
+      const windows = windowsRef
 
       const seen = new Set<string>()
       for (const w of windows) {
         if (seen.has(w.appId)) continue
         seen.add(w.appId)
 
-        const app = getApp(w.appId)
+        // Skip if window already has content (avoid unnecessary updates)
+        if (w.content) continue
+
+        const app = getAppRef(w.appId)
         if (!app) continue
 
         try {
@@ -412,7 +428,7 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
 
     loadPersistedWindows()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [getApp])
+  }, [apps])
 
   // Handle screen resize
   useEffect(() => {
@@ -521,6 +537,8 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
     options,
   ])
 
+  // Return object directly - functions are already stable via useCallback
+  // Note: We intentionally do NOT memoize this to avoid stale closures
   return {
     // State
     windows: windowsStore.windows,
@@ -531,7 +549,7 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
     persistLoaded,
     apps,
 
-    // Actions
+    // Actions - all useCallback with stable dependencies
     openWindow,
     closeWindow,
     focusWindow,

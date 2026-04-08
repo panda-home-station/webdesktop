@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react'
+import React, { useState, useEffect, useContext, useRef } from 'react'
 import { Sidebar } from '@desktop/components/Sidebar'
 import { WindowContext } from '@shared/sdk/window'
 import { getWallpaper, setWallpaper } from '@desktop/state/desktop'
@@ -78,11 +78,17 @@ const TABS = [
 export default function SystemSettings() {
   const win = useContext(WindowContext)
   const [activeTab, setActiveTab] = useState('device')
+  const lastTitleRef = useRef<string>('')
 
   useEffect(() => {
     if (win && win.setTitle) {
       const tabName = TABS.find(t => t.id === activeTab)?.label || '设置'
-      win.setTitle(`Settings - ${tabName}`)
+      const newTitle = `Settings - ${tabName}`
+      // Only update if title actually changed to prevent infinite loops
+      if (lastTitleRef.current !== newTitle) {
+        lastTitleRef.current = newTitle
+        win.setTitle(newTitle)
+      }
     }
   }, [activeTab, win])
 
