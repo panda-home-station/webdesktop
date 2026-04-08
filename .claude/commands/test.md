@@ -6,7 +6,7 @@ Before committing, ensure all tests pass.
 
 ```bash
 # 运行所有检查（lint + 测试）
-npm run test:all
+npm run regression
 ```
 
 ## Test Requirements
