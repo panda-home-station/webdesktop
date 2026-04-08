@@ -22,6 +22,7 @@ import type {
 } from '@shared/types/system-types'
 import type { Pool } from '@shared/types/pool-types'
 import type { Disk } from '@shared/types/disk-types'
+import { UserManagement } from './components/UserManagement'
 
 // Format bytes to human readable string
 function formatBytes(bytes: number): string {
@@ -87,7 +88,7 @@ function getNetworkInfo(
 
 const TABS = [
   { id: 'device', label: '关于本机', icon: <Info size={20} /> },
-  { id: 'users', label: '用户与账户', icon: <Users size={20} /> },
+  { id: 'users', label: '用户与群组', icon: <Users size={20} /> },
   { id: 'storage', label: '存储空间', icon: <Server size={20} /> },
   { id: 'disk', label: '硬盘管理', icon: <HardDrive size={20} /> },
   { id: 'network', label: '网络', icon: <Network size={20} /> },
@@ -668,45 +669,6 @@ function PoolRow({ name, status, isHealthy, usedStr, totalStr, freeStr, percent,
         <span>已用: {usedStr}</span>
         <span>空闲: {freeStr}</span>
       </div>
-    </div>
-  )
-}
-
-function UserManagement() {
-  const [users] = useState([
-    { id: 1, name: 'admin', role: '管理员', status: '活跃' },
-    { id: 2, name: 'guest', role: '访客', status: '禁用' },
-  ])
-
-  return (
-    <div>
-      <Section title="当前用户">
-        <Row
-          label="admin"
-          value="已登录"
-          icon={<div style={{ width: 32, height: 32, borderRadius: '50%', background: '#8e8e93', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</div>}
-          onClick={() => {}}
-          border={false}
-        />
-      </Section>
-
-      <Section title="所有用户" footer="管理员可以添加或移除用户，并管理其访问权限。">
-        {users.map((u, i) => (
-          <Row
-            key={u.id}
-            label={u.name}
-            value={u.role}
-            onClick={() => {}}
-            border={i !== users.length - 1}
-          />
-        ))}
-        <Row
-          label="添加用户..."
-          onClick={() => {}}
-          border={false}
-          value={<span style={{ color: '#007aff' }}>+</span>}
-        />
-      </Section>
     </div>
   )
 }
