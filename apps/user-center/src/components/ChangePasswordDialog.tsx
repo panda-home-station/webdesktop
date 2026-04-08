@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Modal, ModalProps } from '@desktop/components/Modal'
 import { truenasApi } from '@truenas/api'
 import { useAuthStore } from '@truenas/stores/auth'
@@ -45,17 +45,7 @@ export function ChangePasswordDialog({ onSuccess, ...modalProps }: ChangePasswor
       // Success
       setSuccess(true)
       onSuccess?.()
-    } catch (err: any) {
-      console.error('Change password error:', err)
-      console.error('Error details:', {
-        message: err?.message,
-        code: err?.code,
-        data: err?.data,
-        reason: err?.reason,
-        strerror: err?.strerror,
-        errno: err?.errno,
-      })
-
+    } catch (err) {
       // Try to extract error message from backend response
       // Check for validation errors from TrueNAS backend
       let errorMessage = err?.message ||
@@ -66,7 +56,6 @@ export function ChangePasswordDialog({ onSuccess, ...modalProps }: ChangePasswor
       // Check for validation errors in data.extra format
       // TrueNAS returns validation errors as: { data: { extra: [['field', 'message'], ...] } }
       if (err?.data?.extra && Array.isArray(err.data.extra)) {
-        console.log('Validation errors found:', err.data.extra)
         const fieldErrors = err.data.extra as [string, string][]
         const oldPasswordError = fieldErrors.find(([field]) =>
           field.includes('old_password') || field.includes('oldPassword') || field.includes('old')
@@ -74,8 +63,6 @@ export function ChangePasswordDialog({ onSuccess, ...modalProps }: ChangePasswor
         const newPasswordError = fieldErrors.find(([field]) =>
           field.includes('new_password') || field.includes('newPassword') || field.includes('new')
         )
-
-        console.log('Field errors:', { oldPasswordError, newPasswordError })
 
         if (oldPasswordError) {
           errorMessage = oldPasswordError[1] || '当前密码错误'

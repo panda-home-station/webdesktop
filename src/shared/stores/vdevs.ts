@@ -27,7 +27,7 @@ interface VdevsState {
   selectPool: (poolId: number) => void;
 }
 
-export const useVdevsStore = create<VdevsState>((set, get) => ({
+export const useVdevsStore = create<VdevsState>((set) => ({
   // Initial state
   isLoading: false,
   nodes: [],

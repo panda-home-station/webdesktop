@@ -4,7 +4,6 @@
  * Mock implementation for testing storage/persistence
  */
 
-import { vi } from 'vitest'
 
 export class MockStorage implements Storage {
   private data = new Map<string, string>()

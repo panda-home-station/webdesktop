@@ -1,17 +1,72 @@
 import React, { useState, useEffect, useContext, useRef } from 'react'
 import { Sidebar } from '@desktop/components/Sidebar'
 import { WindowContext } from '@shared/sdk/window'
-import { getWallpaper, setWallpaper } from '@desktop/state/desktop'
+import {
+  Users,
+  HardDrive,
+  Network,
+  Globe,
+  Server,
+  Info,
+  ChevronRight,
+  Cpu,
+  Copy,
+  MemoryStick,
+} from 'lucide-react'
+
+interface MemorySlot {
+  size: string;
+  memory_type: string;
+}
+
+interface HardwareInfo {
+  cpu: string;
+  memory: string;
+  gpu: string | null;
+  memory_slots: MemorySlot[];
+}
+
+interface NetworkInfo {
+  ip: string;
+  transfer: string;
+}
+
+interface DiskData {
+  name: string;
+  used: string;
+  total: string;
+  percent: string;
+}
+
+interface PhyDisk {
+  name: string;
+  is_rotational: boolean;
+  size: string;
+}
+
+interface DeviceInfo {
+  device_id: string;
+  device_name: string;
+  hardware: HardwareInfo;
+  system_version: string;
+  uptime: string;
+  system_time: string;
+  system_time_ts: number;
+  network: NetworkInfo;
+  system_disk: DiskData;
+  data_disk: DiskData;
+  phy_disks?: PhyDisk[];
+}
 
 // Mock API for now - will be replaced with TrueNAS API
 const api = {
-  fsMkdir: async (path: string) => { },
-  fsList: async (path: string) => ({ entries: [] }),
-  fsUpload: async (path: string, file: File) => { },
-  fsDownloadUrl: (path: string) => '',
+  fsMkdir: async (_path: string) => { },
+  fsList: async (_path: string) => ({ entries: [] }),
+  fsUpload: async (_path: string, _file: File) => { },
+  fsDownloadUrl: (_path: string) => '',
   getSecuritySettings: async () => ({ idle_timeout: 0, idle_action: 'lock' }),
-  setSecuritySettings: async (settings: any) => { },
-  getDeviceInfo: async () => ({
+  setSecuritySettings: async (_settings: unknown) => { },
+  getDeviceInfo: async (): Promise<DeviceInfo> => ({
     device_id: 'PNAS-001',
     device_name: 'Panda Home Station',
     hardware: {
@@ -40,31 +95,13 @@ const api = {
       total: '4.0 TB',
       percent: '30',
     },
-    y_disks: [
+    phy_disks: [
       { name: 'Samsung 970 EVO', is_rotational: false, size: '1TB' },
       { name: 'WD Red Plus', is_rotational: false, size: '4TB' },
       { name: 'WD Red Plus', is_rotational: false, size: '4TB' },
     ],
   }),
 }
-import { 
-  Monitor,
-  Users, 
-  HardDrive, 
-  Network, 
-  Globe, 
-  Server,
-  Info,
-  ChevronRight,
-  Wifi,
-  Activity,
-  Cpu,
-  Copy,
-  Thermometer,
-  Microchip,
-  MemoryStick,
-  Lock,
-} from 'lucide-react'
 
 const TABS = [
   { id: 'device', label: '关于本机', icon: <Info size={20} /> },
@@ -92,11 +129,11 @@ export default function SystemSettings() {
     }
   }, [activeTab, win])
 
-  const [deviceInfo, setDeviceInfo] = useState<any>(() => {
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(() => {
     try {
       const cached = localStorage.getItem('pnas_device_info')
       return cached ? JSON.parse(cached) : null
-    } catch (e) {
+    } catch {
       return null
     }
   })
@@ -105,10 +142,10 @@ export default function SystemSettings() {
     const fetchInfo = () => {
       api.getDeviceInfo().then(data => {
         setDeviceInfo(data)
-        try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch (e) { /* ignore */ }
+        try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch { /* ignore */ }
       }).catch(console.error)
     }
-    
+
     fetchInfo()
     const interval = setInterval(fetchInfo, 5000)
     return () => clearInterval(interval)
@@ -136,7 +173,7 @@ export default function SystemSettings() {
   )
 }
 
-function TabContent({ id, deviceInfo }: { id: string; deviceInfo: any }) {
+function TabContent({ id, deviceInfo }: { id: string; deviceInfo: DeviceInfo | null }) {
   switch (id) {
     case 'device': return <DeviceInfo info={deviceInfo} />
     case 'users': return <UserManagement />
@@ -154,30 +191,30 @@ function Section({ title, children, footer }: { title?: string; children: React.
   return (
     <div style={{ marginBottom: 32 }}>
       {title && (
-        <h3 style={{ 
-          fontSize: 13, 
-          fontWeight: 400, 
-          color: '#6c6c70', 
-          marginBottom: 8, 
+        <h3 style={{
+          fontSize: 13,
+          fontWeight: 400,
+          color: '#6c6c70',
+          marginBottom: 8,
           paddingLeft: 16,
           textTransform: 'uppercase'
         }}>
           {title}
         </h3>
       )}
-      <div style={{ 
-        background: '#fff', 
-        borderRadius: 10, 
+      <div style={{
+        background: '#fff',
+        borderRadius: 10,
         overflow: 'hidden',
-        boxShadow: '0 1px 2px rgba(0,0,0,0.02)' 
+        boxShadow: '0 1px 2px rgba(0,0,0,0.02)'
       }}>
         {children}
       </div>
       {footer && (
-        <div style={{ 
-          fontSize: 13, 
-          color: '#6c6c70', 
-          marginTop: 8, 
+        <div style={{
+          fontSize: 13,
+          color: '#6c6c70',
+          marginTop: 8,
           paddingLeft: 16,
           lineHeight: 1.4
         }}>
@@ -188,27 +225,27 @@ function Section({ title, children, footer }: { title?: string; children: React.
   )
 }
 
-function Row({ 
-  label, 
-  value, 
-  icon, 
-  border = true, 
+function Row({
+  label,
+  value,
+  icon,
+  border = true,
   onClick,
   destructive = false
-}: { 
-  label: string; 
-  value?: React.ReactNode; 
+}: {
+  label: string;
+  value?: React.ReactNode;
   icon?: React.ReactNode;
-  border?: boolean; 
+  border?: boolean;
   onClick?: () => void;
   destructive?: boolean;
 }) {
   return (
-    <div 
+    <div
       onClick={onClick}
-      style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
+      style={{
+        display: 'flex',
+        alignItems: 'center',
         paddingLeft: 16,
         background: '#fff',
         cursor: onClick ? 'pointer' : 'default',
@@ -216,11 +253,11 @@ function Row({
       }}
     >
       {icon && <div style={{ marginRight: 12, color: '#007aff' }}>{icon}</div>}
-      <div style={{ 
-        flex: 1, 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         paddingRight: 16,
         paddingTop: 12,
         paddingBottom: 12,
@@ -228,8 +265,8 @@ function Row({
         height: '100%',
         boxSizing: 'border-box'
       }}>
-        <div style={{ 
-          fontSize: 17, 
+        <div style={{
+          fontSize: 17,
           color: destructive ? '#ff3b30' : '#000',
           fontWeight: 400
         }}>
@@ -282,7 +319,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (c: boolean
 
 // Tab Implementations
 
-function DeviceInfo({ info }: { info: any }) {
+function DeviceInfo({ info }: { info: DeviceInfo | null }) {
   const [displayTime, setDisplayTime] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -324,13 +361,13 @@ function DeviceInfo({ info }: { info: any }) {
     <div style={{ paddingBottom: 40 }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 32, gap: 20 }}>
-        <div style={{ 
-          width: 64, 
-          height: 64, 
-          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)', 
-          borderRadius: 16, 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div style={{
+          width: 64,
+          height: 64,
+          background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
+          borderRadius: 16,
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           color: '#fff',
           boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.2), 0 2px 4px -1px rgba(37, 99, 235, 0.1)'
@@ -359,7 +396,7 @@ function DeviceInfo({ info }: { info: any }) {
               {info.hardware.memory}
               {info.hardware.memory_slots && info.hardware.memory_slots.length > 0 && (
                 <span style={{ color: '#6b7280', marginLeft: 8 }}>
-                  - {info.hardware.memory_slots.map((s: any) => `${s.size} ${s.memory_type}`).join(' | ')}
+                  - {info.hardware.memory_slots.map((s) => `${s.size} ${s.memory_type}`).join(' | ')}
                 </span>
               )}
             </div>
@@ -368,14 +405,14 @@ function DeviceInfo({ info }: { info: any }) {
         <SpecRow label="硬盘" value={
           info.phy_disks && info.phy_disks.length > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
-              {info.phy_disks.map((disk: any, i: number) => (
+              {info.phy_disks.map((disk, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', fontSize: 13, lineHeight: 1.5 }}>
                   <span style={{ fontWeight: 600, color: '#374151' }}>{disk.name}</span>
                   <span style={{ margin: '0 6px', color: '#9ca3af' }}>-</span>
                   <span style={{ color: '#6b7280' }}>
-                    {disk.is_rotational ? 'HDD' : 'SSD'} 
-                    <span style={{ margin: '0 4px', color: '#e5e7eb' }}>|</span> 
-                    {disk.size} 
+                    {disk.is_rotational ? 'HDD' : 'SSD'}
+                    <span style={{ margin: '0 4px', color: '#e5e7eb' }}>|</span>
+                    {disk.size}
                   </span>
                 </div>
               ))}
@@ -383,12 +420,12 @@ function DeviceInfo({ info }: { info: any }) {
           ) : '未检测到磁盘'
         } />
         <SpecRow label="设备 ID" value={info.device_id} action={
-          <button 
+          <button
             onClick={copyId}
-            style={{ 
-              border: 'none', 
-              background: 'transparent', 
-              color: copied ? '#059669' : '#6b7280', 
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: copied ? '#059669' : '#6b7280',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -442,7 +479,7 @@ function SpecGroup({ title, children }: { title: string, children: React.ReactNo
   return (
     <div style={{ marginBottom: 28 }}>
       <h3 style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 2 }}>{title}</h3>
-      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+      <div style={{ background: '#fff', borderRadius: 8, border: '1px solid #e5e5eb', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
         {children}
       </div>
     </div>
@@ -459,7 +496,7 @@ function SpecRow({ label, value, action }: { label: string, value: React.ReactNo
   )
 }
 
-function DiskRow({ name, data, isLast }: { name: string, data: any, isLast?: boolean }) {
+function DiskRow({ name, data, isLast }: { name: string, data: DiskData, isLast?: boolean }) {
   return (
     <div style={{ padding: '16px 20px', borderBottom: isLast ? 'none' : '1px solid #f3f4f6' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
@@ -469,10 +506,10 @@ function DiskRow({ name, data, isLast }: { name: string, data: any, isLast?: boo
         </div>
       </div>
       <div style={{ height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
-        <div style={{ 
-          width: `${data.percent}%`, 
-          height: '100%', 
-          background: data.percent > 90 ? '#ef4444' : '#3b82f6',
+        <div style={{
+          width: `${data.percent}%`,
+          height: '100%',
+          background: Number(data.percent) > 90 ? '#ef4444' : '#3b82f6',
           borderRadius: 4,
           transition: 'width 0.5s ease-out'
         }} />
@@ -490,9 +527,9 @@ function UserManagement() {
   return (
     <div>
       <Section title="当前用户">
-        <Row 
-          label="admin" 
-          value="已登录" 
+        <Row
+          label="admin"
+          value="已登录"
           icon={<div style={{ width: 32, height: 32, borderRadius: '50%', background: '#8e8e93', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>A</div>}
           onClick={() => {}}
           border={false}
@@ -509,9 +546,9 @@ function UserManagement() {
             border={i !== users.length - 1}
           />
         ))}
-        <Row 
-          label="添加用户..." 
-          onClick={() => {}} 
+        <Row
+          label="添加用户..."
+          onClick={() => {}}
           border={false}
           value={<span style={{ color: '#007aff' }}>+</span>}
         />
@@ -542,7 +579,7 @@ function StorageManagement() {
           </div>
         </div>
       </Section>
-      
+
       <Section title="建议">
         <Row label="清理重复文件" onClick={() => {}} />
         <Row label="优化存储空间" onClick={() => {}} border={false} />
@@ -557,7 +594,7 @@ function DiskInfo() {
       <Section title="物理硬盘">
         <Row label="Disk 1 (NVMe)" value="Samsung 980 PRO 1TB" onClick={() => {}} />
         <Row label="Disk 2 (SATA)" value="WD Red Plus 4TB" onClick={() => {}} />
-        <Row label="Disk 3 (SATA)" value="WD Red Plus 4TB" onClick={() => {}} border={false} />
+        <Row label="Disk 3 (SATA)" value="WD Red Plus 4TB" border={false} />
       </Section>
       <Section title="RAID 阵列">
         <Row label="RAID 模式" value="RAID 1 (镜像)" />
@@ -576,7 +613,7 @@ function NetworkSettings() {
         <Row label="IP 地址" value="192.168.1.100" />
         <Row label="MAC 地址" value="00:11:22:33:44:55" border={false} />
       </Section>
-      
+
       <Section title="DNS">
         <Row label="DNS 服务器" value="自动 (8.8.8.8)" onClick={() => {}} border={false} />
       </Section>
@@ -591,21 +628,20 @@ function RemoteAccess() {
   return (
     <div>
       <Section title="终端服务" footer="允许通过 SSH 协议访问系统终端。请确保使用强密码。">
-        <Row 
-          label="SSH" 
-          value={<Switch checked={sshEnabled} onChange={setSshEnabled} />} 
+        <Row
+          label="SSH"
+          value={<Switch checked={sshEnabled} onChange={setSshEnabled} />}
           border={false}
         />
       </Section>
 
       <Section title="桌面共享" footer="允许通过 VNC 客户端查看和控制系统桌面。">
-        <Row 
-          label="VNC 远程桌面" 
-          value={<Switch checked={vncEnabled} onChange={setVncEnabled} />} 
+        <Row
+          label="VNC 远程桌面"
+          value={<Switch checked={vncEnabled} onChange={setVncEnabled} />}
           border={false}
         />
       </Section>
     </div>
   )
 }
-

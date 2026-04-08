@@ -1,3 +1,12 @@
+// Worker global scope with required methods
+interface WorkerSelf {
+  FileReaderSync: new () => FileReaderSync
+  postMessage: (message: unknown) => void
+  onmessage: ((e: MessageEvent) => void) | null
+}
+
+const _self = self as unknown as WorkerSelf
+
 const K = new Uint32Array([
   0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,
   0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
@@ -155,7 +164,7 @@ function compute(req: Req) {
   const file = req.file
   const total = file.size
   const chunkSize = Math.max(256 * 1024, Math.min(8 * 1024 * 1024, req.chunkSize || 4 * 1024 * 1024))
-  const reader = new (self as any).FileReaderSync()
+  const reader = new _self.FileReaderSync()
   const hasher = new SHA256()
   let offset = 0
   while (offset < total) {
@@ -164,21 +173,21 @@ function compute(req: Req) {
     const buf = reader.readAsArrayBuffer(part)
     hasher.update(toUint8(buf))
     offset = end
-    ;(self as any).postMessage({ type: 'progress', loaded: offset, total })
+    ;_self.postMessage({ type: 'progress', loaded: offset, total })
   }
   const hex = hasher.digest()
-  ;(self as any).postMessage({ type: 'result', ok: true, hex })
+  ;_self.postMessage({ type: 'result', ok: true, hex })
 }
 
-(self as any).onmessage = (e: MessageEvent) => {
+_self.onmessage = (e: MessageEvent) => {
   const req = e.data as Req
   if (!req || req.type !== 'sha256' || !(req.file instanceof File)) {
-    (self as any).postMessage({ type: 'result', ok: false })
+    _self.postMessage({ type: 'result', ok: false })
     return
   }
   try {
     compute(req)
   } catch {
-    (self as any).postMessage({ type: 'result', ok: false })
+    _self.postMessage({ type: 'result', ok: false })
   }
 }

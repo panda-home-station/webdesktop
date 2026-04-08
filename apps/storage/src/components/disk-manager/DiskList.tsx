@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useDiskStore } from '@truenas/stores/disk';
 import { StorageDashboardDisk } from '@truenas/types/disk';
-import { formatBytes, getDiskTypeLabel } from '@truenas/utils/storage.utils';
+import {} from '@truenas/utils/storage.utils';
 import DiskFilters from './DiskFilters';
 import DiskTable from './DiskTable';
 

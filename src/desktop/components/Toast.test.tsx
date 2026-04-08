@@ -5,8 +5,6 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
-import React from 'react'
 // import Toast from './Toast'
 // TODO: Uncomment and fix import
 // import Toast from './Toast'

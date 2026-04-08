@@ -29,7 +29,8 @@ export class AlertService {
       this.subscribeToAlertAlerts()
 
       this.initialized = true
-      console.log('Alert service initialized')
+      // eslint-disable-next-line no-console
+      console.debug('Alert service initialized')
     } catch (error) {
       console.error('Failed to initialize alert service:', error)
       useAlertStore.getState().setError(
@@ -137,7 +138,8 @@ export class AlertService {
     // Subscribe to alert.list events (like webui does)
     // Event format: { id: number, msg: 'added' | 'changed' | 'removed', fields?: Alert }
     truenasApi.subscribe('alert.list', (data) => {
-      console.log('Alert event:', data)
+      // eslint-disable-next-line no-console
+      console.debug('Alert event:', data)
 
       const event = data as {
         id: number

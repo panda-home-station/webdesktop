@@ -1,4 +1,3 @@
-import React from 'react'
 import { SidebarLayout, SidebarItem } from '@desktop/layouts/SidebarLayout'
 
 export default function System() {

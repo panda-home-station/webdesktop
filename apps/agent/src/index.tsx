@@ -1,5 +1,3 @@
-import React from 'react'
-
 export default function AgentApp() {
   return (
     <div style={{ padding: 20, textAlign: 'center' }}>

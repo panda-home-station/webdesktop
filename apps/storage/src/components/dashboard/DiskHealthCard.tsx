@@ -5,7 +5,6 @@
 
 import React from 'react';
 import { StorageDashboardDisk } from '@truenas/types/disk';
-import { formatBytes, getDiskTypeLabel, getDiskBusLabel } from '@truenas/utils/storage.utils';
 
 interface DiskHealthCardProps {
   disks: StorageDashboardDisk[];

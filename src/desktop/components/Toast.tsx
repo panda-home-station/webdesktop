@@ -4,8 +4,8 @@
  * Displays temporary notifications and messages
  */
 
-import React, { useEffect, useRef } from 'react'
-import { Check, X, Info, AlertTriangle, AlertCircle, XCircle } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { Check, X, Info, AlertTriangle, XCircle } from 'lucide-react'
 
 export type ToastType = 'success' | 'info' | 'warning' | 'error'
 

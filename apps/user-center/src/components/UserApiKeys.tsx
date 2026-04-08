@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { truenasApi } from '@truenas/api'
 import { useAuthStore } from '@truenas/stores/auth'
 import { ApiKeyForm } from './ApiKeyForm'
@@ -32,7 +32,7 @@ export function UserApiKeys() {
   const { user } = useAuthStore()
   const currentUsername = user?.pw_name
 
-  const loadApiKeys = async () => {
+  const loadApiKeys = useCallback(async () => {
     setLoading(true)
     try {
       const keys = await truenasApi.call('api_key.query', [[], { order_by: ['-created_at'] }]) as ApiKey[]
@@ -46,10 +46,11 @@ export function UserApiKeys() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentUsername])
 
   useEffect(() => {
     loadApiKeys()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUsername])
 
   const handleCreateKey = () => {

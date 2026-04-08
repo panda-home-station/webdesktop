@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Modal, ModalProps } from '@desktop/components/Modal'
 import { truenasApi } from '@truenas/api'
 import { useAuthStore } from '@truenas/stores/auth'
-import { ApiKey, ApiTimestamp } from './UserApiKeys'
+import { ApiKey } from './UserApiKeys'
 
 interface ApiKeyFormProps extends Omit<ModalProps, 'children'> {
   editingKey?: ApiKey
@@ -81,7 +81,7 @@ export function ApiKeyForm({ open, editingKey, onSuccess, onClose, ...modalProps
         }
       }
       onClose()
-    } catch (err: any) {
+    } catch (err) {
       console.error('API key operation error:', err)
       setError(err?.message || '操作失败，请稍后重试')
     } finally {

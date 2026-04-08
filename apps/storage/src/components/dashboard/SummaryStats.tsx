@@ -6,7 +6,6 @@
 import React from 'react';
 import { useStorageDashboardStore } from '@truenas/stores/storage-dashboard';
 import { formatBytes, getTotalPoolCapacity, getTotalPoolUsed } from '@truenas/utils/storage.utils';
-import { Pool } from '@truenas/types/pool';
 
 interface SummaryStatsProps {
   poolCount?: number;
@@ -23,7 +22,6 @@ export default function Summary({ poolCount, diskCount, scrubCount }: SummarySta
 
   const totalCapacity = getTotalPoolCapacity(store.pools);
   const totalUsed = getTotalPoolUsed(store.pools);
-  const totalAvailable = totalCapacity - totalUsed;
   const usedPercentage = totalCapacity > 0 ? (totalUsed / totalCapacity) * 100 : 0;
 
   return (

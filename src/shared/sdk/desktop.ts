@@ -7,7 +7,7 @@
 
 const logoutCallbacks: Array<() => void> = []
 const lockScreenCallbacks: Array<() => void> = []
-const openAppCallbacks: Array<(id: string, args?: any) => void> = []
+const openAppCallbacks: Array<(id: string, args?: unknown) => void> = []
 const winActionCallbacks: Array<(id: string, action: string) => void> = []
 const showDesktopCallbacks: Array<() => void> = []
 const launcherCallbacks: Array<() => void> = []
@@ -36,7 +36,7 @@ export function lockScreen() {
   lockScreenCallbacks.forEach(cb => cb())
 }
 
-export function subscribeOpenApp(callback: (id: string, args?: any) => void): () => void {
+export function subscribeOpenApp(callback: (id: string, args?: unknown) => void): () => void {
   openAppCallbacks.push(callback)
   return () => {
     const idx = openAppCallbacks.indexOf(callback)
@@ -44,7 +44,7 @@ export function subscribeOpenApp(callback: (id: string, args?: any) => void): ()
   }
 }
 
-export function openApp(id: string, args?: any) {
+export function openApp(id: string, args?: unknown) {
   openAppCallbacks.forEach(cb => cb(id, args))
 }
 

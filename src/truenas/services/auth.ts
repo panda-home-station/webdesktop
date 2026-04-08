@@ -6,6 +6,7 @@ import {
   LoginExResponse,
   LoginExResponseType,
   LoggedInUser,
+  Role,
 } from '../../shared/types/auth.interface';
 import { persistentStorage, sessionStorage as phsSessionStorage } from '../../desktop/state/persistence';
 
@@ -152,7 +153,7 @@ export class AuthService {
     if (!authStore.user?.privilege?.roles?.$set) {
       return false;
     }
-    return authStore.user.privilege.roles.$set.includes(role as any);
+    return authStore.user.privilege.roles.$set.includes(role as Role);
   }
 
   /**

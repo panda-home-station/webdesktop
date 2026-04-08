@@ -33,7 +33,7 @@ export default function LockScreen({ onUnlock, onLogout, wallpaper, username }: 
       // In production, this should call the appropriate TrueNAS API
       onUnlock()
       setPassword('')
-    } catch (err) {
+    } catch {
       setError('密码错误，请重试')
       setPassword('')
     } finally {

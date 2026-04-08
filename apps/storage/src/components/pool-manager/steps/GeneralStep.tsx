@@ -5,7 +5,6 @@
 
 import React from 'react';
 import { usePoolManagerStore } from '@truenas/stores/pool-manager';
-import { DeduplicationSetting } from '@truenas/types/dedup-enum-types';
 
 export default function GeneralStep() {
   const {

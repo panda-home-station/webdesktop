@@ -76,8 +76,8 @@ function calculateInitialPosition(
 /**
  * App Loader Component
  */
-function AppLoader({ appId, args, onLoaded }: { appId: string; args?: any; onLoaded?: () => void }) {
-  const [Comp, setComp] = useState<React.ComponentType<any> | null>(null)
+function AppLoader({ appId, args, onLoaded }: { appId: string; args?: unknown; onLoaded?: () => void }) {
+  const [Comp, setComp] = useState<React.ComponentType<Record<string, unknown>> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -91,9 +91,10 @@ function AppLoader({ appId, args, onLoaded }: { appId: string; args?: any; onLoa
       })
       .catch((err) => {
         console.error(`Failed to load app ${appId}:`, err)
-        if (mounted) setError(err.message)
+        if (mounted) setError((err as Error).message)
       })
     return () => { mounted = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId])
 
   if (error) {
@@ -160,7 +161,7 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
       title?: string
       content?: React.ReactNode
       iconUrl?: string
-      args?: any
+      args?: unknown
       checkPermissions?: boolean
     }) => {
       const {

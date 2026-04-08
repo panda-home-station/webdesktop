@@ -18,7 +18,6 @@ export default function StorageDashboard() {
     pools,
     disks,
     scrubs,
-    rootDatasets,
     error,
     loadDashboard,
     refreshDashboard,

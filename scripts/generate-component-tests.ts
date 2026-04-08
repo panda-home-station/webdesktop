@@ -11,6 +11,8 @@
  *   node scripts/generate-component-tests.ts --list             # List all components
  */
 
+/* eslint-disable no-console */
+
 import * as fs from 'fs'
 import * as path from 'path'
 import * as parser from '@typescript-eslint/typescript-estree'

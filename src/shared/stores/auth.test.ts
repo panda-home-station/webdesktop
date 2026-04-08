@@ -6,7 +6,6 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAuthStore } from './auth'
-import { LoginResult } from '../types/login-result.enum'
 import { mockLoggedInUser } from '../../test/mocks/truenasApi'
 
 // Mock the auth service

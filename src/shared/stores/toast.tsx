@@ -162,7 +162,7 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 /**
  * Toast Context
  */
-import React, { createContext, useContext, ReactNode } from 'react'
+import { createContext, useContext, ReactNode } from 'react'
 
 type ToastStoreState = ReturnType<typeof useToastStore>
 

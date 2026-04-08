@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useWindowsStore, WindowState } from './windows-store'
+import { useWindowsStore } from './windows-store'
 
 describe('Windows Store', () => {
   beforeEach(() => {

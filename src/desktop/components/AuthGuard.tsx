@@ -26,7 +26,7 @@ export default function AuthGuard({
   onUnauthenticated,
   wsInitialized = true,
 }: AuthGuardProps) {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated } = useAuthStore()
   const isAutoLoggingIn = useAutoLogin(isAuthenticated, wsInitialized)
 
   if (!isAuthenticated) {

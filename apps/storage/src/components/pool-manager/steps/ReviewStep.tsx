@@ -5,7 +5,6 @@
 
 import React from 'react';
 import { usePoolManagerStore } from '@truenas/stores/pool-manager';
-import { formatBytes } from '@truenas/utils/storage.utils';
 
 export default function ReviewStep() {
   const {
@@ -15,7 +14,6 @@ export default function ReviewStep() {
     deduplication,
     vdevGroups,
     getTotalDisksCount,
-    canProceed,
   } = usePoolManagerStore();
 
   const dataGroup = vdevGroups.find((g) => g.type === 'data');

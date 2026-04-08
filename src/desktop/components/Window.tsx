@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react'
+import React, { useRef, useState, useCallback, useMemo } from 'react'
 import Icon from '@mdi/react'
 import { mdiAbTesting } from '@mdi/js'
 import { WindowContext } from '../../shared/sdk/window'
@@ -122,8 +122,8 @@ export default function Window({
            const percent = currentW > 0 ? offsetX / currentW : 0
            const newW = Number.isFinite(rect.w) ? rect.w : Math.min(safeW, 800)
            const newH = Number.isFinite(rect.h) ? rect.h : Math.min(safeH, 600)
-           const baseX = Number.isFinite(rect.x) ? rect.x : safeX
-           const baseY = Number.isFinite(rect.y) ? rect.y : safeY
+           const _baseX = Number.isFinite(rect.x) ? rect.x : safeX
+           const _baseY = Number.isFinite(rect.y) ? rect.y : safeY
            const newX = ev.clientX - (newW * percent)
            const newY = ev.clientY - (dragStartY - dragInitY)
 

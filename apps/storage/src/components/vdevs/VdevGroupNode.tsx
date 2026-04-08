@@ -50,7 +50,6 @@ export default function VdevGroupNode({ node }: VdevGroupNodeProps) {
   };
 
   const getStats = (): { total: number; allocated: number } => {
-    const disks = topologyToDisks(node);
     return {
       total: node.stats.size,
       allocated: node.stats.allocated,

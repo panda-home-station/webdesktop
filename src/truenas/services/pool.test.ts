@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { PoolService, poolService } from './pool'
+import { poolService } from './pool'
 import { mockPools } from '../../test/mocks/truenasApi'
 
 // Mock truenasApi

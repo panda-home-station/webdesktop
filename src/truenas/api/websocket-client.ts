@@ -58,7 +58,7 @@ export class TrueNASError extends Error {
     public reason?: string,
     public errno?: number,
     public strerror?: string,
-    public errorResponse?: any
+    public errorResponse?: unknown
   ) {
     super(message)
     this.name = 'TrueNASError'
@@ -463,7 +463,8 @@ export class TrueNASWebSocketClient {
    */
   private log(...args: unknown[]): void {
     if (this.config.debug) {
-      console.log('[TrueNAS WebSocket]', ...args)
+      // eslint-disable-next-line no-console
+      console.debug('[TrueNAS WebSocket]', ...args)
     }
   }
 
@@ -500,7 +501,7 @@ export class TrueNASWebSocketClient {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       try {
         await this.waitUntilConnected()
-      } catch (error) {
+      } catch {
         // If not connected and reconnection is in progress, queue the call
         this.pendingCalls.push({ method, params: params || [] })
         throw new Error('WebSocket is not connected')

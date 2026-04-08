@@ -25,7 +25,7 @@ interface DesktopShellProps {
  * Renders desktop environment with wallpaper and app support
  * Handles lock screen state
  */
-export default function DesktopShell({ children }: DesktopShellProps) {
+export default function DesktopShell(_props: DesktopShellProps) {
   const wallpaper = useWallpaper()
   const [isLocked, setIsLocked] = useState(false)
   const { user } = useAuthStore()
@@ -43,13 +43,6 @@ export default function DesktopShell({ children }: DesktopShellProps) {
   const handleLogout = async () => {
     const authStore = useAuthStore.getState()
     await authStore.logout()
-  }
-
-  /**
-   * Handle lock request
-   */
-  const handleLock = () => {
-    setIsLocked(true)
   }
 
   if (isLocked) {

@@ -7,7 +7,6 @@ import { truenasApi } from '../api';
 import {
   CreatePool,
   CreatePoolResult,
-  ExpandPoolParams,
   Pool,
   PoolAttachParams,
   PoolExpandParams,

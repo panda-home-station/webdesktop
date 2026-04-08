@@ -59,17 +59,17 @@ export function getPoolHealthColor(status: string): string {
 }
 
 // Get total pool capacity
-export function getTotalPoolCapacity(pools: any[]): number {
+export function getTotalPoolCapacity(pools: { size?: { allocated?: number } }[]): number {
   return pools.reduce((total, pool) => total + (pool.size?.allocated || 0), 0);
 }
 
 // Get total pool used
-export function getTotalPoolUsed(pools: any[]): number {
+export function getTotalPoolUsed(pools: { size?: { used?: number } }[]): number {
   return pools.reduce((total, pool) => total + (pool.size?.used || 0), 0);
 }
 
 // Get pool used percentage
-export function getPoolUsedPercentage(pool: any): number {
+export function getPoolUsedPercentage(pool: { allocated?: number; free?: number }): number {
   // When is_upgraded is true, pool.allocated and pool.free are available
   const allocated = pool.allocated || 0;
   const free = pool.free || 0;

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { LoggedInUser } from '../types/auth.interface';
 import { authService } from '../../truenas/services/auth';
-import { createTypedStore, sessionStorage as phsSessionStorage } from '../../desktop/state/persistence';
+import { createTypedStore } from '../../desktop/state/persistence';
 
 // Create typed stores for persistent data
 const tokenStore = createTypedStore<string | null>('token', null);

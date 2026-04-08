@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { SidebarLayout, SidebarItem } from '@desktop/layouts/SidebarLayout'
 
 interface Dataset {
@@ -87,8 +87,6 @@ export default function Datasets() {
                   <tbody>
                     {sortedDatasets.map((dataset) => {
                       const indent = getDepth(dataset.path) * 24
-                      const total = dataset.used_bytes + dataset.available_bytes
-                      const usedPercent = (dataset.used_bytes / total) * 100
                       return (
                         <tr
                           key={dataset.path}

@@ -3,7 +3,7 @@
  * Main storage management application
  */
 
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import StorageDashboard from './components/dashboard/StorageDashboard';
 import { truenasApi } from '@truenas/api';
 

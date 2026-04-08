@@ -52,20 +52,20 @@ const GlassTile = memo(({ children, color, active, activeColor = '#2563eb' }: { 
 ))
 GlassTile.displayName = 'GlassTile'
 
-const TaskbarIcon = memo(({ 
-  id, 
-  title, 
-  iconUrl, 
-  isAppActive, 
+const TaskbarIcon = memo(({
+  id: _id,
+  title,
+  iconUrl,
+  isAppActive,
   isFocused,
-  onClick, 
-  onMouseEnter, 
-  onMouseLeave 
-}: { 
-  id: string, 
-  title: string, 
-  iconUrl?: string, 
-  isAppActive: boolean, 
+  onClick,
+  onMouseEnter,
+  onMouseLeave
+}: {
+  id: string,
+  title: string,
+  iconUrl?: string,
+  isAppActive: boolean,
   isFocused: boolean,
   onClick: () => void,
   onMouseEnter: (e: React.MouseEvent<HTMLElement>) => void,
@@ -109,7 +109,7 @@ const TaskbarIcon = memo(({
 })
 TaskbarIcon.displayName = 'TaskbarIcon'
 
-export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [], onToggleQuickAgent }: Props) {
+export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLauncher, onOpenApp: _onOpenApp, isLauncherOpen, onCloseLauncher, zOrder = [], onToggleQuickAgent }: Props) {
   const apps = listApps()
   const { user, logout } = useAuthStore()
   const unreadAlertCount = useAlertStore(state => state.getImportantUnreadAlertsCount())
@@ -137,7 +137,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
 
   const isRunning = (id?: string) => !!(id && byApp[id] && byApp[id].length > 0)
   const [tip, setTip] = useState<{ text: string; x: number; y: number } | null>(null)
-  const tipTimerRef = React.useRef<any>(null)
+  const tipTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const showTip = (text: string, el: HTMLElement) => {
     if (tipTimerRef.current) clearTimeout(tipTimerRef.current)
@@ -269,8 +269,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
           const arr = byApp[id] || []
           const title = a?.title || id
           const iconUrl = a?.iconUrl
-          const anyMin = arr.find(x => x.minimized)
-          const anyWin = arr.find(x => !x.minimized) || arr[0]
+          const _anyMin = arr.find(x => x.minimized)
+          const _anyWin = arr.find(x => !x.minimized) || arr[0]
           // If any window of this app is not minimized, the app is considered "active" (showing on desktop)
           const isAppActive = arr.some(w => !w.minimized)
 
@@ -463,8 +463,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
                   flexShrink: 0,
                   overflow: 'hidden'
                 }}>
-                  {(user as any)?.avatar_url ? (
-                    <img src={(user as any).avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  {(user as { avatar_url?: string })?.avatar_url ? (
+                    <img src={(user as { avatar_url?: string }).avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     (user?.username || 'U').charAt(0).toUpperCase()
                   )}

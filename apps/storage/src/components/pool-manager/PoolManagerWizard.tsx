@@ -18,7 +18,6 @@ import ReviewStep from './steps/ReviewStep';
 export default function PoolManagerWizard() {
   const {
     currentStep,
-    totalSteps,
     canProceed,
     createPool,
     reset,

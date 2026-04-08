@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { DiskService, diskService } from './disk'
+import { diskService } from './disk'
 
 // Mock truenasApi
 vi.mock('../api', () => ({

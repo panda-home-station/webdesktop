@@ -4,8 +4,8 @@
  */
 
 import React, { useState } from 'react';
-import { VDevItem, TopologyDisk } from '@truenas/types/storage-types';
-import { isTopologyDisk, topologyToDisks } from '@truenas/utils/topology.utils';
+import { VDevItem } from '@truenas/types/storage-types';
+import { isTopologyDisk } from '@truenas/utils/topology.utils';
 import { getTopologyStatusLabel, getTopologyStatusColor } from '@truenas/types/vdev-status-enum';
 import { TopologyItemType } from '@truenas/types/vdev-enum-types';
 

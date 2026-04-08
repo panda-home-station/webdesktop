@@ -9,7 +9,6 @@ import { datasetService } from '@truenas/services/dataset';
 import {
   formatBytes,
   getDatasetName,
-  getDatasetUsedPercentage,
 } from '@truenas/utils/dataset.utils';
 
 interface DatasetDetailsPanelProps {
@@ -39,8 +38,6 @@ EditValues,
       setIsSaving(false);
     }
   };
-
-  const usedPercentage = getDatasetUsedPercentage(dataset);
 
   return (
     <div style={styles.container}>
@@ -223,10 +220,6 @@ function StorageInfoRow({ label, value }: StorageInfoRowProps) {
       <span style={styles.infoValue}>{value}</span>
     </div>
   );
-}
-
-function formatDataset(value: unknown): string {
-  return formatBytes(value as number);
 }
 
 function getProgressColor(percentage: number): string {

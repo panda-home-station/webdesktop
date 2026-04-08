@@ -244,7 +244,6 @@ export default function NotificationsApp() {
   const {
     alerts,
     isLoading,
-    isPanelOpen,
     error,
     dismissAlert,
     reopenAlert,

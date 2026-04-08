@@ -3,39 +3,24 @@
  * Display dataset tree and management options
  */
 
-import React, { useEffect, useState } from 'react';
-import { useStorageDashboardStore } from '@truenas/stores/storage-dashboard';
+import React, { useCallback, useEffect, useState } from 'react';
 import { datasetService } from '@truenas/services/dataset';
 import { Dataset, DatasetDetails } from '@truenas/types/dataset-types';
 import { DatasetType } from '@truenas/types/dataset-enum-types';
-import {
-  formatBytes,
-  getDatasetName,
-  isVolume,
-  isFilesystem,
-  getDatasetUsedPercentage,
-  getDatasetIcon,
-  getDatasetIconColor,
-} from '@truenas/utils/dataset.utils';
+import {} from '@truenas/utils/dataset.utils';
 import DatasetTree from './DatasetTree';
 import DatasetDetailsPanel from './DatasetDetailsPanel';
 
 export default function DatasetView({ poolId }: { poolId: number }) {
-  const {
-    isLoading,
-    rootDatasets,
-    loadDashboard,
-  } = useStorageDashboardStore();
-
   const [datasets, setDatasets] = useState<Dataset[]>([]);
   const [selectedDataset, setSelectedDataset] = useState<DatasetDetails | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   useEffect(() => {
     loadDatasets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [poolId]);
 
-  const loadDatasets = async () => {
+  const loadDatasets = useCallback(async () => {
     try {
       const poolDatasets = await datasetService.query([
         ['pool', '=', poolId],
@@ -44,7 +29,7 @@ export default function DatasetView({ poolId }: { poolId: number }) {
     } catch (error) {
       console.error('Failed to load datasets:', error);
     }
-  };
+  }, [poolId]);
 
   const handleDatasetSelect = async (dataset: Dataset) => {
     try {
@@ -52,16 +37,6 @@ export default function DatasetView({ poolId }: { poolId: number }) {
       setSelectedDataset(details[0]);
     } catch (error) {
       console.error('Failed to load dataset details:', error);
-    }
-  };
-
-  const handleDatasetCreate = async (parentId: string, params: unknown) => {
-    try {
-      await datasetService.create(params);
-      await loadDatasets();
-      setShowCreateDialog(false);
-    } catch (error) {
-      console.error('Failed to create dataset:', error);
     }
   };
 
@@ -107,7 +82,7 @@ export default function DatasetView({ poolId }: { poolId: number }) {
           <DatasetTree
             datasets={datasets}
             onSelect={handleDatasetSelect}
-            onCreate={(parentId) => setShowCreateDialog(true)}
+            onCreate={() => {}}
             onDelete={handleDatasetDelete}
           />
         </div>

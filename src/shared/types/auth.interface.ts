@@ -6,8 +6,8 @@ export interface LoggedInUser {
   pw_shell: string;
   pw_uid: number;
   attributes: {
-    preferences: any;
-    dashState: any[];
+    preferences: Record<string, unknown>;
+    dashState: unknown[];
     appsAgreement: boolean;
   };
   privilege: AuthMePrivilege;

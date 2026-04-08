@@ -1,4 +1,3 @@
-import React, { useEffect, useState } from 'react'
 import { TabsLayout, TabItem } from '@desktop/layouts/TabsLayout'
 
 export default function DataProtection() {

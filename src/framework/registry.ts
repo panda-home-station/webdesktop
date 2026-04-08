@@ -15,7 +15,7 @@ type AppDef = {
   title: string
   capabilities: string[]
   iconUrl?: string
-  load: () => Promise<React.ComponentType<any>>
+  load: () => Promise<React.ComponentType<Record<string, unknown>>>
   minW?: number
   minH?: number
 }
@@ -24,7 +24,7 @@ type AppDef = {
 const manifests: Record<string, Manifest> = Object.fromEntries(
   Object.entries(import.meta.glob('../../apps/**/manifest.json', { eager: true })).map(([p, m]) => [
     p,
-    (m as any).default ?? (m as any)
+    (m as { default?: Manifest }).default ?? (m as Manifest)
   ])
 )
 
@@ -49,8 +49,8 @@ const apps: AppDef[] = Object.entries(manifests)
       minW: typeof m.minWidth === 'number' ? m.minWidth : undefined,
       minH: typeof m.minHeight === 'number' ? m.minHeight : undefined,
       load: async () => {
-        const mod = await (loader as () => Promise<any>)()
-        return mod.default as React.ComponentType<any>
+        const mod = await (loader as () => Promise<{ default: React.ComponentType<Record<string, unknown>> }>)()
+        return mod.default
       }
     }
   })

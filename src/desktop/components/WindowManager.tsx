@@ -10,11 +10,8 @@ export default function WindowManager() {
   const {
     windows,
     zOrder,
-    animating,
     showLauncher,
     showQuickAgent,
-    persistLoaded,
-    apps,
     focusWindow,
     closeWindow,
     minimizeWindow,
@@ -39,21 +36,11 @@ export default function WindowManager() {
   const handleLauncherOpen = (
     id: string,
     title: string,
-    Comp: React.ComponentType<any> | undefined,
+    Comp: React.ComponentType<Record<string, unknown>> | undefined,
     iconUrl?: string
   ) => {
     const app = getApp(id)
     if (!app) {
-      // Placeholder for unknown app
-      const Placeholder = () => (
-        <div style={{ padding: 16 }}>
-          <h3 style={{ margin: 0, marginBottom: 8 }}>未安装的应用</h3>
-          <div>应用 ID：{id}</div>
-          <div style={{ marginTop: 10, color: 'var(--muted)' }}>
-            这是占位窗口，用于验证 Dock 点击行为。
-          </div>
-        </div>
-      )
       return
     }
 
@@ -72,7 +59,7 @@ export default function WindowManager() {
     toggleLauncher()
   }
 
-  const handleOpenFullApp = (messages: any[]) => {
+  const handleOpenFullApp = (messages: unknown[]) => {
     openWindow({
       appId: 'agent',
       args: { initialMessages: messages },
@@ -103,7 +90,6 @@ export default function WindowManager() {
           if (w.minimized) return null
 
           const z = zOrder.indexOf(w.id) + 10
-          const app = getApp(w.appId)
           const { minW, minH } = getAppMinDimensions(w.appId)
 
           return (
@@ -170,8 +156,8 @@ export default function WindowManager() {
 /**
  * App Loader Component
  */
-function AppLoader({ appId, args, onLoaded }: { appId: string; args?: any; onLoaded?: () => void }) {
-  const [Comp, setComp] = useState<React.ComponentType<any> | null>(null)
+function AppLoader({ appId, args, onLoaded }: { appId: string; args?: Record<string, unknown>; onLoaded?: () => void }) {
+  const [Comp, setComp] = useState<React.ComponentType<Record<string, unknown>> | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -190,6 +176,7 @@ function AppLoader({ appId, args, onLoaded }: { appId: string; args?: any; onLoa
         })
     })
     return () => { mounted = false }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [appId])
 
   if (error) {

@@ -31,7 +31,7 @@ interface PoolManagerState {
 
   // VDEV configuration
   vdevGroups: VdevGroup[];
-  availableDisks: any[];
+  availableDisks: Record<string, unknown>[];
 
   // Deduplication
   deduplication: string;
@@ -192,7 +192,7 @@ export const usePoolManagerStore = create<PoolManagerState>((set, get) => ({
     }
 
     // TODO: Implement pool creation via service
-    const params = {
+    const _params = {
       name,
       encryption: encryption ? {
         algorithm: encryptionAlgorithm,
@@ -204,6 +204,6 @@ export const usePoolManagerStore = create<PoolManagerState>((set, get) => ({
     };
 
     // await poolService.create(params);
-    console.log('Creating pool:', params);
+    // Debug: console.log('Creating pool:', params);
   },
 }));

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { api } from '../api/client'
 import { clearPersistState } from './state/windows-store'
 
@@ -39,7 +39,7 @@ export default function InitForm({ onDone }: Props) {
       setTimeout(() => {
         if (onDone) onDone()
       }, 1000)
-    } catch (err) {
+    } catch {
       setError('初始化或登录失败')
     } finally {
       setLoading(false)

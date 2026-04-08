@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useRef, useState, useContext, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Sidebar } from '@desktop/components/Sidebar'
-import { WindowContext, useWindow } from '@shared/sdk/window'
+import { useWindow } from '@shared/sdk/window'
 import { useAuthStore } from '@truenas/stores/auth'
 import Icon from '@mdi/react'
 import {
@@ -14,14 +14,19 @@ import { getWallpaper as getDesktopWallpaper, setWallpaper as setDesktopWallpape
 import { ChangePasswordDialog } from './components/ChangePasswordDialog'
 import { UserApiKeys } from './components/UserApiKeys'
 
+interface SecuritySettings {
+  idle_timeout: number;
+  idle_action: string;
+}
+
 // Mock API for now - will be replaced with TrueNAS API
 const api = {
-  fsMkdir: async (path: string) => { },
-  fsList: async (path: string) => ({ entries: [] }),
-  fsUpload: async (path: string, file: File) => { },
-  fsDownloadUrl: (path: string) => '',
-  getSecuritySettings: async () => ({ idle_timeout: 0, idle_action: 'lock' }),
-  setSecuritySettings: async (settings: any) => { },
+  fsMkdir: async (_path: string) => { },
+  fsList: async (_path: string) => ({ entries: [] }),
+  fsUpload: async (_path: string, _file: File) => { },
+  fsDownloadUrl: (_path: string) => '',
+  getSecuritySettings: async (): Promise<SecuritySettings> => ({ idle_timeout: 0, idle_action: 'lock' }),
+  setSecuritySettings: async (_settings: SecuritySettings) => { },
 }
 
 type Item = 'profile' | 'wallpapers' | 'security' | 'change-password' | 'api-keys'
@@ -52,6 +57,7 @@ export default function UserCenter() {
                      active === 'change-password' ? '更改密码' :
                      active === 'api-keys' ? '我的API Key' : ''
     win.setTitle(`User Center - ${tabName}`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active])
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
@@ -71,7 +77,7 @@ export default function UserCenter() {
       setBusy(true)
       try {
         await api.fsMkdir(WALL_DIR)
-      } catch (e) {
+      } catch {
         // ignore
       }
       try {
@@ -93,11 +99,11 @@ export default function UserCenter() {
           try {
             const ev = new CustomEvent('desktop:wallpaper', { detail: { url } })
             window.dispatchEvent(ev)
-          } catch (e) {
+          } catch {
             // ignore
           }
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
     })()

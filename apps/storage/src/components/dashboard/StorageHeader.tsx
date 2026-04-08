@@ -4,7 +4,6 @@
  */
 
 import React from 'react';
-import { useStorageDashboardStore } from '@truenas/stores/storage-dashboard';
 
 interface StorageHeaderProps {
   onRefresh: () => void;
@@ -12,8 +11,6 @@ interface StorageHeaderProps {
 }
 
 export default function StorageHeader({ onRefresh, isRefreshing }: StorageHeaderProps) {
-  const { pools, error } = useStorageDashboardStore();
-
   return (
     <div style={styles.header}>
       <div style={styles.titleSection}>

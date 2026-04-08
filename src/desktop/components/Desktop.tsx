@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import WindowManager from './WindowManager'
-import { getWallpaper, setWallpaper } from '../state/desktop'
+import { getWallpaper } from '../state/desktop'
 import { openApp } from '../../shared/sdk/desktop'
 import { listApps } from '../../framework/registry'
 import Icon from '@mdi/react'
@@ -135,7 +135,7 @@ export default function Desktop() {
   useEffect(() => {
     const url = getWallpaper()
     setWallpaperUrl(url)
-    const onWp = (e: any) => {
+    const onWp = (e: Event) => {
       const u = e?.detail?.url
       if (typeof u === 'string' && u.length > 0) {
         setWallpaperUrl(u)
@@ -161,7 +161,7 @@ export default function Desktop() {
       position: 'relative'
     }
     return base
-  }, [wallpaper])
+  }, [])
 
   const onContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault()

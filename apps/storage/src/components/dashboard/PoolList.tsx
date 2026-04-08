@@ -7,7 +7,6 @@ import React, { useState } from 'react';
 import { Pool } from '@truenas/types/pool';
 import {
   formatBytes,
-  calculatePercentage,
   getUsageColor,
   getPoolStatusLabel,
   getPoolHealthColor,

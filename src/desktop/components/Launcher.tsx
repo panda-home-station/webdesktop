@@ -3,22 +3,24 @@ import { listApps } from '../../framework/registry'
 import { requestPermission } from '../../shared/sdk/permissions'
 
 type Props = {
-  onOpen: (id: string, title: string, Comp?: React.ComponentType<any>, iconUrl?: string) => void
+  onOpen: (id: string, title: string, Comp?: React.ComponentType<Record<string, unknown>>, iconUrl?: string) => void
   onClose: () => void
 }
 
-const AppItem = memo(({ a, onOpen, onClose }: { 
-  a: any, 
-  onOpen: Props['onOpen'], 
+interface AppItemProps {
+  a: { id: string; title: string; iconUrl?: string; capabilities?: string[] }
+  onOpen: Props['onOpen']
   onClose: Props['onClose']
-}) => {
+}
+
+const AppItem = memo(({ a, onOpen, onClose }: AppItemProps) => {
   return (
     <button
       key={a.id}
       title={a.title}
       onClick={async () => {
         // 权限检查
-        const caps = (a as any).capabilities as string[] | undefined
+        const caps = a.capabilities
         if (Array.isArray(caps)) {
           for (const cap of caps) {
             const ok = requestPermission(a.id, cap)

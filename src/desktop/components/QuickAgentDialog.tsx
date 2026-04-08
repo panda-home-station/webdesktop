@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { X, Maximize2, Sparkles, CornerDownLeft } from 'lucide-react'
+import { Maximize2, Sparkles, CornerDownLeft } from 'lucide-react'
 
 interface Message {
   id: string

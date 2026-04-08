@@ -6,12 +6,10 @@
 import React from 'react';
 import { usePoolManagerStore } from '@truenas/stores/pool-manager';
 import { VDevType, CreateVdevLayout } from '@truenas/types/vdev-enum-types';
-import { formatBytes } from '@truenas/utils/storage.utils';
 
 export default function DataStep() {
   const {
     vdevGroups,
-    availableDisks,
     errors,
     addVdev,
   } = usePoolManagerStore();

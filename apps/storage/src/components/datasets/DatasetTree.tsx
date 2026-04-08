@@ -9,7 +9,6 @@ import {
   getDatasetName,
   hasChildren,
   isVolume,
-  isFilesystem,
   getDatasetUsedPercentage,
   getDatasetIcon,
   getDatasetIconColor,

@@ -5,8 +5,6 @@
 
 import React from 'react';
 import { VDevItem } from '@truenas/types/storage-types';
-import { TopologyItemType } from '@truenas/types/vdev-enum-types';
-import { isTopologyDisk, topologyToDisks } from '@truenas/utils/topology.utils';
 import VdevGroupNode from './VdevGroupNode';
 import TopologyItemNode from './TopologyItemNode';
 
