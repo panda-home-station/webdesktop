@@ -335,11 +335,10 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
             <span
               style={{
                 position: 'absolute',
-                top: 2,
-                right: 2,
-                minWidth: '16px',
-                height: '16px',
-                padding: '0 4px',
+                top: -2,
+                right: -2,
+                width: '14px',
+                height: '14px',
                 borderRadius: '8px',
                 background: '#ef4444',
                 color: '#fff',
