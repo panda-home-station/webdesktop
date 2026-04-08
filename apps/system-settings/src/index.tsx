@@ -14,7 +14,6 @@ import {
   MemoryStick,
 } from 'lucide-react'
 import { systemService } from '@truenas/services/system'
-import { truenasApi } from '@truenas/api'
 import type {
   SystemInfo,
   ReportingRealtimeUpdate,
@@ -27,14 +26,6 @@ function formatBytes(bytes: number): string {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
   return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
-}
-
-// Format Unix timestamp to datetime string
-function formatDatetime(timestamp: number): string {
-  const d = new Date(timestamp * 1000)
-  if (isNaN(d.getTime())) return 'N/A'
-  const pad = (n: number) => n < 10 ? '0' + n : n
-  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
 // Calculate CPU usage percentage from AllCpusUpdate
@@ -383,14 +374,35 @@ function DeviceInfo({
 
     // Get timestamp from datetime field
     const datetimeValue = systemInfo.datetime
-    let baseTs: number
-    if (typeof datetimeValue === 'object' && datetimeValue !== null && '$date' in datetimeValue) {
-      baseTs = datetimeValue.$date * 1000
-    } else if (typeof datetimeValue === 'number') {
-      baseTs = datetimeValue > 1e12 ? datetimeValue : datetimeValue * 1000
-    } else {
-      baseTs = Date.now()
+
+    // Try to interpret the datetime value
+    // The TrueNAS API may return datetime as { $date: timestamp } where timestamp can be in seconds or milliseconds
+    const tryParse = (value: unknown, convertFromSeconds = true): number | null => {
+      let ts: number
+      if (typeof value === 'object' && value !== null && '$date' in value) {
+        const dateValue = (value as { $date: number }).$date
+        // If the value is large, it's likely already in milliseconds
+        ts = convertFromSeconds && dateValue < 1e12 ? dateValue * 1000 : dateValue
+      } else if (typeof value === 'number') {
+        // Detect if timestamp is in seconds or milliseconds
+        ts = convertFromSeconds && value < 1e12 ? value * 1000 : value
+      } else {
+        return null
+      }
+      // Sanity check: year should be between 2000 and 2100
+      const year = new Date(ts).getFullYear()
+      if (year >= 2000 && year <= 2100) {
+        return ts
+      }
+      return null
     }
+
+    // Try original value, then try alternative interpretations (with/without seconds-to-ms conversion)
+    const baseTs = tryParse(datetimeValue, true)
+      ?? tryParse(datetimeValue, false)
+      ?? tryParse((datetimeValue as { $date?: number })?.$date, true)
+      ?? tryParse((datetimeValue as { $date?: number })?.$date, false)
+      ?? Date.now()
 
     const format = (ms: number) => {
       const d = new Date(ms)
