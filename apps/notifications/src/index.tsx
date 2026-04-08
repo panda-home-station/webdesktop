@@ -238,6 +238,7 @@ const AlertItem = React.memo(({ alert, onDismiss, onRestore }: {
     </div>
   )
 })
+AlertItem.displayName = 'AlertItem'
 
 export default function NotificationsApp() {
   const {

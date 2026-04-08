@@ -5,17 +5,8 @@ Before committing, ensure all tests pass.
 ## Test Commands
 
 ```bash
-# 运行所有测试
-npm run test
-
-# 运行测试（单次，不 watch）
-npm run test -- --run
-
-# 运行测试并查看覆盖率
-npm run test:coverage
-
-# 运行特定测试文件
-npx vitest run src/path/to/test.spec.ts
+# 运行所有检查（lint + 测试）
+npm run test:all
 ```
 
 ## Test Requirements
