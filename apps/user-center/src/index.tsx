@@ -44,21 +44,15 @@ export default function UserCenter() {
   // Track last active tab to prevent duplicate title updates
   const lastActiveRef = useRef('')
 
-  // Update window title based on active tab
+  // Update window title
   useEffect(() => {
-    if (lastActiveRef.current === active) {
+    if (lastActiveRef.current === 'User Center') {
       return
     }
-    lastActiveRef.current = active
-
-    const tabName = active === 'profile' ? '账户信息' :
-                     active === 'wallpapers' ? '主题与壁纸' :
-                     active === 'security' ? '安全设置' :
-                     active === 'change-password' ? '更改密码' :
-                     active === 'api-keys' ? '我的API Key' : ''
-    win.setTitle(`User Center - ${tabName}`)
+    lastActiveRef.current = 'User Center'
+    win.setTitle('User Center')
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active])
+  }, [])
 
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 

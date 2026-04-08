@@ -119,15 +119,13 @@ export default function SystemSettings() {
 
   useEffect(() => {
     if (win && win.setTitle) {
-      const tabName = TABS.find(t => t.id === activeTab)?.label || '设置'
-      const newTitle = `Settings - ${tabName}`
       // Only update if title actually changed to prevent infinite loops
-      if (lastTitleRef.current !== newTitle) {
-        lastTitleRef.current = newTitle
-        win.setTitle(newTitle)
+      if (lastTitleRef.current !== 'Settings') {
+        lastTitleRef.current = 'Settings'
+        win.setTitle('Settings')
       }
     }
-  }, [activeTab, win])
+  }, [win])
 
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(() => {
     try {
