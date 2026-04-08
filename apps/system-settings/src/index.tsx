@@ -13,94 +13,92 @@ import {
   Copy,
   MemoryStick,
 } from 'lucide-react'
+import { systemService } from '@truenas/services/system'
+import { truenasApi } from '@truenas/api'
+import type {
+  SystemInfo,
+  ReportingRealtimeUpdate,
+} from '@shared/types/system-types'
 
-interface MemorySlot {
-  size: string;
-  memory_type: string;
+// Format bytes to human readable string
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
-interface HardwareInfo {
-  cpu: string;
-  memory: string;
-  gpu: string | null;
-  memory_slots: MemorySlot[];
+// Format Unix timestamp to datetime string
+function formatDatetime(timestamp: number): string {
+  const d = new Date(timestamp * 1000)
+  if (isNaN(d.getTime())) return 'N/A'
+  const pad = (n: number) => n < 10 ? '0' + n : n
+  return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
 
-interface NetworkInfo {
-  ip: string;
-  transfer: string;
+// Calculate CPU usage percentage from AllCpusUpdate
+function getCpuUsage(realtime: ReportingRealtimeUpdate | null): string {
+  if (!realtime?.cpu?.cpu) return '0%'
+  const usage = realtime.cpu.cpu.usage
+  return `${usage.toFixed(1)}%`
 }
 
-interface DiskData {
+// Network interface alias from interface.query
+interface NetworkInterfaceAlias {
+  address: string;
+  type?: string;
+  netmask?: number;
+}
+
+// Network interface from interface.query
+interface NetworkInterfaceFromApi {
   name: string;
-  used: string;
-  total: string;
-  percent: string;
+  state: {
+    link_state: string;
+    flags: string[];
+    aliases: NetworkInterfaceAlias[];
+  };
 }
 
-interface PhyDisk {
-  name: string;
-  is_rotational: boolean;
-  size: string;
+// Get network info
+function getNetworkInfo(
+  networkInterfaces: NetworkInterfaceFromApi[]
+): { ip: string; status: string } {
+  if (!networkInterfaces || networkInterfaces.length === 0) {
+    return { ip: 'Loading...', status: 'Loading...' }
+  }
+
+  // Find primary interface (up and has IP)
+  const primaryIface = networkInterfaces.find(
+    (iface) => iface.state?.link_state === 'LINK_STATE_UP' || iface.state?.flags?.includes('UP')
+  ) || networkInterfaces[0]
+
+  if (!primaryIface) {
+    return { ip: 'N/A', status: 'Disconnected' }
+  }
+
+  // Get IP address from state.aliases
+  const aliases = primaryIface.state?.aliases || []
+  const ip = aliases.find(
+    (alias) => alias.address?.startsWith('192.168.') || alias.address?.startsWith('10.') || alias.address?.startsWith('172.')
+  )?.address || aliases[0]?.address || 'N/A'
+
+  return {
+    ip,
+    status: primaryIface.state?.link_state === 'LINK_STATE_UP' ? 'Connected' : 'Disconnected',
+  }
 }
 
-interface DeviceInfo {
-  device_id: string;
-  device_name: string;
-  hardware: HardwareInfo;
-  system_version: string;
-  uptime: string;
-  system_time: string;
-  system_time_ts: number;
-  network: NetworkInfo;
-  system_disk: DiskData;
-  data_disk: DiskData;
-  phy_disks?: PhyDisk[];
-}
-
-// Mock API for now - will be replaced with TrueNAS API
-const api = {
-  fsMkdir: async (_path: string) => { },
-  fsList: async (_path: string) => ({ entries: [] }),
-  fsUpload: async (_path: string, _file: File) => { },
-  fsDownloadUrl: (_path: string) => '',
-  getSecuritySettings: async () => ({ idle_timeout: 0, idle_action: 'lock' }),
-  setSecuritySettings: async (_settings: unknown) => { },
-  getDeviceInfo: async (): Promise<DeviceInfo> => ({
-    device_id: 'PNAS-001',
-    device_name: 'Panda Home Station',
-    hardware: {
-      cpu: 'Intel Core i5-12400 3.00 GHz',
-      memory: '16 GB DDR4-3200',
-      gpu: 'Intel UHD Graphics 620',
-      memory_slots: [],
-    },
-    system_version: '1.0.0',
-    uptime: '0 days 1 hour 30 minutes',
-    system_time: '2024-01-15 12:30:00',
-    system_time_ts: 1705313000,
-    network: {
-      ip: '192.168.1.100',
-      transfer: 'Tx: 0.0 MB/s Rx: 0.0 MB/s',
-    },
-    system_disk: {
-      name: 'System',
-      used: '100 GB',
-      total: '256 GB',
-      percent: '39',
-    },
-    data_disk: {
-      name: 'Data',
-      used: '1.2 TB',
-      total: '4.0 TB',
-      percent: '30',
-    },
-    phy_disks: [
-      { name: 'Samsung 970 EVO', is_rotational: false, size: '1TB' },
-      { name: 'WD Red Plus', is_rotational: false, size: '4TB' },
-      { name: 'WD Red Plus', is_rotational: false, size: '4TB' },
-    ],
-  }),
+// Get storage pools info
+function getPoolsInfo(pools: Record<string, { available: number; used: number; total: number }> | null): { used: string; total: string; percent: string }[] {
+  if (!pools) return []
+  return Object.entries(pools).map(([name, data]) => ({
+    name,
+    used: formatBytes(data.used),
+    total: formatBytes(data.total),
+    percent: data.total > 0 ? ((data.used / data.total) * 100).toFixed(0) : '0',
+  }))
 }
 
 const TABS = [
@@ -117,9 +115,19 @@ export default function SystemSettings() {
   const [activeTab, setActiveTab] = useState('device')
   const lastTitleRef = useRef<string>('')
 
+  // Static system info (fetched once)
+  const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
+  const [networkInterfaces, setNetworkInterfaces] = useState<NetworkInterfaceFromApi[]>([])
+
+  // Realtime data (continuously updated)
+  const [realtime, setRealtime] = useState<ReportingRealtimeUpdate | null>(null)
+
+  // Loading states
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
   useEffect(() => {
     if (win && win.setTitle) {
-      // Only update if title actually changed to prevent infinite loops
       if (lastTitleRef.current !== 'Settings') {
         lastTitleRef.current = 'Settings'
         win.setTitle('Settings')
@@ -127,53 +135,93 @@ export default function SystemSettings() {
     }
   }, [win])
 
-  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(() => {
-    try {
-      const cached = localStorage.getItem('pnas_device_info')
-      return cached ? JSON.parse(cached) : null
-    } catch {
-      return null
-    }
-  })
-
+  // Fetch static data on mount
   useEffect(() => {
-    const fetchInfo = () => {
-      api.getDeviceInfo().then(data => {
-        setDeviceInfo(data)
-        try { localStorage.setItem('pnas_device_info', JSON.stringify(data)) } catch { /* ignore */ }
-      }).catch(console.error)
+    let cancelled = false
+
+    async function fetchStaticData() {
+      try {
+        const [sysInfo, ifaces] = await Promise.all([
+          systemService.getSystemInfo(),
+          systemService.getNetworkInterfaces(),
+        ])
+
+        if (cancelled) return
+
+        setSystemInfo(sysInfo)
+        setNetworkInterfaces(ifaces as NetworkInterfaceFromApi[])
+        setLoading(false)
+      } catch (err) {
+        if (cancelled) return
+        console.error('Failed to fetch system info:', err)
+        setError('Failed to load system information')
+        setLoading(false)
+      }
     }
 
-    fetchInfo()
-    const interval = setInterval(fetchInfo, 5000)
-    return () => clearInterval(interval)
+    fetchStaticData()
+    return () => { cancelled = true }
+  }, [])
+
+  // Subscribe to realtime updates
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null
+
+    try {
+      unsubscribe = systemService.subscribeRealtime((data) => {
+        setRealtime(data)
+      })
+    } catch (err) {
+      console.error('Failed to subscribe to realtime updates:', err)
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
   }, [])
 
   return (
     <div style={{ display: 'flex', height: '100%', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', color: '#1c1c1e', background: '#f2f2f7' }} className="noselect">
-      {/* Sidebar */}
-      <Sidebar
-        items={TABS}
-        activeId={activeTab}
-        onSelect={setActiveTab}
-      />
-
-      {/* Content Area */}
+      <Sidebar items={TABS} activeId={activeTab} onSelect={setActiveTab} />
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div style={{ padding: '32px 40px', maxWidth: 720, margin: '0 auto' }}>
           <h2 style={{ margin: '0 0 24px 0', fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em' }}>
             {TABS.find(t => t.id === activeTab)?.label}
           </h2>
-          <TabContent id={activeTab} deviceInfo={deviceInfo} />
+          <TabContent
+            id={activeTab}
+            systemInfo={systemInfo}
+            realtime={realtime}
+            networkInterfaces={networkInterfaces}
+            loading={loading}
+            error={error}
+          />
         </div>
       </div>
     </div>
   )
 }
 
-function TabContent({ id, deviceInfo }: { id: string; deviceInfo: DeviceInfo | null }) {
+function TabContent({
+  id,
+  systemInfo,
+  realtime,
+  networkInterfaces,
+  loading,
+  error,
+}: {
+  id: string
+  systemInfo: SystemInfo | null
+  realtime: ReportingRealtimeUpdate | null
+  networkInterfaces: NetworkInterfaceFromApi[]
+  loading: boolean
+  error: string | null
+}) {
   switch (id) {
-    case 'device': return <DeviceInfo info={deviceInfo} />
+    case 'device':
+      return <DeviceInfo systemInfo={systemInfo} realtime={realtime} networkInterfaces={networkInterfaces} loading={loading} error={error} />
     case 'users': return <UserManagement />
     case 'storage': return <StorageManagement />
     case 'disk': return <DiskInfo />
@@ -263,11 +311,7 @@ function Row({
         height: '100%',
         boxSizing: 'border-box'
       }}>
-        <div style={{
-          fontSize: 17,
-          color: destructive ? '#ff3b30' : '#000',
-          fontWeight: 400
-        }}>
+        <div style={{ fontSize: 17, color: destructive ? '#ff3b30' : '#000', fontWeight: 400 }}>
           {label}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}>
@@ -295,7 +339,7 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (c: boolean
         cursor: 'pointer',
         transition: 'background 0.3s ease',
         boxSizing: 'border-box',
-        border: checked ? 'none' : '2px solid #e9e9ea' // Fix border look
+        border: checked ? 'none' : '2px solid #e9e9ea'
       }}
     >
       <div
@@ -317,43 +361,95 @@ function Switch({ checked, onChange }: { checked: boolean; onChange: (c: boolean
 
 // Tab Implementations
 
-function DeviceInfo({ info }: { info: DeviceInfo | null }) {
+function DeviceInfo({
+  systemInfo,
+  realtime,
+  networkInterfaces,
+  loading,
+  error,
+}: {
+  systemInfo: SystemInfo | null
+  realtime: ReportingRealtimeUpdate | null
+  networkInterfaces: NetworkInterfaceFromApi[]
+  loading: boolean
+  error: string | null
+}) {
   const [displayTime, setDisplayTime] = useState('')
   const [copied, setCopied] = useState(false)
 
+  // Live clock from system time
   useEffect(() => {
-    if (!info) return
-    let ts = info.system_time_ts ? info.system_time_ts * 1000 : Date.now()
+    if (!systemInfo) return
+
+    // Get timestamp from datetime field
+    const datetimeValue = systemInfo.datetime
+    let baseTs: number
+    if (typeof datetimeValue === 'object' && datetimeValue !== null && '$date' in datetimeValue) {
+      baseTs = datetimeValue.$date * 1000
+    } else if (typeof datetimeValue === 'number') {
+      baseTs = datetimeValue > 1e12 ? datetimeValue : datetimeValue * 1000
+    } else {
+      baseTs = Date.now()
+    }
+
     const format = (ms: number) => {
       const d = new Date(ms)
+      if (isNaN(d.getTime())) return 'N/A'
       const pad = (n: number) => n < 10 ? '0' + n : n
       return `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
     }
-    setDisplayTime(format(ts))
+
+    setDisplayTime(format(baseTs))
+    let ts = baseTs
     const timer = setInterval(() => {
       ts += 1000
       setDisplayTime(format(ts))
     }, 1000)
     return () => clearInterval(timer)
-  }, [info])
+  }, [systemInfo])
 
   const copyId = () => {
-    if (info?.device_id) {
-      navigator.clipboard.writeText(info.device_id)
+    if (systemInfo?.system_serial) {
+      navigator.clipboard.writeText(systemInfo.system_serial)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     }
   }
 
-  if (!info) {
+  if (loading) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: 20 }}>
-         <div style={{ height: 100, background: '#f3f4f6', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
-         <div style={{ height: 200, background: '#f3f4f6', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
-         <style>{`@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }`}</style>
+        <div style={{ height: 100, background: '#f3f4f6', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
+        <div style={{ height: 200, background: '#f3f4f6', borderRadius: 8, animation: 'pulse 1.5s infinite' }} />
+        <style>{`@keyframes pulse { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }`}</style>
       </div>
     )
   }
+
+  if (error || !systemInfo) {
+    return (
+      <div style={{ padding: 20, color: '#ef4444' }}>
+        {error || 'Failed to load system information'}
+      </div>
+    )
+  }
+
+  // Calculate uptime
+  const uptimeSeconds = systemInfo.uptime_seconds || 0
+  const days = Math.floor(uptimeSeconds / 86400)
+  const hours = Math.floor((uptimeSeconds % 86400) / 3600)
+  const minutes = Math.floor((uptimeSeconds % 3600) / 60)
+  const uptime = days > 0
+    ? `${days} days ${hours} hours ${minutes} minutes`
+    : `${hours} hours ${minutes} minutes`
+
+  // Get dynamic data
+  const cpuUsage = getCpuUsage(realtime)
+  const networkInfo = getNetworkInfo(networkInterfaces)
+  const poolsInfo = getPoolsInfo(realtime?.pools || null)
+
+  // Physical memory
+  const physmemGb = (systemInfo.physmem / (1024 ** 3)).toFixed(1)
 
   return (
     <div style={{ paddingBottom: 40 }}>
@@ -373,51 +469,25 @@ function DeviceInfo({ info }: { info: DeviceInfo | null }) {
           <Server size={32} />
         </div>
         <div>
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#111827' }}>{info.device_name}</h1>
+          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#111827' }}>{systemInfo.hostname || 'Panda Home Station'}</h1>
           <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
-               <Cpu size={14} /> {info.hardware.cpu.split(' ')[0]}
-             </span>
-             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
-               <MemoryStick size={14} /> {info.hardware.memory.split(' ')[0]} {info.hardware.memory.split(' ')[1]}
-             </span>
+            <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
+              <Cpu size={14} /> {cpuUsage}
+            </span>
+            <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
+              <MemoryStick size={14} /> {physmemGb} GB
+            </span>
           </div>
         </div>
       </div>
 
       <SpecGroup title="硬件规格">
-        <SpecRow label="处理器" value={info.hardware.cpu} />
-        <SpecRow label="显卡" value={info.hardware.gpu || 'N/A'} />
-        <SpecRow label="内存" value={
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div>
-              {info.hardware.memory}
-              {info.hardware.memory_slots && info.hardware.memory_slots.length > 0 && (
-                <span style={{ color: '#6b7280', marginLeft: 8 }}>
-                  - {info.hardware.memory_slots.map((s) => `${s.size} ${s.memory_type}`).join(' | ')}
-                </span>
-              )}
-            </div>
-          </div>
-        } />
-        <SpecRow label="硬盘" value={
-          info.phy_disks && info.phy_disks.length > 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '4px 0' }}>
-              {info.phy_disks.map((disk, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', fontSize: 13, lineHeight: 1.5 }}>
-                  <span style={{ fontWeight: 600, color: '#374151' }}>{disk.name}</span>
-                  <span style={{ margin: '0 6px', color: '#9ca3af' }}>-</span>
-                  <span style={{ color: '#6b7280' }}>
-                    {disk.is_rotational ? 'HDD' : 'SSD'}
-                    <span style={{ margin: '0 4px', color: '#e5e7eb' }}>|</span>
-                    {disk.size}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : '未检测到磁盘'
-        } />
-        <SpecRow label="设备 ID" value={info.device_id} action={
+        <SpecRow label="处理器" value={systemInfo.model || `${systemInfo.cores} cores`} />
+        <SpecRow label="核心数" value={`${systemInfo.cores} (${systemInfo.physical_cores} physical)`} />
+        <SpecRow label="内存" value={`${physmemGb} GB`} />
+        <SpecRow label="ECC 内存" value={systemInfo.ecc_memory ? '是' : '否'} />
+        <SpecRow label="系统产品" value={systemInfo.system_product || 'N/A'} />
+        <SpecRow label="设备 ID" value={systemInfo.system_serial || 'N/A'} action={
           <button
             onClick={copyId}
             style={{
@@ -443,31 +513,36 @@ function DeviceInfo({ info }: { info: DeviceInfo | null }) {
       </SpecGroup>
 
       <SpecGroup title="系统规格">
-        <SpecRow label="版本" value="PandaNAS OS" />
-        <SpecRow label="系统版本号" value={info.system_version} />
-        <SpecRow label="本次运行时间" value={info.uptime} />
-        <SpecRow label="系统时间" value={displayTime || info.system_time} />
+        <SpecRow label="版本" value={systemInfo.version || 'N/A'} />
+        <SpecRow label="平台" value={systemInfo.platform || 'N/A'} />
+        <SpecRow label="本次运行时间" value={uptime} />
+        <SpecRow label="系统时间" value={displayTime || 'N/A'} />
       </SpecGroup>
 
       <SpecGroup title="网络连接">
-        <SpecRow label="IP 地址" value={info.network.ip} />
+        <SpecRow label="IP 地址" value={networkInfo.ip} />
         <SpecRow label="连接状态" value={
-          <span style={{ color: '#059669', display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}>
-            ● 已连接
+          <span style={{ color: networkInfo.status === 'Connected' ? '#059669' : '#ef4444', display: 'flex', alignItems: 'center', gap: 6, transform: 'translateZ(0)' }}>
+            ● {networkInfo.status}
           </span>
-        } />
-        <SpecRow label="传输数据" value={
-          <div style={{ display: 'flex', gap: 16 }}>
-             <span>{info.network.transfer.split(' ')[0]} {info.network.transfer.split(' ')[1]}</span>
-             <span style={{ color: '#e5e7eb' }}>|</span>
-             <span>{info.network.transfer.split(' ')[2]} {info.network.transfer.split(' ')[3]}</span>
-          </div>
         } />
       </SpecGroup>
 
       <SpecGroup title="存储空间">
-        <DiskRow name="系统盘 (System)" data={info.system_disk} />
-        <DiskRow name="数据盘 (Data)" data={info.data_disk} isLast />
+        {poolsInfo.length > 0 ? (
+          poolsInfo.map((pool, index) => (
+            <DiskRow
+              key={pool.name}
+              name={pool.name}
+              data={{ used: pool.used, total: pool.total, percent: pool.percent }}
+              isLast={index === poolsInfo.length - 1}
+            />
+          ))
+        ) : (
+          <div style={{ padding: '16px 20px', color: '#6b7280', fontSize: 13 }}>
+            No pools available
+          </div>
+        )}
       </SpecGroup>
     </div>
   )
@@ -494,13 +569,13 @@ function SpecRow({ label, value, action }: { label: string, value: React.ReactNo
   )
 }
 
-function DiskRow({ name, data, isLast }: { name: string, data: DiskData, isLast?: boolean }) {
+function DiskRow({ name, data, isLast }: { name: string, data: { used: string; total: string; percent: string }, isLast?: boolean }) {
   return (
     <div style={{ padding: '16px 20px', borderBottom: isLast ? 'none' : '1px solid #f3f4f6' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
         <div style={{ fontSize: 13, fontWeight: 500, color: '#111827' }}>{name}</div>
         <div style={{ fontSize: 13, color: '#6b7280' }}>
-          {data.used.split(' ')[0]} / {data.total}
+          {data.used} / {data.total}
         </div>
       </div>
       <div style={{ height: 8, background: '#f3f4f6', borderRadius: 4, overflow: 'hidden' }}>
