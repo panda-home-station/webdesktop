@@ -103,17 +103,10 @@ export default function Window({
     let lastDy = 0
     let rafId: number | null = null
 
-    // Performance optimization: remove heavy styles during drag
-    // NOTE: will-change is NOT set here - it's set only when actual drag movement starts
-    // to avoid subtle visual shifts from layer recomposition
-    if (winRef.current) {
-      // 仅对当前拖拽的窗口禁用昂贵的特效，以保证其移动的绝对流畅
-      winRef.current.style.boxShadow = 'none'
-    }
-    // Remove contain from content div to avoid GPU compositing conflict with translate3d
-    if (contentRef.current) {
-      contentRef.current.style.contain = 'none'
-    }
+    // Performance optimization: use transform for GPU acceleration
+    // Direct DOM style modifications (boxShadow, contain) during drag can cause
+    // layout recalculation issues where content div unexpectedly expands and
+    // covers the title bar. Using transform is sufficient for smooth dragging.
 
     const move = (ev: MouseEvent) => {
       const dx = ev.clientX - dragStartX
