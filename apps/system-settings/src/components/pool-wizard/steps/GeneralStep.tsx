@@ -13,10 +13,9 @@ import { isSedCapableDisk } from '@truenas/types/disk-types'
 import { colors } from '@apps/system-settings/styles/theme'
 
 // Encryption warning message (same as webui)
-const ENCRYPTION_WARNING_MESSAGE = `加密功能适用于存储敏感数据的用户。
-池级加密不应用于存储池本身或池中的磁盘。它应用于共享池名称的根数据集以及创建的任何子数据集，除非您在创建子数据集时更改加密设置。
+const ENCRYPTION_WARNING_MESSAGE = `池级加密不应用于存储池本身或池中的磁盘。它应用于共享池名称的根数据集以及创建的任何子数据集，除非您在创建子数据集时更改加密设置。
 
-有关加密的更多信息，请参阅 TrueNAS 文档中心。`
+请妥善保存加密密钥，丢失后将无法恢复数据。`
 
 interface GeneralStepProps {
   errors: Record<string, string>
@@ -46,12 +45,10 @@ export function GeneralStep({ errors }: GeneralStepProps) {
 
   const nonUniqueSerialDisksCount = (() => {
     if (allDisks.length === 0) return 0
-    // 使用和 webui 相同的方法: 检查 disk.duplicate_serial?.length > 0
     return allDisks.filter((disk) => disk.duplicate_serial && disk.duplicate_serial.length > 0).length
   })()
 
   const [showEncryptionWarning, setShowEncryptionWarning] = useState(false)
-  const [pendingEncryptionType, setPendingEncryptionType] = useState<string | null>(null)
   const [algorithmOptions, setAlgorithmOptions] = useState<EncryptionAlgorithmOption[]>([])
   const [hasSedCapableDisks, setHasSedCapableDisks] = useState(false)
 
@@ -65,7 +62,6 @@ export function GeneralStep({ errors }: GeneralStepProps) {
         )
         setAlgorithmOptions(options)
       } catch {
-        // Fallback options if API fails
         setAlgorithmOptions([
           { value: 'AES-128-GCM', label: 'AES-128-GCM' },
           { value: 'AES-192-GCM', label: 'AES-192-GCM' },
@@ -93,159 +89,151 @@ export function GeneralStep({ errors }: GeneralStepProps) {
 
   // Handle encryption type changes
   const handleEncryptionTypeChange = (type: 'none' | 'software' | 'sed') => {
-    // If selecting software encryption, show warning first
     if (type === 'software' && encryptionType !== 'software') {
-      setPendingEncryptionType(type)
       setShowEncryptionWarning(true)
+    } else if (type === 'none') {
+      setEncryption(false)
+      setEncryptionType('none')
     } else {
+      setEncryption(true)
       setEncryptionType(type)
     }
   }
 
   const handleEncryptionWarningConfirm = () => {
     setShowEncryptionWarning(false)
-    if (pendingEncryptionType) {
-      setEncryptionType(pendingEncryptionType)
-    }
-    setPendingEncryptionType(null)
+    setEncryption(true)
+    setEncryptionType('software')
   }
 
   const handleEncryptionWarningCancel = () => {
     setShowEncryptionWarning(false)
-    setPendingEncryptionType(null)
-    // Reset to none if user cancels
-    if (encryptionType === 'software') {
-      setEncryptionType('none')
+  }
+
+  const handleEncryptionSelectChange = (value: string) => {
+    if (value === 'none') {
+      handleEncryptionTypeChange('none')
+    } else if (value === 'software') {
+      handleEncryptionTypeChange('software')
+    } else if (value === 'sed') {
+      setEncryption(true)
+      setEncryptionType('sed')
     }
   }
 
   return (
     <div style={styles.container}>
       {/* Pool Name */}
-      <div style={styles.fieldRow}>
-        <label style={styles.label}>池名称 *</label>
-        <input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="例如: pool1"
-          style={{
-            ...styles.input,
-            ...(errors.name ? styles.inputError : {}),
-          }}
-        />
+      <div style={styles.compactSection}>
+        <div style={styles.fieldRow}>
+          <label style={styles.label}>池名称 *</label>
+          <input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="例如: pool1"
+            style={{
+              ...styles.input,
+              ...(errors.name ? styles.inputError : {}),
+            }}
+          />
+        </div>
+        {errors.name && (
+          <div style={styles.error}>
+            <AlertCircle size={12} />
+            {errors.name}
+          </div>
+        )}
+        {!errors.name && <span style={styles.hint}>仅支持字母、数字和下划线</span>}
       </div>
 
       {/* Encryption */}
-      <div style={styles.fieldRow}>
-        <label style={styles.label}>启用加密</label>
-        <select
-          value={encryption ? encryptionType : 'none'}
-          onChange={(e) => {
-            const value = e.target.value as 'none' | 'software' | 'sed'
-            if (value === 'software' && encryptionType !== 'software') {
-              setEncryption(true)
-              handleEncryptionTypeChange('software')
-            } else {
-              setEncryption(value !== 'none')
-              setEncryptionType(value)
-            }
-          }}
-          style={styles.select}
-        >
-          <option value="none">无加密</option>
-          <option value="software">软件加密</option>
-          {hasSedCapableDisks && <option value="sed">SED (自加密硬盘)</option>}
-        </select>
-      </div>
-
-      {/* Encryption Standard (shown when Software encryption is selected) */}
-      {encryption && encryptionType === 'software' && (
+      <div style={styles.compactSection}>
         <div style={styles.fieldRow}>
-          <label style={styles.label}>加密标准</label>
+          <label style={styles.label}>加密</label>
           <select
-            value={encryptionAlgorithm}
-            onChange={(e) => setEncryptionAlgorithm(e.target.value)}
+            value={encryption ? encryptionType : 'none'}
+            onChange={(e) => handleEncryptionSelectChange(e.target.value)}
             style={styles.select}
           >
-            {algorithmOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
+            <option value="none">无加密</option>
+            <option value="software">软件加密</option>
+            {hasSedCapableDisks && <option value="sed">SED</option>}
           </select>
+        </div>
+      </div>
+
+      {/* Encryption Standard */}
+      {encryption && encryptionType === 'software' && (
+        <div style={styles.compactSection}>
+          <div style={styles.fieldRow}>
+            <label style={styles.label}>加密标准</label>
+            <select
+              value={encryptionAlgorithm}
+              onChange={(e) => setEncryptionAlgorithm(e.target.value)}
+              style={styles.select}
+            >
+              {algorithmOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
 
       {/* SED Password */}
       {encryption && encryptionType === 'sed' && (
-        <div style={styles.field}>
-          <label style={styles.label}>SED 密码 *</label>
-          <input
-            type="password"
-            value={sedPassword || ''}
-            onChange={(e) => setSedPassword(e.target.value || null)}
-            placeholder="至少8个字符"
-            style={{
-              ...styles.input,
-              ...(errors.sedPassword ? styles.inputError : {}),
-            }}
-          />
+        <div style={styles.compactSection}>
+          <div style={styles.fieldRow}>
+            <label style={styles.label}>SED 密码 *</label>
+            <input
+              type="password"
+              value={sedPassword || ''}
+              onChange={(e) => setSedPassword(e.target.value || null)}
+              placeholder="至少8个字符"
+              style={{
+                ...styles.input,
+                ...(errors.sedPassword ? styles.inputError : {}),
+              }}
+            />
+          </div>
           {errors.sedPassword && (
             <div style={styles.error}>
-              <AlertCircle size={14} />
+              <AlertCircle size={12} />
               {errors.sedPassword}
             </div>
           )}
-          <span style={styles.hint}>
-            此密码将用于解锁自加密硬盘，请妥善保管
-          </span>
+          <span style={styles.hint}>此密码将用于解锁自加密硬盘，请妥善保管</span>
         </div>
       )}
 
       {/* Non-Unique Serial Disks Warning */}
       {nonUniqueSerialDisksCount > 0 && (
-        <div style={styles.field}>
-          <div style={styles.warning}>
-            <AlertCircle size={16} style={{ color: colors.warning, flexShrink: 0 }} />
-            <div>
-              <span>存在 {nonUniqueSerialDisksCount} 块硬盘具有非唯一序列号</span>
-            </div>
+        <div style={styles.warningSection}>
+          <div style={styles.warningHeader}>
+            <AlertCircle size={14} style={{ color: colors.warning }} />
+            <span style={styles.warningTitle}>
+              检测到 {nonUniqueSerialDisksCount} 块硬盘序列号非唯一
+            </span>
           </div>
           <p style={styles.warningText}>
-            非唯一序列号可能是由于线缆问题导致的，将此类硬盘添加到池中可能导致数据丢失。
+            可能因线缆问题导致，添加到池中可能丢失数据
           </p>
-          <div style={styles.radioGroupHorizontal}>
-            <label
-              style={{
-                ...styles.radioLabel,
-                ...(!allowNonUniqueSerialDisks ? styles.radioLabelSelected : {}),
-              }}
-            >
-              <input
-                type="radio"
-                name="allowNonUnique"
-                checked={!allowNonUniqueSerialDisks}
-                onChange={() => setAllowNonUniqueSerialDisks(false)}
-                style={{ marginRight: 8 }}
-              />
-              不允许非唯一序列号硬盘（推荐）
-            </label>
-            <label
-              style={{
-                ...styles.radioLabel,
-                ...(allowNonUniqueSerialDisks ? styles.radioLabelSelected : {}),
-              }}
-            >
-              <input
-                type="radio"
-                name="allowNonUnique"
-                checked={allowNonUniqueSerialDisks}
-                onChange={() => setAllowNonUniqueSerialDisks(true)}
-                style={{ marginRight: 8 }}
-              />
-              允许非唯一序列号硬盘（不推荐）
-            </label>
+          <div style={styles.radioGroup}>
+            <RadioOption
+              label="不允许"
+              description="推荐，将排除这些硬盘"
+              checked={!allowNonUniqueSerialDisks}
+              onChange={() => setAllowNonUniqueSerialDisks(false)}
+            />
+            <RadioOption
+              label="允许"
+              description="不推荐，存在数据风险"
+              checked={allowNonUniqueSerialDisks}
+              onChange={() => setAllowNonUniqueSerialDisks(true)}
+            />
           </div>
         </div>
       )}
@@ -253,9 +241,9 @@ export function GeneralStep({ errors }: GeneralStepProps) {
       {/* Encryption Warning Dialog */}
       <ConfirmDialog
         open={showEncryptionWarning}
-        title="警告"
+        title="软件加密警告"
         message={ENCRYPTION_WARNING_MESSAGE}
-        confirmText="我已了解"
+        confirmText="我已了解并确认"
         cancelText="取消"
         onConfirm={handleEncryptionWarningConfirm}
         onCancel={handleEncryptionWarningCancel}
@@ -265,109 +253,158 @@ export function GeneralStep({ errors }: GeneralStepProps) {
   )
 }
 
+function RadioOption({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string
+  description: string
+  checked: boolean
+  onChange: () => void
+}) {
+  return (
+    <label
+      style={{
+        ...styles.radioOption,
+        ...(checked ? styles.radioOptionSelected : {}),
+      }}
+    >
+      <input
+        type="radio"
+        checked={checked}
+        onChange={onChange}
+        style={styles.radioInput}
+      />
+      <div style={styles.radioContent}>
+        <span style={styles.radioLabel}>{label}</span>
+        <span style={styles.radioDescription}>{description}</span>
+      </div>
+    </label>
+  )
+}
+
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: 24,
+    padding: '12px 16px',
   },
-  field: {
-    marginBottom: 20,
+  compactSection: {
+    marginBottom: 12,
   },
   fieldRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 20,
   },
   label: {
-    fontSize: 14,
-    fontWeight: 600,
+    fontSize: 13,
+    fontWeight: 500,
     color: colors.text,
-    whiteSpace: 'nowrap' as const,
+    minWidth: 72,
   },
   input: {
     flex: 1,
-    padding: '10px 12px',
+    padding: '8px 10px',
     fontSize: 14,
     border: `1px solid ${colors.border}`,
-    borderRadius: 8,
+    borderRadius: 6,
     outline: 'none',
     boxSizing: 'border-box' as const,
+    backgroundColor: colors.cardBg,
+    color: colors.text,
   },
   inputError: {
     borderColor: colors.danger,
   },
   select: {
-    width: '100%',
-    padding: '10px 12px',
+    flex: 1,
+    padding: '8px 10px',
     fontSize: 14,
     border: `1px solid ${colors.border}`,
-    borderRadius: 8,
+    borderRadius: 6,
     outline: 'none',
     boxSizing: 'border-box' as const,
     backgroundColor: colors.cardBg,
     cursor: 'pointer',
+    color: colors.text,
+    appearance: 'none' as const,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238e8e93' d='M5 7L1 3h8z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 8px center',
   },
   error: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-    fontSize: 13,
+    gap: 4,
+    marginTop: 4,
+    fontSize: 12,
     color: colors.danger,
   },
   hint: {
     display: 'block',
-    marginTop: 6,
-    fontSize: 12,
+    marginTop: 4,
+    marginLeft: 84,
+    fontSize: 11,
     color: colors.textSecondary,
   },
-  checkboxLabel: {
-    fontSize: 14,
-    color: colors.text,
-    cursor: 'pointer',
+  warningSection: {
+    marginTop: 8,
+    padding: '10px 12px',
+    backgroundColor: `${colors.warning}10`,
+    border: `1px solid ${colors.warning}30`,
+    borderRadius: 8,
+  },
+  warningHeader: {
     display: 'flex',
     alignItems: 'center',
+    gap: 6,
   },
-  radioGroup: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 8,
-  },
-  radioGroupHorizontal: {
-    display: 'flex',
-    flexDirection: 'row' as const,
-    gap: 12,
-  },
-  radioLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '10px 14px',
-    fontSize: 14,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    cursor: 'pointer',
-    transition: 'all 0.15s ease',
-  },
-  radioLabelSelected: {
-    borderColor: colors.primary,
-    backgroundColor: `${colors.primary}10`,
-    color: colors.primary,
-  },
-  warning: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 8,
-    padding: '12px 14px',
-    backgroundColor: `${colors.warning}15`,
-    border: `1px solid ${colors.warning}40`,
-    borderRadius: 8,
-    marginBottom: 12,
-    fontSize: 14,
+  warningTitle: {
+    fontSize: 12,
+    fontWeight: 500,
     color: colors.text,
   },
   warningText: {
-    margin: '0 0 12px 0',
-    fontSize: 13,
+    margin: '4px 0 8px 0',
+    fontSize: 11,
+    color: colors.textSecondary,
+  },
+  radioGroup: {
+    display: 'flex',
+    flexDirection: 'row' as const,
+    gap: 8,
+  },
+  radioOption: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 10px',
+    border: `1px solid ${colors.border}`,
+    borderRadius: 6,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+    backgroundColor: colors.cardBg,
+  },
+  radioOptionSelected: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}10`,
+  },
+  radioInput: {
+    accentColor: colors.primary,
+  },
+  radioContent: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+  },
+  radioLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: colors.text,
+  },
+  radioDescription: {
+    fontSize: 10,
     color: colors.textSecondary,
   },
 }
