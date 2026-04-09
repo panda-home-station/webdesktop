@@ -3,7 +3,7 @@
  * Main system settings application
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Dispatch } from 'react'
 import { Sidebar } from '@desktop/components/Sidebar'
 import { Info, Users, HardDrive, Network, Globe, Server } from 'lucide-react'
 import { systemService } from '@truenas/services/system'
@@ -128,6 +128,7 @@ export default function SystemSettings() {
             datasets={datasets}
             loading={loading}
             error={error}
+            setDisks={setDisks}
           />
         </div>
       </div>
@@ -145,6 +146,7 @@ function TabContent({
   datasets,
   loading,
   error,
+  setDisks,
 }: {
   id: string
   systemInfo: SystemInfo | null
@@ -155,6 +157,7 @@ function TabContent({
   datasets: Dataset[]
   loading: boolean
   error: string | null
+  setDisks: Dispatch<React.SetStateAction<Disk[]>>
 }) {
   switch (id) {
     case 'device':
@@ -182,6 +185,11 @@ function TabContent({
       return (
         <DiskOverview
           disks={disks}
+          onDiskUpdate={(updatedDisk) => {
+            setDisks(prev => prev.map(d =>
+              d.identifier === updatedDisk.identifier ? updatedDisk : d
+            ))
+          }}
         />
       )
     case 'network':

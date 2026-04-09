@@ -12,9 +12,10 @@ import { colors } from '../../styles/theme'
 interface DiskDetailsProps {
   disk: Disk
   onBack: () => void
+  onEdit?: () => void
 }
 
-export function DiskDetails({ disk, onBack }: DiskDetailsProps) {
+export function DiskDetails({ disk, onBack, onEdit }: DiskDetailsProps) {
   const displayName = getDiskDisplayName(disk)
   const isSed = isSedDisk(disk)
   const isUnlocked = isDiskUnlocked(disk)
@@ -28,6 +29,11 @@ export function DiskDetails({ disk, onBack }: DiskDetailsProps) {
         </button>
         <h2 style={styles.title}>{displayName}</h2>
         <TypeBadge type={disk.type} />
+        {onEdit && (
+          <button style={styles.editButton} onClick={onEdit}>
+            Edit
+          </button>
+        )}
       </div>
 
       {/* Basic Info */}
@@ -180,6 +186,17 @@ const styles = {
     borderRadius: 8,
     fontSize: 13,
     fontWeight: 600,
+  },
+  editButton: {
+    padding: '8px 16px',
+    backgroundColor: colors.primary,
+    border: 'none',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 14,
+    color: '#fff',
+    fontWeight: 500,
+    marginLeft: 'auto',
   },
   section: {
     backgroundColor: colors.cardBg,

@@ -9,15 +9,18 @@ import { DiskType } from '@truenas/types/disk-type-enum-types'
 import { DiskFilters } from './disks/DiskFilters'
 import { DiskTable } from './disks/DiskTable'
 import { DiskDetails } from './disks/DiskDetails'
+import { DiskEditForm } from './disks/DiskEditForm'
 import { formatBytes } from '@truenas/utils/storage.utils'
 import { colors } from '../styles/theme'
 
 interface DiskOverviewProps {
   disks: Disk[]
+  onDiskUpdate?: (updatedDisk: Disk) => void
 }
 
-export function DiskOverview({ disks }: DiskOverviewProps) {
+export function DiskOverview({ disks, onDiskUpdate }: DiskOverviewProps) {
   const [selectedDisk, setSelectedDisk] = useState<Disk | null>(null)
+  const [editingDisk, setEditingDisk] = useState<Disk | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<DiskType | 'all'>('all')
   const [poolFilter, setPoolFilter] = useState('')
@@ -82,12 +85,28 @@ export function DiskOverview({ disks }: DiskOverviewProps) {
     }
   }, [disks])
 
+  // If a disk is being edited, show the edit form
+  if (editingDisk) {
+    return (
+      <DiskEditForm
+        disk={editingDisk}
+        onSave={(updatedDisk) => {
+          onDiskUpdate?.(updatedDisk)
+          setEditingDisk(null)
+          setSelectedDisk(null)
+        }}
+        onCancel={() => setEditingDisk(null)}
+      />
+    )
+  }
+
   // If a disk is selected, show its details
   if (selectedDisk) {
     return (
       <DiskDetails
         disk={selectedDisk}
         onBack={() => setSelectedDisk(null)}
+        onEdit={() => setEditingDisk(selectedDisk)}
       />
     )
   }
