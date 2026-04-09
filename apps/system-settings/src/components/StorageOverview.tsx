@@ -8,7 +8,6 @@ import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
 import { PoolList, PoolDetails } from './pools'
 import { DatasetTree } from './datasets'
-import { openApp } from '@shared/sdk/desktop'
 import { colors } from '../styles/theme'
 
 interface StorageOverviewProps {
@@ -38,20 +37,11 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
     )
   }
 
-  const handleCreatePool = () => {
-    openApp('storage', 'create-pool')
-  }
-
   return (
     <div>
       {/* Pool List */}
       <div style={styles.section}>
-        <div style={styles.sectionHeader}>
-          <h3 style={styles.sectionTitle}>Storage Pools</h3>
-          <button style={styles.createButton} onClick={handleCreatePool}>
-            + Create Pool
-          </button>
-        </div>
+        <h3 style={styles.sectionTitle}>Storage Pools</h3>
         <PoolList
           pools={pools}
           onPoolClick={(pool) => {
@@ -85,28 +75,12 @@ const styles = {
   section: {
     marginBottom: 24,
   },
-  sectionHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
   sectionTitle: {
-    margin: 0,
+    margin: '0 0 16px 0',
     fontSize: 14,
     fontWeight: 600,
     color: colors.textSecondary,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px',
-  },
-  createButton: {
-    padding: '8px 16px',
-    backgroundColor: colors.primary,
-    border: 'none',
-    borderRadius: 8,
-    cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: 500,
-    color: '#fff',
   },
 }
