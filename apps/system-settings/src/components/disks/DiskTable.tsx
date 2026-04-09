@@ -109,11 +109,11 @@ function StatusIndicator({ online }: { online: boolean }) {
       <div
         style={{
           ...styles.statusDot,
-          backgroundColor: online ? colors.success : colors.textSecondary,
+          backgroundColor: online ? colors.textSecondary : colors.success,
         }}
       />
       <span style={styles.statusText}>
-        {online ? 'Online' : 'In Pool'}
+        {online ? 'Available' : 'In Pool'}
       </span>
     </div>
   )
