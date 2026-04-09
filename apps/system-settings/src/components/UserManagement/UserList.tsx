@@ -16,6 +16,12 @@ import {
   Plus,
   Trash2,
   Edit2,
+  Shield,
+  Key as KeyIcon,
+  History as HistoryIcon,
+  Clock as ClockIcon,
+  FileText,
+  Activity,
 } from 'lucide-react'
 import {
   Card,
@@ -59,6 +65,57 @@ function UserCard({
 
   const status: 'active' | 'locked' | 'disabled' =
     user.locked ? 'locked' : user.password_disabled ? 'disabled' : 'active'
+
+  // Format password age
+  const formatPasswordAge = (age: number | null): string => {
+    if (age === null) return '-'
+    if (age === 0) return '今天'
+    if (age === 1) return '1 天'
+    if (age < 30) return `${age} 天`
+    const months = Math.floor(age / 30)
+    if (months === 1) return '1 个月'
+    if (months < 12) return `${months} 个月`
+    const years = Math.floor(months / 12)
+    return years === 1 ? '1 年' : `${years} 年`
+  }
+
+  // Format last password change
+  const formatLastPasswordChange = (date: { $date: number } | null): string => {
+    if (!date) return '-'
+    return new Date(date.$date).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  }
+
+  // Get user type label
+  const getUserTypeLabel = (): string => {
+    if (user.builtin) return '内置'
+    return '本地'
+  }
+
+  // Get TrueNAS access level
+  const getTrueNASAccess = (): string => {
+    if (user.roles?.includes('truenas_admin') || user.builtin) return '完全管理员'
+    if (user.roles?.includes('reader')) return '只读'
+    if (user.local) return '本地用户'
+    return '标准用户'
+  }
+
+  // Get sudo commands display
+  const getSudoDisplay = (): string => {
+    if (user.sudo_commands_nopasswd?.includes('ALL')) return 'ALL (无密码)'
+    if (user.sudo_commands?.includes('ALL')) return 'ALL'
+    const cmds = [
+      ...(user.sudo_commands_nopasswd || []),
+      ...(user.sudo_commands || []),
+    ]
+    if (cmds.length === 0) return '-'
+    return cmds.slice(0, 3).join(', ') + (cmds.length > 3 ? '...' : '')
+  }
 
   return (
     <Card>
@@ -122,20 +179,78 @@ function UserCard({
       {/* Expanded content */}
       {expanded && (
         <>
-          {/* Info rows */}
+          {/* Info rows - Basic Info */}
           <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden', marginTop: 12 }}>
             <InfoRow icon={<UserIcon size={16} />} label="UID" value={user.uid} />
+            <InfoRow icon={<Shield size={16} />} label="群组" value={user.group?.bsdgrp_group || '-'} />
+            <InfoRow icon={<CheckCircle size={16} />} label="类型" value={getUserTypeLabel()} />
             <InfoRow icon={<Home size={16} />} label="主目录" value={user.home} />
             <InfoRow icon={<Shell size={16} />} label="Shell" value={user.shell} />
-            <InfoRow icon={<Mail size={16} />} label="邮箱" value={user.email || '-'} border={false} />
+            <InfoRow icon={<Mail size={16} />} label="邮箱" value={user.email || '-'} />
+            <InfoRow icon={<Lock size={16} />} label="密码状态" value={user.password_disabled ? '无密码' : '具有密码'} />
+            <InfoRow icon={<Wifi size={16} />} label="SMB访问" value={user.smb ? '具有 SMB 访问' : '无 SMB 访问'} />
+            <InfoRow icon={<Terminal size={16} />} label="SSH访问" value={user.ssh_password_enabled ? '允许密码登录' : '无 SSH 访问'} border={false} />
+          </div>
+
+          {/* Access & Permissions */}
+          <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden', marginTop: 12 }}>
+            <InfoRow icon={<Shield size={16} />} label="TrueNAS访问" value={getTrueNASAccess()} />
+            <InfoRow icon={<KeyIcon size={16} />} label="API密钥" value={user.api_keys?.length ? `${user.api_keys.length} 个密钥` : '无 API 密钥'} />
+            <InfoRow icon={<Terminal size={16} />} label="Sudo命令" value={getSudoDisplay()} border={false} />
+          </div>
+
+          {/* Password Info */}
+          <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden', marginTop: 12 }}>
+            <InfoRow icon={<Lock size={16} />} label="密码时长" value={formatPasswordAge(user.password_age)} />
+            <InfoRow icon={<HistoryIcon size={16} />} label="密码历史" value={user.password_history ? `${user.password_history.length} 条记录` : '无历史'} />
+            <InfoRow icon={<ClockIcon size={16} />} label="上次更改" value={formatLastPasswordChange(user.last_password_change)} border={false} />
           </div>
 
           {/* Feature badges */}
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             {user.smb && <Badge label="SMB" bgColor="#e3f2fd" textColor={colors.primary} icon={<CheckCircle size={12} />} />}
             {user.ssh_password_enabled && <Badge label="SSH" bgColor="#e8f5e9" textColor={colors.success} icon={<Wifi size={12} />} />}
-            {user.sudo_commands?.length > 0 && <Badge label="Sudo" bgColor="#fff3e0" textColor={colors.warning} icon={<Terminal size={12} />} />}
+            {(user.sudo_commands?.length > 0 || user.sudo_commands_nopasswd?.length > 0) && (
+              <Badge label="Sudo" bgColor="#fff3e0" textColor={colors.warning} icon={<Terminal size={12} />} />
+            )}
             {user.builtin && <Badge label="内置" bgColor="#f3e5f5" textColor="#7b1fa2" icon={<Lock size={12} />} />}
+            {user.password_disabled && <Badge label="无密码" bgColor="#ffebee" textColor={colors.danger} icon={<Lock size={12} />} />}
+          </div>
+
+          {/* Access section - Last Action & Logs */}
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid ' + colors.border }}>
+            <div style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 8 }}>
+              <Activity size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+              <span>访问</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 14, color: colors.text }}>
+                <span style={{ color: colors.textSecondary }}>Last Action: </span>
+                <span>认证方式</span>
+              </div>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  // TODO: Open logs viewer
+                  console.log('View logs for user:', user.id)
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: colors.primary,
+                  fontSize: 14,
+                  cursor: 'pointer',
+                  padding: '4px 8px',
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <FileText size={14} />
+                See Logs
+              </button>
+            </div>
           </div>
 
           {/* Action buttons */}
