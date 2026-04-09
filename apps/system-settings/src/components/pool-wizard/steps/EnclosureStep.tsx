@@ -5,7 +5,7 @@
 
 import React from 'react'
 import { AlertCircle } from 'lucide-react'
-import { usePoolWizardStore, selectNonUniqueSerialDisksCount } from '../store/poolWizardStore'
+import { usePoolWizardStore } from '../store/poolWizardStore'
 import { colors } from '@apps/system-settings/styles/theme'
 
 interface EnclosureStepProps {
@@ -19,15 +19,17 @@ export function EnclosureStep({ errors }: EnclosureStepProps) {
     limitToEnclosure,
     dispersalStrategy,
     allowNonUniqueSerialDisks,
+    allDisks,
     setUseEnclosure,
     setLimitToEnclosure,
     setDispersalStrategy,
     setAllowNonUniqueSerialDisks,
   } = usePoolWizardStore()
 
-  const nonUniqueSerialDisksCount = selectNonUniqueSerialDisksCount(
-    usePoolWizardStore.getState()
-  )
+  // 使用和 webui 相同的方法: 检查 duplicate_serial.length > 0
+  const nonUniqueSerialDisksCount = allDisks.filter(
+    (disk) => disk.duplicate_serial && disk.duplicate_serial.length > 0
+  ).length
 
   // If no enclosures, show basic enclosure options
   const hasEnclosures = enclosures.length > 0

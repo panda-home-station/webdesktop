@@ -203,6 +203,13 @@ export class PoolService {
   subscribeToScanChanges(callback: (data: { id: number; fields: Record<string, unknown> }) => void): () => void {
     return truenasApi.subscribe('pool.get_scan', callback) as () => void;
   }
+
+  /**
+   * Get encryption algorithm choices
+   */
+  async getEncryptionAlgorithmChoices(): Promise<Record<string, string>> {
+    return truenasApi.call('pool.dataset.encryption_algorithm_choices') as Promise<Record<string, string>>;
+  }
 }
 
 // Singleton instance

@@ -185,6 +185,14 @@ export function isSedDisk(disk: Disk | DetailsDisk): boolean {
 }
 
 /**
+ * Check if disk is SED-capable (can be used for SED encryption)
+ * A disk is SED-capable if its sed_status is Uninitialized or Unlocked
+ */
+export function isSedCapableDisk(disk: DetailsDisk): boolean {
+  return disk.sed_status === SedStatus.Uninitialized || disk.sed_status === SedStatus.Unlocked;
+}
+
+/**
  * Check if disk is unlocked
  */
 export function isDiskUnlocked(disk: Disk | DetailsDisk): boolean {
