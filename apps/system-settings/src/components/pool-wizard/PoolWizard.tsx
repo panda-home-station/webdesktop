@@ -54,6 +54,10 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
   }
 
   const handleNext = () => {
+    const errors = validateStep(usePoolWizardStore.getState(), currentStep)
+    if (Object.keys(errors).length > 0) {
+      return
+    }
     nextStep()
   }
 
@@ -94,6 +98,8 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
 
   const isFirstStep = currentStep === 0
   const isLastStep = currentStep === totalSteps - 1
+  const stepErrors = validateStep(usePoolWizardStore.getState(), currentStep)
+  const hasStepErrors = Object.keys(stepErrors).length > 0
 
   if (!open) return null
 
@@ -225,7 +231,14 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
               </span>
 
               {!isLastStep ? (
-                <button onClick={handleNext} style={styles.navButtonPrimary}>
+                <button
+                  onClick={handleNext}
+                  disabled={hasStepErrors}
+                  style={{
+                    ...styles.navButtonPrimary,
+                    ...(hasStepErrors ? styles.navButtonDisabled : {}),
+                  }}
+                >
                   下一步
                   <ChevronRight size={18} />
                 </button>

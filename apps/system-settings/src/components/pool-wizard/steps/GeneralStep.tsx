@@ -122,7 +122,7 @@ export function GeneralStep({ errors }: GeneralStepProps) {
   return (
     <div style={styles.container}>
       {/* Pool Name */}
-      <div style={styles.field}>
+      <div style={styles.fieldRow}>
         <label style={styles.label}>池名称 *</label>
         <input
           type="text"
@@ -134,89 +134,34 @@ export function GeneralStep({ errors }: GeneralStepProps) {
             ...(errors.name ? styles.inputError : {}),
           }}
         />
-        {errors.name && (
-          <div style={styles.error}>
-            <AlertCircle size={14} />
-            {errors.name}
-          </div>
-        )}
       </div>
 
       {/* Encryption */}
-      <div style={styles.field}>
-        <label style={styles.checkboxLabel}>
-          <input
-            type="checkbox"
-            checked={encryption}
-            onChange={(e) => setEncryption(e.target.checked)}
-            style={{ marginRight: 8 }}
-          />
-          启用加密
-        </label>
+      <div style={styles.fieldRow}>
+        <label style={styles.label}>启用加密</label>
+        <select
+          value={encryption ? encryptionType : 'none'}
+          onChange={(e) => {
+            const value = e.target.value as 'none' | 'software' | 'sed'
+            if (value === 'software' && encryptionType !== 'software') {
+              setEncryption(true)
+              handleEncryptionTypeChange('software')
+            } else {
+              setEncryption(value !== 'none')
+              setEncryptionType(value)
+            }
+          }}
+          style={styles.select}
+        >
+          <option value="none">无加密</option>
+          <option value="software">软件加密</option>
+          {hasSedCapableDisks && <option value="sed">SED (自加密硬盘)</option>}
+        </select>
       </div>
-
-      {/* Encryption Type */}
-      {encryption && (
-        <div style={styles.field}>
-          <label style={styles.label}>加密类型</label>
-          <div style={styles.radioGroup}>
-            <label
-              style={{
-                ...styles.radioLabel,
-                ...(encryptionType === 'none' ? styles.radioLabelSelected : {}),
-              }}
-            >
-              <input
-                type="radio"
-                name="encryptionType"
-                value="none"
-                checked={encryptionType === 'none'}
-                onChange={() => setEncryptionType('none')}
-                style={{ marginRight: 8 }}
-              />
-              无加密
-            </label>
-            <label
-              style={{
-                ...styles.radioLabel,
-                ...(encryptionType === 'software' ? styles.radioLabelSelected : {}),
-              }}
-            >
-              <input
-                type="radio"
-                name="encryptionType"
-                value="software"
-                checked={encryptionType === 'software'}
-                onChange={() => handleEncryptionTypeChange('software')}
-                style={{ marginRight: 8 }}
-              />
-              软件加密
-            </label>
-            {hasSedCapableDisks && (
-              <label
-                style={{
-                  ...styles.radioLabel,
-                  ...(encryptionType === 'sed' ? styles.radioLabelSelected : {}),
-                }}
-              >
-                <input
-                  type="radio"
-                  name="encryptionType"
-                  value="sed"
-                  checked={encryptionType === 'sed'}
-                  onChange={() => setEncryptionType('sed')}
-                  style={{ marginRight: 8 }}
-                />
-                SED (自加密硬盘)
-              </label>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Encryption Standard (shown when Software encryption is selected) */}
       {encryption && encryptionType === 'software' && (
-        <div style={styles.field}>
+        <div style={styles.fieldRow}>
           <label style={styles.label}>加密标准</label>
           <select
             value={encryptionAlgorithm}
@@ -229,9 +174,6 @@ export function GeneralStep({ errors }: GeneralStepProps) {
               </option>
             ))}
           </select>
-          <span style={styles.hint}>
-            选择加密算法标准
-          </span>
         </div>
       )}
 
@@ -273,7 +215,7 @@ export function GeneralStep({ errors }: GeneralStepProps) {
           <p style={styles.warningText}>
             非唯一序列号可能是由于线缆问题导致的，将此类硬盘添加到池中可能导致数据丢失。
           </p>
-          <div style={styles.radioGroup}>
+          <div style={styles.radioGroupHorizontal}>
             <label
               style={{
                 ...styles.radioLabel,
@@ -330,15 +272,20 @@ const styles: Record<string, React.CSSProperties> = {
   field: {
     marginBottom: 20,
   },
+  fieldRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 20,
+  },
   label: {
-    display: 'block',
-    marginBottom: 8,
     fontSize: 14,
     fontWeight: 600,
     color: colors.text,
+    whiteSpace: 'nowrap' as const,
   },
   input: {
-    width: '100%',
+    flex: 1,
     padding: '10px 12px',
     fontSize: 14,
     border: `1px solid ${colors.border}`,
@@ -385,6 +332,11 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
     gap: 8,
+  },
+  radioGroupHorizontal: {
+    display: 'flex',
+    flexDirection: 'row' as const,
+    gap: 12,
   },
   radioLabel: {
     display: 'flex',
