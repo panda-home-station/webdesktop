@@ -1,19 +1,26 @@
+/**
+ * System Settings App
+ * Main system settings application
+ */
+
 import { useState, useEffect } from 'react'
 import { Sidebar } from '@desktop/components/Sidebar'
 import { Info, Users, HardDrive, Network, Globe, Server } from 'lucide-react'
 import { systemService } from '@truenas/services/system'
 import { poolService } from '@truenas/services/pool'
 import { diskService } from '@truenas/services/disk'
-import type { SystemInfo, ReportingRealtimeUpdate } from '@truenas/types/system-types'
+import { datasetService } from '@truenas/services/dataset'
+import type { SystemInfo, ReportingRealtimeUpdate } from '@truenas/types/system'
 import type { Pool } from '@truenas/types/pool'
 import type { Disk } from '@truenas/types/disk'
+import type { Dataset } from '@truenas/types/dataset'
+import type { NetworkInterfaceFromApi } from './utils/system'
 import { UserManagement } from './components/UserManagement'
 import { DeviceInfo } from './components/DeviceInfo'
 import { StorageOverview } from './components/StorageOverview'
 import { DiskOverview } from './components/DiskOverview'
 import { NetworkSettings } from './components/NetworkSettings'
 import { RemoteAccess } from './components/RemoteAccess'
-import type { NetworkInterfaceFromApi } from './utils/system'
 
 const TABS = [
   { id: 'device', label: '关于本机', icon: <Info size={20} /> },
@@ -32,6 +39,7 @@ export default function SystemSettings() {
   const [networkInterfaces, setNetworkInterfaces] = useState<NetworkInterfaceFromApi[]>([])
   const [pools, setPools] = useState<Pool[]>([])
   const [disks, setDisks] = useState<Disk[]>([])
+  const [datasets, setDatasets] = useState<Dataset[]>([])
 
   // Realtime data
   const [realtime, setRealtime] = useState<ReportingRealtimeUpdate | null>(null)
@@ -46,19 +54,21 @@ export default function SystemSettings() {
 
     async function fetchStaticData() {
       try {
-        const [sysInfo, ifaces, poolsData, disksData] = await Promise.all([
+        const [sysInfo, ifaces, poolsData, disksData, datasetsData] = await Promise.all([
           systemService.getSystemInfo(),
           systemService.getNetworkInterfaces(),
-          poolService.query([], { extra: { is_upgraded: true } }),
+          poolService.query([], { extra: { is_upgraded: true } } as unknown as undefined),
           diskService.query(),
+          datasetService.query(),
         ])
 
         if (cancelled) return
 
-        setSystemInfo(sysInfo)
+        setSystemInfo(sysInfo as SystemInfo)
         setNetworkInterfaces(ifaces as NetworkInterfaceFromApi[])
         setPools(poolsData as Pool[])
         setDisks(disksData as Disk[])
+        setDatasets(datasetsData as Dataset[])
         setLoading(false)
       } catch (err) {
         if (cancelled) return
@@ -104,7 +114,7 @@ export default function SystemSettings() {
     >
       <Sidebar items={TABS} activeId={activeTab} onSelect={setActiveTab} />
       <div style={{ flex: 1, overflowY: 'auto' }}>
-        <div style={{ padding: '32px 40px', maxWidth: 720, margin: '0 auto' }}>
+        <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
           <h2 style={{ margin: '0 0 24px 0', fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em' }}>
             {TABS.find(t => t.id === activeTab)?.label}
           </h2>
@@ -115,6 +125,7 @@ export default function SystemSettings() {
             networkInterfaces={networkInterfaces}
             pools={pools}
             disks={disks}
+            datasets={datasets}
             loading={loading}
             error={error}
           />
@@ -131,6 +142,7 @@ function TabContent({
   networkInterfaces,
   pools,
   disks,
+  datasets,
   loading,
   error,
 }: {
@@ -140,6 +152,7 @@ function TabContent({
   networkInterfaces: NetworkInterfaceFromApi[]
   pools: Pool[]
   disks: Disk[]
+  datasets: Dataset[]
   loading: boolean
   error: string | null
 }) {
@@ -159,9 +172,18 @@ function TabContent({
     case 'users':
       return <UserManagement />
     case 'storage':
-      return <StorageOverview />
+      return (
+        <StorageOverview
+          pools={pools}
+          datasets={datasets}
+        />
+      )
     case 'disk':
-      return <DiskOverview />
+      return (
+        <DiskOverview
+          disks={disks}
+        />
+      )
     case 'network':
       return <NetworkSettings />
     case 'remote':
