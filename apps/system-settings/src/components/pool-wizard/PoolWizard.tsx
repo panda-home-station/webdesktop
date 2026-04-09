@@ -1,0 +1,295 @@
+/**
+ * Pool Wizard Component
+ * Main wizard container with step management
+ */
+
+import React, { useEffect } from 'react'
+import { X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import { Modal } from '@desktop/components/Modal'
+import { usePoolWizardStore, WIZARD_STEPS } from './store/poolWizardStore'
+import { validateStep, stepHasWarnings } from './utils/validation'
+import { WizardStepper } from './components/WizardStepper'
+import { GeneralStep } from './steps/GeneralStep'
+import { EnclosureStep } from './steps/EnclosureStep'
+import { DataStep } from './steps/DataStep'
+import { LogStep, SpareStep, CacheStep, MetadataStep, DedupStep } from './steps/VdevStep'
+import { ReviewStep } from './steps/ReviewStep'
+import { colors } from '@apps/system-settings/styles/theme'
+
+interface PoolWizardProps {
+  open: boolean
+  onClose: () => void
+  onSuccess: () => void
+}
+
+export function PoolWizard({ open, onClose, onSuccess }: PoolWizardProps) {
+  const {
+    currentStep,
+    totalSteps,
+    isLoading,
+    initialize,
+    reset,
+    setStep,
+    nextStep,
+    prevStep,
+  } = usePoolWizardStore()
+
+  // Initialize on open
+  useEffect(() => {
+    if (open) {
+      initialize()
+    }
+  }, [open, initialize])
+
+  // Handle successful creation
+  const state = usePoolWizardStore.getState()
+  useEffect(() => {
+    if (state.isCreating === false && !state.error && !state.isLoading) {
+      // Pool was created successfully - check if we need to notify
+    }
+  }, [state.isCreating, state.error, state.isLoading])
+
+  const handleStepClick = (step: number) => {
+    if (step <= currentStep || step === currentStep + 1) {
+      setStep(step)
+    }
+  }
+
+  const handleNext = () => {
+    nextStep()
+  }
+
+  const handlePrev = () => {
+    prevStep()
+  }
+
+  const handleClose = () => {
+    reset()
+    onClose()
+  }
+
+  const getCurrentStepContent = () => {
+    const errors = validateStep(usePoolWizardStore.getState(), currentStep)
+    const warnings = stepHasWarnings(usePoolWizardStore.getState(), currentStep)
+
+    switch (currentStep) {
+      case 0:
+        return <GeneralStep errors={errors} />
+      case 1:
+        return <EnclosureStep errors={errors} />
+      case 2:
+        return <DataStep errors={errors} warnings={warnings} />
+      case 3:
+        return <LogStep errors={errors} warnings={warnings} />
+      case 4:
+        return <SpareStep errors={errors} warnings={warnings} />
+      case 5:
+        return <CacheStep errors={errors} warnings={warnings} />
+      case 6:
+        return <MetadataStep errors={errors} warnings={warnings} />
+      case 7:
+        return <DedupStep errors={errors} warnings={warnings} />
+      case 8:
+        return <ReviewStep />
+      default:
+        return null
+    }
+  }
+
+  const isFirstStep = currentStep === 0
+  const isLastStep = currentStep === totalSteps - 1
+
+  if (!open) return null
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 1000,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        backdropFilter: 'blur(4px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) handleClose()
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: 900,
+          maxHeight: '90vh',
+          backgroundColor: colors.cardBg,
+          borderRadius: 20,
+          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          animation: 'modal-pop 0.2s ease-out',
+        }}
+      >
+        {/* Header */}
+        <div
+          style={{
+            padding: '16px 20px',
+            borderBottom: `1px solid ${colors.border}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+            创建存储池
+          </h2>
+          <button
+            onClick={handleClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 8,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <X size={20} color={colors.textSecondary} />
+          </button>
+        </div>
+
+        {/* Loading State */}
+        {isLoading && (
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 12,
+              color: colors.textSecondary,
+            }}
+          >
+            <Loader2 size={24} className="spin" />
+            <span>加载中...</span>
+          </div>
+        )}
+
+        {/* Wizard Content */}
+        {!isLoading && (
+          <>
+            {/* Stepper */}
+            <div style={{ padding: '16px 20px 0' }}>
+              <WizardStepper
+                currentStep={currentStep}
+                onStepClick={handleStepClick}
+              />
+            </div>
+
+            {/* Step Content */}
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                backgroundColor: colors.background,
+              }}
+            >
+              {getCurrentStepContent()}
+            </div>
+
+            {/* Navigation */}
+            <div
+              style={{
+                padding: '16px 20px',
+                borderTop: `1px solid ${colors.border}`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                backgroundColor: colors.cardBg,
+              }}
+            >
+              <button
+                onClick={handlePrev}
+                disabled={isFirstStep}
+                style={{
+                  ...styles.navButton,
+                  ...(isFirstStep ? styles.navButtonDisabled : {}),
+                }}
+              >
+                <ChevronLeft size={18} />
+                上一步
+              </button>
+
+              <span style={styles.stepIndicator}>
+                步骤 {currentStep + 1} / {totalSteps}
+              </span>
+
+              {!isLastStep ? (
+                <button onClick={handleNext} style={styles.navButtonPrimary}>
+                  下一步
+                  <ChevronRight size={18} />
+                </button>
+              ) : (
+                <div style={{ width: 80 }} />
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes modal-pop {
+          0% { transform: scale(0.95); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        .spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+const styles: Record<string, React.CSSProperties> = {
+  navButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '10px 16px',
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 14,
+    color: colors.text,
+  },
+  navButtonDisabled: {
+    opacity: 0.5,
+    cursor: 'not-allowed',
+  },
+  navButtonPrimary: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '10px 16px',
+    backgroundColor: colors.primary,
+    border: 'none',
+    borderRadius: 8,
+    cursor: 'pointer',
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#fff',
+  },
+  stepIndicator: {
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+}

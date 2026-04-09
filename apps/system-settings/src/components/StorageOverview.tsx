@@ -4,9 +4,11 @@
  */
 
 import { useState } from 'react'
+import { Plus } from 'lucide-react'
 import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
 import { PoolList, PoolDetails } from './pools'
+import { PoolWizard } from './pool-wizard'
 import { DatasetTree } from './datasets'
 import { colors } from '../styles/theme'
 
@@ -18,6 +20,7 @@ interface StorageOverviewProps {
 
 export function StorageOverview({ pools, datasets, onPoolClick }: StorageOverviewProps) {
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null)
+  const [showCreateForm, setShowCreateForm] = useState(false)
 
   // If a pool is selected, show its details
   if (selectedPool) {
@@ -41,7 +44,27 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
     <div>
       {/* Pool List */}
       <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Storage Pools</h3>
+        <div style={styles.sectionHeader}>
+          <h3 style={styles.sectionTitle}>Storage Pools</h3>
+          <button
+            onClick={() => setShowCreateForm(true)}
+            style={{
+              padding: '8px 16px',
+              backgroundColor: colors.primary,
+              color: '#fff',
+              border: 'none',
+              borderRadius: 8,
+              fontSize: 14,
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+            }}
+          >
+            <Plus size={16} /> 创建池
+          </button>
+        </div>
         <PoolList
           pools={pools}
           onPoolClick={(pool) => {
@@ -67,6 +90,16 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
           />
         </div>
       )}
+
+      {/* Create Pool Wizard Modal */}
+      <PoolWizard
+        open={showCreateForm}
+        onClose={() => setShowCreateForm(false)}
+        onSuccess={() => {
+          setShowCreateForm(false)
+          // Parent will refresh pools
+        }}
+      />
     </div>
   )
 }
@@ -75,8 +108,14 @@ const styles = {
   section: {
     marginBottom: 24,
   },
+  sectionHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   sectionTitle: {
-    margin: '0 0 16px 0',
+    margin: 0,
     fontSize: 14,
     fontWeight: 600,
     color: colors.textSecondary,

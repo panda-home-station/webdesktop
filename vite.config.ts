@@ -51,6 +51,8 @@ export default defineConfig(({ mode }) => {
         '@truenas/utils/storage': path.resolve(__dirname, 'src/shared/utils/storage.utils'),
         '@truenas/utils/topology': path.resolve(__dirname, 'src/shared/utils/topology.utils'),
         '@truenas/utils/dataset': path.resolve(__dirname, 'src/shared/utils/dataset.utils'),
+        // App styles
+        '@apps/system-settings/styles': path.resolve(__dirname, 'apps/system-settings/src/styles'),
       },
     },
     server: {
