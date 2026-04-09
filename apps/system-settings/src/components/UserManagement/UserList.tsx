@@ -232,7 +232,6 @@ function UserCard({
                 onClick={(e) => {
                   e.stopPropagation()
                   // TODO: Open logs viewer
-                  console.log('View logs for user:', user.id)
                 }}
                 style={{
                   background: 'none',

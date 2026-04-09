@@ -58,7 +58,7 @@ export default function SystemSettings() {
           systemService.getSystemInfo(),
           systemService.getNetworkInterfaces(),
           poolService.query([], { extra: { is_upgraded: true } } as unknown as undefined),
-          diskService.query(),
+          diskService.query([], { extra: { pools: true } }),
           datasetService.query(),
         ])
 
