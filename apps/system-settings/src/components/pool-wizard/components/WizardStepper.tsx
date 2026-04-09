@@ -40,7 +40,7 @@ export function WizardStepper({ currentStep, onStepClick }: WizardStepperProps) 
                 }}
               >
                 {isCompleted ? (
-                  <Check size={14} color="#fff" />
+                  <Check size={10} color="#fff" />
                 ) : (
                   <span style={styles.stepNumber}>{step.id + 1}</span>
                 )}
@@ -74,19 +74,20 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
     alignItems: 'center',
-    padding: '16px 24px',
+    padding: '8px 12px',
     backgroundColor: colors.cardBg,
-    borderRadius: 12,
-    marginBottom: 24,
+    borderRadius: 8,
+    marginBottom: 12,
     overflowX: 'auto',
+    gap: 0,
   },
   step: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
-    padding: '8px 12px',
-    borderRadius: 8,
-    transition: 'all 0.2s ease',
+    gap: 4,
+    padding: '4px 6px',
+    borderRadius: 6,
+    transition: 'all 0.15s ease',
     flexShrink: 0,
   },
   stepActive: {
@@ -96,15 +97,16 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: 'transparent',
   },
   stepCircle: {
-    width: 28,
-    height: 28,
+    width: 20,
+    height: 20,
     borderRadius: '50%',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.background,
     border: `2px solid ${colors.border}`,
-    transition: 'all 0.2s ease',
+    transition: 'all 0.15s ease',
+    flexShrink: 0,
   },
   circleActive: {
     backgroundColor: colors.primary,
@@ -115,12 +117,12 @@ const styles: Record<string, React.CSSProperties> = {
     borderColor: colors.success,
   },
   stepNumber: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: 600,
     color: colors.textSecondary,
   },
   stepTitle: {
-    fontSize: 13,
+    fontSize: 11,
     fontWeight: 500,
     color: colors.textSecondary,
     whiteSpace: 'nowrap' as const,
@@ -133,11 +135,11 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.text,
   },
   connector: {
-    flex: 1,
-    minWidth: 20,
+    width: 12,
     height: 2,
     backgroundColor: colors.border,
-    margin: '0 4px',
+    margin: '0 1px',
+    flexShrink: 0,
   },
   connectorCompleted: {
     backgroundColor: colors.success,

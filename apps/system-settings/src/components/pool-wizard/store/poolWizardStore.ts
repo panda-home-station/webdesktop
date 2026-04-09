@@ -199,14 +199,13 @@ export interface StepDefinition {
 
 export const WIZARD_STEPS: StepDefinition[] = [
   { id: 0, title: '基本信息' },
-  { id: 1, title: '机箱选项' },
-  { id: 2, title: '数据', vdevType: VDevType.Data },
-  { id: 3, title: '日志', vdevType: VDevType.Log, isOptional: true },
-  { id: 4, title: '备用', vdevType: VDevType.Spare, isOptional: true },
-  { id: 5, title: '缓存', vdevType: VDevType.Cache, isOptional: true },
-  { id: 6, title: '元数据', vdevType: VDevType.Special, isOptional: true },
-  { id: 7, title: '去重', vdevType: VDevType.Dedup, isOptional: true },
-  { id: 8, title: '评审' },
+  { id: 1, title: '数据', vdevType: VDevType.Data },
+  { id: 2, title: '日志', vdevType: VDevType.Log, isOptional: true },
+  { id: 3, title: '备用', vdevType: VDevType.Spare, isOptional: true },
+  { id: 4, title: '缓存', vdevType: VDevType.Cache, isOptional: true },
+  { id: 5, title: '元数据', vdevType: VDevType.Special, isOptional: true },
+  { id: 6, title: '去重', vdevType: VDevType.Dedup, isOptional: true },
+  { id: 7, title: '评审' },
 ]
 
 // ============ Store ============

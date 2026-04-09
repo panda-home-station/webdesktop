@@ -9,7 +9,6 @@ import { usePoolWizardStore } from './store/poolWizardStore'
 import { validateStep, stepHasWarnings } from './utils/validation'
 import { WizardStepper } from './components/WizardStepper'
 import { GeneralStep } from './steps/GeneralStep'
-import { EnclosureStep } from './steps/EnclosureStep'
 import { DataStep } from './steps/DataStep'
 import { LogStep, SpareStep, CacheStep, MetadataStep, DedupStep } from './steps/VdevStep'
 import { ReviewStep } from './steps/ReviewStep'
@@ -75,20 +74,18 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
       case 0:
         return <GeneralStep errors={errors} />
       case 1:
-        return <EnclosureStep errors={errors} />
-      case 2:
         return <DataStep errors={errors} warnings={warnings} />
-      case 3:
+      case 2:
         return <LogStep errors={errors} warnings={warnings} />
-      case 4:
+      case 3:
         return <SpareStep errors={errors} warnings={warnings} />
-      case 5:
+      case 4:
         return <CacheStep errors={errors} warnings={warnings} />
-      case 6:
+      case 5:
         return <MetadataStep errors={errors} warnings={warnings} />
-      case 7:
+      case 6:
         return <DedupStep errors={errors} warnings={warnings} />
-      case 8:
+      case 7:
         return <ReviewStep />
       default:
         return null
@@ -121,7 +118,7 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
         style={{
           width: '100%',
           maxWidth: 900,
-          maxHeight: '90vh',
+          height: 520,
           backgroundColor: colors.cardBg,
           borderRadius: 20,
           boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
@@ -134,14 +131,14 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
         {/* Header */}
         <div
           style={{
-            padding: '16px 20px',
+            padding: '12px 16px',
             borderBottom: `1px solid ${colors.border}`,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
+          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
             创建存储池
           </h2>
           <button
@@ -150,14 +147,14 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
               background: 'none',
               border: 'none',
               cursor: 'pointer',
-              padding: 8,
-              borderRadius: 8,
+              padding: 6,
+              borderRadius: 6,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <X size={20} color={colors.textSecondary} />
+            <X size={18} color={colors.textSecondary} />
           </button>
         </div>
 
@@ -182,7 +179,7 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
         {!isLoading && (
           <>
             {/* Stepper */}
-            <div style={{ padding: '16px 20px 0' }}>
+            <div style={{ padding: '8px 12px 0' }}>
               <WizardStepper
                 currentStep={currentStep}
                 onStepClick={handleStepClick}
@@ -192,7 +189,7 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
             {/* Step Content */}
             <div
               style={{
-                flex: 1,
+                height: 380,
                 overflowY: 'auto',
                 backgroundColor: colors.background,
               }}
@@ -203,7 +200,7 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
             {/* Navigation */}
             <div
               style={{
-                padding: '16px 20px',
+                padding: '12px 16px',
                 borderTop: `1px solid ${colors.border}`,
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -262,12 +259,12 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 4,
-    padding: '10px 16px',
+    padding: '8px 12px',
     backgroundColor: colors.cardBg,
     border: `1px solid ${colors.border}`,
-    borderRadius: 8,
+    borderRadius: 6,
     cursor: 'pointer',
-    fontSize: 14,
+    fontSize: 13,
     color: colors.text,
   },
   navButtonDisabled: {
@@ -278,17 +275,17 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 4,
-    padding: '10px 16px',
+    padding: '8px 12px',
     backgroundColor: colors.primary,
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 6,
     cursor: 'pointer',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 600,
     color: '#fff',
   },
   stepIndicator: {
-    fontSize: 13,
+    fontSize: 12,
     color: colors.textSecondary,
   },
 }
