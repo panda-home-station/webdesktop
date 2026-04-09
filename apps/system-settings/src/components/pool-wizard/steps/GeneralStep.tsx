@@ -121,9 +121,6 @@ export function GeneralStep({ errors }: GeneralStepProps) {
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>基本信息</h3>
-      <p style={styles.description}>设置池名称和加密选项</p>
-
       {/* Pool Name */}
       <div style={styles.field}>
         <label style={styles.label}>池名称 *</label>
@@ -329,17 +326,6 @@ export function GeneralStep({ errors }: GeneralStepProps) {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     padding: 24,
-  },
-  title: {
-    margin: '0 0 8px 0',
-    fontSize: 18,
-    fontWeight: 600,
-    color: colors.text,
-  },
-  description: {
-    margin: '0 0 24px 0',
-    fontSize: 14,
-    color: colors.textSecondary,
   },
   field: {
     marginBottom: 20,
