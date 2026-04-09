@@ -9,15 +9,15 @@ export const groupService = {
   },
 
   async create(group: GroupUpdate): Promise<number> {
-    return truenasApi.call('group.create', [group]) as Promise<number>
+    return truenasApi.call('group.create', group) as Promise<number>
   },
 
   async update(id: number, group: Partial<GroupUpdate>): Promise<number> {
-    return truenasApi.call('group.update', [id, group]) as Promise<number>
+    return truenasApi.call('group.update', id, group) as Promise<number>
   },
 
   async delete(id: number): Promise<number> {
-    return truenasApi.call('group.delete', [id]) as Promise<number>
+    return truenasApi.call('group.delete', id) as Promise<number>
   },
 
   async getNextGid(): Promise<number> {
