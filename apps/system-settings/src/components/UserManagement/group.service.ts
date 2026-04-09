@@ -3,9 +3,26 @@ import type { Group, GroupUpdate } from '@truenas/types/group-types'
 
 export type { Group, GroupUpdate }
 
+interface GroupQueryParams {
+  builtin?: boolean
+}
+
 export const groupService = {
-  async query(): Promise<Group[]> {
-    return truenasApi.call('group.query') as Promise<Group[]>
+  async query(params?: GroupQueryParams): Promise<Group[]> {
+    const filterConditions: unknown[] = []
+
+    // By default, exclude builtin groups (similar to webui behavior)
+    if (params?.builtin !== false && params?.builtin !== true) {
+      filterConditions.push(['builtin', '=', false])
+    }
+    if (params?.builtin === false) {
+      filterConditions.push(['builtin', '=', false])
+    }
+    if (params?.builtin === true) {
+      filterConditions.push(['builtin', '=', true])
+    }
+
+    return truenasApi.call('group.query', filterConditions, {}) as Promise<Group[]>
   },
 
   async create(group: GroupUpdate): Promise<number> {

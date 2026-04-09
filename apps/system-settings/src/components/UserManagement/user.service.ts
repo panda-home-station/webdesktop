@@ -7,17 +7,24 @@ export const userService = {
   async query(params?: { local?: boolean; builtin?: boolean }): Promise<User[]> {
     const filterConditions: unknown[] = []
 
-    // Default: show local users only
+    // Default: show local users only (local=true, builtin=false)
     const localOnly = params?.local !== false
 
     if (localOnly) {
       filterConditions.push(['local', '=', true])
+      // When showing local users, exclude builtin users by default
+      // (TrueNAS has many builtin users that are not actual local users)
+      if (params?.builtin !== false && params?.builtin !== true) {
+        filterConditions.push(['builtin', '=', false])
+      }
     }
     if (params?.builtin === false) {
       filterConditions.push(['builtin', '=', false])
     }
+    if (params?.builtin === true) {
+      filterConditions.push(['builtin', '=', true])
+    }
 
-    // Pass [filters, options] as separate arguments
     return truenasApi.call('user.query', filterConditions, {}) as Promise<User[]>
   },
 
