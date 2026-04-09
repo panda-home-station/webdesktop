@@ -2,6 +2,13 @@ import React, { useRef, useState, useCallback, useMemo } from 'react'
 import Icon from '@mdi/react'
 import { mdiAbTesting } from '@mdi/js'
 import { WindowContext } from '../../shared/sdk/window'
+import {
+  DRAG_THRESHOLD,
+  TITLEBAR_HEIGHT,
+  calculateDragBounds,
+  DEFAULT_RESTORE_W,
+  DEFAULT_RESTORE_H,
+} from '../utils/window-utils'
 
 export interface WinProps {
   id: string
@@ -113,14 +120,14 @@ export default function Window({
       const dy = ev.clientY - dragStartY
       
       if (isDraggingMaximized && !hasRestored) {
-        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) {
-           const rect = restoreRect || { w: Math.min(safeW, 800), h: Math.min(safeH, 600), x: safeX, y: safeY }
-           const currentW = safeW || 800
+        if (Math.abs(dx) > DRAG_THRESHOLD || Math.abs(dy) > DRAG_THRESHOLD) {
+           const rect = restoreRect || { w: Math.min(safeW, DEFAULT_RESTORE_W), h: Math.min(safeH, DEFAULT_RESTORE_H), x: safeX, y: safeY }
+           const currentW = safeW || DEFAULT_RESTORE_W
            const offsetX = dragStartX - dragInitX
            // Prevent division by zero
            const percent = currentW > 0 ? offsetX / currentW : 0
-           const newW = Number.isFinite(rect.w) ? rect.w : Math.min(safeW, 800)
-           const newH = Number.isFinite(rect.h) ? rect.h : Math.min(safeH, 600)
+           const newW = Number.isFinite(rect.w) ? rect.w : Math.min(safeW, DEFAULT_RESTORE_W)
+           const newH = Number.isFinite(rect.h) ? rect.h : Math.min(safeH, DEFAULT_RESTORE_H)
            const _baseX = Number.isFinite(rect.x) ? rect.x : safeX
            const _baseY = Number.isFinite(rect.y) ? rect.y : safeY
            const newX = ev.clientX - (newW * percent)
@@ -157,22 +164,18 @@ export default function Window({
       // Calculate boundaries
       const W = window.innerWidth
       const H = window.innerHeight
-      const currentW = hasRestored ? (restoreRect?.w || 800) : safeW
-      
+      const currentW = hasRestored ? (restoreRect?.w || DEFAULT_RESTORE_W) : safeW
+
       const rawX = dragInitX + dx
       const rawY = dragInitY + dy
-      
+
       // Allow dragging out of bounds but with limits
-      // Left/Right: keep 30px visible
+      // Left/Right: keep WINDOW_BOUNDARY_MARGIN px visible
       // Top: >= -1 (allow covering 1px border/gap)
-      const minX = 30 - currentW
-      const maxX = W - 30
-      const minY = -1
-      const maxY = H - 30
-      
-      const clampedX = Math.max(minX, Math.min(rawX, maxX))
-      const clampedY = Math.max(minY, Math.min(rawY, maxY))
-      
+      const bounds = calculateDragBounds(W, H, currentW)
+      const clampedX = Math.max(bounds.minX, Math.min(rawX, bounds.maxX))
+      const clampedY = Math.max(bounds.minY, Math.min(rawY, bounds.maxY))
+
       const newDx = clampedX - dragInitX
       const newDy = clampedY - dragInitY
 
@@ -211,26 +214,19 @@ export default function Window({
            winRef.current.style.boxShadow = 'var(--win-shadow)'
            winRef.current.style.willChange = 'auto'
         }
-        if (contentRef.current) {
-          contentRef.current.style.contain = 'size layout paint style'
-        }
         return
       }
 
       const W = window.innerWidth
       const H = window.innerHeight
-      const currentW = hasRestored ? (restoreRect?.w || 800) : safeW
+      const currentW = hasRestored ? (restoreRect?.w || DEFAULT_RESTORE_W) : safeW
 
       const rawX = dragInitX + lastDx
       const rawY = dragInitY + lastDy
-      
-      const minX = 30 - currentW
-      const maxX = W - 30
-      const minY = -1
-      const maxY = H - 30
-      
-      const nx = Math.round(Math.max(minX, Math.min(rawX, maxX)))
-      const ny = Math.round(Math.max(minY, Math.min(rawY, maxY)))
+
+      const bounds = calculateDragBounds(W, H, currentW)
+      const nx = Math.round(Math.max(bounds.minX, Math.min(rawX, bounds.maxX)))
+      const ny = Math.round(Math.max(bounds.minY, Math.min(rawY, bounds.maxY)))
       
       // Reset transform and transition
       if (winRef.current) {
@@ -242,10 +238,6 @@ export default function Window({
         winRef.current.style.willChange = 'auto'
       }
 
-      if (contentRef.current) {
-        contentRef.current.style.contain = 'size layout paint style'
-      }
-      
       if (nx !== safeX || ny !== safeY || hasRestored) {
         onMove(id, nx, ny)
       }
@@ -382,7 +374,7 @@ export default function Window({
       <div
         className="win-title"
         style={{
-          height: 38,
+          height: TITLEBAR_HEIGHT,
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
