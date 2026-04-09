@@ -27,87 +27,125 @@ import { colors } from '../../styles/theme'
 // Group card component
 function GroupCard({
   group,
+  expanded,
+  onToggle,
   onEdit,
   onDelete,
 }: {
   group: Group
+  expanded: boolean
+  onToggle: () => void
   onEdit: () => void
   onDelete: () => void
 }) {
   return (
     <Card>
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+      {/* Header - always visible, clickable */}
+      <div
+        onClick={onToggle}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
         <div style={{
-          width: 48,
-          height: 48,
+          width: 44,
+          height: 44,
           borderRadius: 10,
           backgroundColor: group.builtin ? '#f3e5f5' : colors.primary,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          marginRight: 14,
+          marginRight: 12,
+          flexShrink: 0,
         }}>
           {group.builtin ? (
-            <Lock size={22} color="#7b1fa2" />
+            <Lock size={20} color="#7b1fa2" />
           ) : (
-            <Users size={22} color="#fff" />
+            <Users size={20} color="#fff" />
           )}
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: colors.text, marginBottom: 2 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: colors.text, marginBottom: 2 }}>
             {group.name}
           </div>
-          <div style={{ fontSize: 14, color: colors.textSecondary }}>
+          <div style={{ fontSize: 13, color: colors.textSecondary }}>
             GID {group.gid}
           </div>
         </div>
-        {group.builtin && (
-          <Badge label="内置" bgColor="#f3e5f5" textColor="#7b1fa2" />
-        )}
-      </div>
-
-      {/* Info */}
-      <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden' }}>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '10px 12px',
-          borderBottom: '1px solid ' + colors.border,
-        }}>
-          <Users size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
-          <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>成员数量</span>
-          <span style={{ fontSize: 14, color: colors.textSecondary }}>{group.users?.length || 0}</span>
-        </div>
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          padding: '10px 12px',
-        }}>
-          <Shield size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
-          <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>SMB 映射</span>
-          <span style={{ fontSize: 14, color: group.smb ? colors.success : colors.textSecondary }}>
-            {group.smb ? '已启用' : '未启用'}
-          </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {group.builtin && (
+            <Badge label="内置" bgColor="#f3e5f5" textColor="#7b1fa2" />
+          )}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              color: colors.textSecondary,
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease',
+            }}
+          >
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
         </div>
       </div>
 
-      {/* Feature badges */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-        {(group.sudo_commands?.length ?? 0) > 0 && (
-          <Badge label="Sudo" bgColor="#fff3e0" textColor={colors.warning} icon={<Terminal size={12} />} />
-        )}
-        {(group.sudo_commands_nopasswd?.length ?? 0) > 0 && (
-          <Badge label="Sudo (无密码)" bgColor="#ffebee" textColor={colors.danger} icon={<Terminal size={12} />} />
-        )}
-      </div>
+      {/* Expanded content */}
+      {expanded && (
+        <>
+          {/* Info */}
+          <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden', marginTop: 12 }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '10px 12px',
+              borderBottom: '1px solid ' + colors.border,
+            }}>
+              <Users size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
+              <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>成员数量</span>
+              <span style={{ fontSize: 14, color: colors.textSecondary }}>{group.users?.length || 0}</span>
+            </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '10px 12px',
+            }}>
+              <Shield size={16} color={colors.textSecondary} style={{ marginRight: 10 }} />
+              <span style={{ fontSize: 14, color: colors.text, flex: 1 }}>SMB 映射</span>
+              <span style={{ fontSize: 14, color: group.smb ? colors.success : colors.textSecondary }}>
+                {group.smb ? '已启用' : '未启用'}
+              </span>
+            </div>
+          </div>
 
-      {/* Action buttons */}
-      {!group.builtin && !group.immutable && (
-        <div style={{ display: 'flex', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid ' + colors.border }}>
-          <ActionButton onClick={onEdit} icon={<Edit2 size={16} />} label="编辑" primary />
-          <ActionButton onClick={onDelete} icon={<Trash2 size={16} />} label="" danger />
-        </div>
+          {/* Feature badges */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            {(group.sudo_commands?.length ?? 0) > 0 && (
+              <Badge label="Sudo" bgColor="#fff3e0" textColor={colors.warning} icon={<Terminal size={12} />} />
+            )}
+            {(group.sudo_commands_nopasswd?.length ?? 0) > 0 && (
+              <Badge label="Sudo (无密码)" bgColor="#ffebee" textColor={colors.danger} icon={<Terminal size={12} />} />
+            )}
+          </div>
+
+          {/* Action buttons */}
+          {!group.builtin && !group.immutable && (
+            <div style={{ display: 'flex', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid ' + colors.border }}>
+              <ActionButton onClick={onEdit} icon={<Edit2 size={16} />} label="编辑" primary />
+              <ActionButton onClick={onDelete} icon={<Trash2 size={16} />} label="" danger />
+            </div>
+          )}
+        </>
       )}
     </Card>
   )
@@ -156,6 +194,7 @@ export function GroupList() {
   const [showForm, setShowForm] = useState(false)
   const [editingGroup, setEditingGroup] = useState<Group | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Group | null>(null)
+  const [expandedGroupId, setExpandedGroupId] = useState<number | null>(null)
 
   const loadGroups = useCallback(async () => {
     try {
@@ -280,12 +319,15 @@ export function GroupList() {
         )}
 
         {!loading && !error && filteredGroups.map((group) => (
-          <GroupCard
-            key={group.id}
-            group={group}
-            onEdit={() => handleEdit(group)}
-            onDelete={() => setDeleteConfirm(group)}
-          />
+          <div key={group.id} style={{ marginBottom: 8 }}>
+            <GroupCard
+              group={group}
+              expanded={expandedGroupId === group.id}
+              onToggle={() => setExpandedGroupId(expandedGroupId === group.id ? null : group.id)}
+              onEdit={() => handleEdit(group)}
+              onDelete={() => setDeleteConfirm(group)}
+            />
+          </div>
         ))}
       </div>
 

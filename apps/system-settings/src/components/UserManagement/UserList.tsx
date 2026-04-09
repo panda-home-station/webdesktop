@@ -32,10 +32,14 @@ import { colors } from '../../styles/theme'
 // User card component
 function UserCard({
   user,
+  expanded,
+  onToggle,
   onEdit,
   onDelete,
 }: {
   user: User
+  expanded: boolean
+  onToggle: () => void
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -58,56 +62,90 @@ function UserCard({
 
   return (
     <Card>
-      {/* Header with avatar and name */}
-      <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+      {/* Header with avatar and name - always visible, clickable */}
+      <div
+        onClick={onToggle}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          cursor: 'pointer',
+          userSelect: 'none',
+        }}
+      >
         <div style={{
-          width: 56,
-          height: 56,
+          width: 44,
+          height: 44,
           borderRadius: '50%',
           backgroundColor: getAvatarColor(user.uid),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           color: '#fff',
-          fontSize: 20,
+          fontSize: 16,
           fontWeight: 600,
-          marginRight: 14,
+          marginRight: 12,
+          flexShrink: 0,
         }}>
           {getInitials(user.full_name || user.username)}
         </div>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 18, fontWeight: 600, color: colors.text, marginBottom: 2 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 16, fontWeight: 600, color: colors.text, marginBottom: 2 }}>
             {user.full_name || user.username}
           </div>
-          <div style={{ fontSize: 15, color: colors.textSecondary }}>
+          <div style={{ fontSize: 13, color: colors.textSecondary }}>
             @{user.username}
           </div>
         </div>
-        {StatusBadge[status]()}
-      </div>
-
-      {/* Info rows */}
-      <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden' }}>
-        <InfoRow icon={<UserIcon size={16} />} label="UID" value={user.uid} />
-        <InfoRow icon={<Home size={16} />} label="主目录" value={user.home} />
-        <InfoRow icon={<Shell size={16} />} label="Shell" value={user.shell} />
-        <InfoRow icon={<Mail size={16} />} label="邮箱" value={user.email || '-'} border={false} />
-      </div>
-
-      {/* Feature badges */}
-      <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-        {user.smb && <Badge label="SMB" bgColor="#e3f2fd" textColor={colors.primary} icon={<CheckCircle size={12} />} />}
-        {user.ssh_password_enabled && <Badge label="SSH" bgColor="#e8f5e9" textColor={colors.success} icon={<Wifi size={12} />} />}
-        {user.sudo_commands?.length > 0 && <Badge label="Sudo" bgColor="#fff3e0" textColor={colors.warning} icon={<Terminal size={12} />} />}
-        {user.builtin && <Badge label="内置" bgColor="#f3e5f5" textColor="#7b1fa2" icon={<Lock size={12} />} />}
-      </div>
-
-      {/* Action buttons */}
-      {!user.builtin && !user.immutable && (
-        <div style={{ display: 'flex', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid ' + colors.border }}>
-          <ActionButton onClick={onEdit} icon={<Edit2 size={16} />} label="编辑" primary />
-          <ActionButton onClick={onDelete} icon={<Trash2 size={16} />} label="" danger />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {StatusBadge[status]()}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={{
+              color: colors.textSecondary,
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+              transition: 'transform 0.2s ease',
+            }}
+          >
+            <path d="m6 9 6 6 6-6"/>
+          </svg>
         </div>
+      </div>
+
+      {/* Expanded content */}
+      {expanded && (
+        <>
+          {/* Info rows */}
+          <div style={{ background: colors.background, borderRadius: 8, overflow: 'hidden', marginTop: 12 }}>
+            <InfoRow icon={<UserIcon size={16} />} label="UID" value={user.uid} />
+            <InfoRow icon={<Home size={16} />} label="主目录" value={user.home} />
+            <InfoRow icon={<Shell size={16} />} label="Shell" value={user.shell} />
+            <InfoRow icon={<Mail size={16} />} label="邮箱" value={user.email || '-'} border={false} />
+          </div>
+
+          {/* Feature badges */}
+          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+            {user.smb && <Badge label="SMB" bgColor="#e3f2fd" textColor={colors.primary} icon={<CheckCircle size={12} />} />}
+            {user.ssh_password_enabled && <Badge label="SSH" bgColor="#e8f5e9" textColor={colors.success} icon={<Wifi size={12} />} />}
+            {user.sudo_commands?.length > 0 && <Badge label="Sudo" bgColor="#fff3e0" textColor={colors.warning} icon={<Terminal size={12} />} />}
+            {user.builtin && <Badge label="内置" bgColor="#f3e5f5" textColor="#7b1fa2" icon={<Lock size={12} />} />}
+          </div>
+
+          {/* Action buttons */}
+          {!user.builtin && !user.immutable && (
+            <div style={{ display: 'flex', gap: 12, marginTop: 16, paddingTop: 16, borderTop: '1px solid ' + colors.border }}>
+              <ActionButton onClick={onEdit} icon={<Edit2 size={16} />} label="编辑" primary />
+              <ActionButton onClick={onDelete} icon={<Trash2 size={16} />} label="" danger />
+            </div>
+          )}
+        </>
       )}
     </Card>
   )
@@ -171,6 +209,7 @@ export function UserList() {
   const [showForm, setShowForm] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<User | null>(null)
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null)
 
   const loadUsers = useCallback(async () => {
     try {
@@ -296,12 +335,15 @@ export function UserList() {
         )}
 
         {!loading && !error && filteredUsers.map((user) => (
-          <UserCard
-            key={user.id}
-            user={user}
-            onEdit={() => handleEdit(user)}
-            onDelete={() => setDeleteConfirm(user)}
-          />
+          <div key={user.id} style={{ marginBottom: 8 }}>
+            <UserCard
+              user={user}
+              expanded={expandedUserId === user.id}
+              onToggle={() => setExpandedUserId(expandedUserId === user.id ? null : user.id)}
+              onEdit={() => handleEdit(user)}
+              onDelete={() => setDeleteConfirm(user)}
+            />
+          </div>
         ))}
       </div>
 
