@@ -5,8 +5,7 @@
 
 import React, { useEffect } from 'react'
 import { X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
-import { Modal } from '@desktop/components/Modal'
-import { usePoolWizardStore, WIZARD_STEPS } from './store/poolWizardStore'
+import { usePoolWizardStore } from './store/poolWizardStore'
 import { validateStep, stepHasWarnings } from './utils/validation'
 import { WizardStepper } from './components/WizardStepper'
 import { GeneralStep } from './steps/GeneralStep'
@@ -22,7 +21,7 @@ interface PoolWizardProps {
   onSuccess: () => void
 }
 
-export function PoolWizard({ open, onClose, onSuccess }: PoolWizardProps) {
+export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardProps) {
   const {
     currentStep,
     totalSteps,

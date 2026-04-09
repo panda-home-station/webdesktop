@@ -5,7 +5,7 @@
 
 import React from 'react'
 import { AlertCircle } from 'lucide-react'
-import { usePoolWizardStore, EncryptionType } from '../store/poolWizardStore'
+import { usePoolWizardStore } from '../store/poolWizardStore'
 import { colors } from '@apps/system-settings/styles/theme'
 
 interface GeneralStepProps {

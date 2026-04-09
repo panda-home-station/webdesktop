@@ -27,25 +27,6 @@ export interface DiskSelectionResult {
 }
 
 /**
- * Group disks by size and type
- */
-function groupDisksBySizeAndType(
-  disks: DetailsDisk[]
-): Map<string, DetailsDisk[]> {
-  const groups = new Map<string, DetailsDisk[]>()
-
-  disks.forEach((disk) => {
-    const key = `${disk.type}-${disk.size}`
-    if (!groups.has(key)) {
-      groups.set(key, [])
-    }
-    groups.get(key)!.push(disk)
-  })
-
-  return groups
-}
-
-/**
  * Filter disks by size and type
  */
 function filterDisks(

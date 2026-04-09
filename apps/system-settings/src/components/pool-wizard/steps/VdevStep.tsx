@@ -5,7 +5,7 @@
 
 import React from 'react'
 import { AlertCircle, Zap, Trash2 } from 'lucide-react'
-import { VDevType, vdevTypeLabels } from '@truenas/types/vdev-enum-types'
+import { VDevType } from '@truenas/types/vdev-enum-types'
 import { DetailsDisk } from '@truenas/types/disk-types'
 import { usePoolWizardStore, LAYOUT_OPTIONS } from '../store/poolWizardStore'
 import { LayoutSelector } from '../components/LayoutSelector'

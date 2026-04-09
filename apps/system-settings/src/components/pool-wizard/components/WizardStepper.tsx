@@ -6,7 +6,6 @@
 import React from 'react'
 import { Check } from 'lucide-react'
 import { WIZARD_STEPS } from '../store/poolWizardStore'
-import { usePoolWizardStore } from '../store/poolWizardStore'
 import { colors } from '@apps/system-settings/styles/theme'
 
 interface WizardStepperProps {

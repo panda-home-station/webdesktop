@@ -5,9 +5,8 @@
 
 import { create } from 'zustand'
 import { DetailsDisk, DiskDetailsResponse } from '@truenas/types/disk-types'
-import { CreateVdevLayout, VDevType, vdevTypeLabels } from '@truenas/types/vdev-enum-types'
+import { CreateVdevLayout, VDevType } from '@truenas/types/vdev-enum-types'
 import { DiskType } from '@truenas/types/disk-type-enum-types'
-import { UpdatePoolTopology } from '@truenas/types/pool'
 import { diskService } from '@truenas/services/disk'
 import { poolService } from '@truenas/services/pool'
 import { automaticDiskSelection } from '../utils/disk-selection'
