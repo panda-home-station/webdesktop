@@ -186,6 +186,10 @@ export default function Window({
       // Only enable will-change when actually dragging (not just on initial click)
       if (winRef.current && winRef.current.style.willChange !== 'transform') {
         winRef.current.style.willChange = 'transform'
+        // Temporarily disable overflow and contain during drag to fix GPU rendering
+        // issues with border-radius on some browsers
+        winRef.current.style.overflow = 'visible'
+        winRef.current.style.contain = 'none'
       }
 
       if (!rafId) {
@@ -213,6 +217,8 @@ export default function Window({
         if (winRef.current) {
            winRef.current.style.boxShadow = 'var(--win-shadow)'
            winRef.current.style.willChange = 'auto'
+           winRef.current.style.overflow = 'hidden'
+           winRef.current.style.contain = 'paint'
         }
         return
       }
@@ -236,6 +242,8 @@ export default function Window({
         // Restore styles
         winRef.current.style.boxShadow = 'var(--win-shadow)'
         winRef.current.style.willChange = 'auto'
+        winRef.current.style.overflow = 'hidden'
+        winRef.current.style.contain = 'paint'
       }
 
       if (nx !== safeX || ny !== safeY || hasRestored) {
