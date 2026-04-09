@@ -17,7 +17,6 @@ import {
   Card,
   SearchInput,
   StatsCard,
-  Switch,
   DeleteConfirm,
   EmptyState,
   LoadingSkeleton,
@@ -154,7 +153,6 @@ export function GroupList() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
-  const [showBuiltin, setShowBuiltin] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingGroup, setEditingGroup] = useState<Group | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<Group | null>(null)
@@ -187,7 +185,6 @@ export function GroupList() {
   }, [loadGroups])
 
   const filteredGroups = groups.filter((group) => {
-    if (!showBuiltin && group.builtin) return false
     if (!search) return true
     const searchLower = search.toLowerCase()
     return (
@@ -258,14 +255,6 @@ export function GroupList() {
           >
             <Plus size={18} /> 创建
           </button>
-        </div>
-
-        {/* Toggle */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <span style={{ fontSize: 14, color: colors.textSecondary, marginRight: 12 }}>
-            显示内置组
-          </span>
-          <Switch checked={showBuiltin} onChange={setShowBuiltin} />
         </div>
       </div>
 
