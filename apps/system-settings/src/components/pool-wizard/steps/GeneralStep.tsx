@@ -315,7 +315,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.text,
   },
   inputError: {
-    borderColor: colors.danger,
+    border: `1px solid ${colors.danger}`,
   },
   select: {
     flex: 1,
@@ -388,7 +388,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: colors.cardBg,
   },
   radioOptionSelected: {
-    borderColor: colors.primary,
+    border: `1px solid ${colors.primary}`,
     backgroundColor: `${colors.primary}10`,
   },
   radioInput: {
