@@ -5,9 +5,8 @@
 
 import React, { useEffect } from 'react'
 import { X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
-import { usePoolWizardStore } from './store/poolWizardStore'
+import { usePoolWizardStore, WIZARD_STEPS } from './store/poolWizardStore'
 import { validateStep, stepHasWarnings } from './utils/validation'
-import { WizardStepper } from './components/WizardStepper'
 import { GeneralStep } from './steps/GeneralStep'
 import { DataStep } from './steps/DataStep'
 import { LogStep, SpareStep, CacheStep, MetadataStep, DedupStep } from './steps/VdevStep'
@@ -27,7 +26,6 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
     isLoading,
     initialize,
     reset,
-    setStep,
     nextStep,
     prevStep,
   } = usePoolWizardStore()
@@ -46,12 +44,6 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
       // Pool was created successfully - check if we need to notify
     }
   }, [state.isCreating, state.error, state.isLoading])
-
-  const handleStepClick = (step: number) => {
-    if (step <= currentStep || step === currentStep + 1) {
-      setStep(step)
-    }
-  }
 
   const handleNext = () => {
     const errors = validateStep(usePoolWizardStore.getState(), currentStep)
@@ -147,21 +139,29 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
           <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
             创建存储池
           </h2>
-          <button
-            onClick={handleClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 6,
-              borderRadius: 6,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <X size={18} color={colors.textSecondary} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            {!isLoading && (
+              <span style={{ fontSize: 13, color: colors.textSecondary }}>
+                {WIZARD_STEPS[currentStep].title}
+                <span style={{ marginLeft: 6 }}>Step {currentStep + 1}/{totalSteps}</span>
+              </span>
+            )}
+            <button
+              onClick={handleClose}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 6,
+                borderRadius: 6,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <X size={18} color={colors.textSecondary} />
+            </button>
+          </div>
         </div>
 
         {/* Loading State */}
@@ -184,18 +184,10 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
         {/* Wizard Content */}
         {!isLoading && (
           <>
-            {/* Stepper */}
-            <div style={{ padding: '8px 12px 0' }}>
-              <WizardStepper
-                currentStep={currentStep}
-                onStepClick={handleStepClick}
-              />
-            </div>
-
             {/* Step Content */}
             <div
               style={{
-                height: 380,
+                flex: 1,
                 overflowY: 'auto',
                 backgroundColor: colors.background,
               }}
@@ -225,10 +217,6 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
                 <ChevronLeft size={18} />
                 上一步
               </button>
-
-              <span style={styles.stepIndicator}>
-                步骤 {currentStep + 1} / {totalSteps}
-              </span>
 
               {!isLastStep ? (
                 <button
