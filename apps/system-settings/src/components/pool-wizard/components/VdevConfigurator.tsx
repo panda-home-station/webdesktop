@@ -41,24 +41,27 @@ export function VdevConfigurator({
   }
 
   const usingDraid = isDraidLayout(layout)
-  const minDisks = minDisksPerLayout[layout]
+  const minDisks = minDisksPerLayout[layout] ?? 1
+
+  // Ensure availableDiskCount is valid
+  const diskCount = typeof availableDiskCount === 'number' && availableDiskCount > 0 ? availableDiskCount : 0
 
   // Calculate options
   const widthOptions = usingDraid
     ? []
-    : calculateWidthOptions(layout, availableDiskCount)
+    : calculateWidthOptions(layout, diskCount)
 
   const vdevOptions = calculateVdevsOptions(
     width ?? minDisks,
-    availableDiskCount,
+    diskCount,
     isSingleVdev
   )
 
   // dRAID options
   const parityMap: Record<string, number> = {
-    [CreateVdevLayoutEnum.Draid1]: 1,
-    [CreateVdevLayoutEnum.Draid2]: 2,
-    [CreateVdevLayoutEnum.Draid3]: 3,
+    [CreateVdevLayout.Draid1]: 1,
+    [CreateVdevLayout.Draid2]: 2,
+    [CreateVdevLayout.Draid3]: 3,
   }
   const parityDisks = parityMap[layout] ?? 1
 
@@ -74,12 +77,12 @@ export function VdevConfigurator({
           <div style={styles.field}>
             <label style={styles.label}>每组数据盘数</label>
             <select
-              value={draidDataDisks ?? 8}
+              value={draidDataDisks !== null ? String(draidDataDisks) : '8'}
               onChange={(e) => onDraidDataDisksChange(Number(e.target.value))}
               style={styles.select}
             >
               {draidDataOptions.map((d) => (
-                <option key={d} value={d}>
+                <option key={d} value={String(d)}>
                   {d} 数据盘
                 </option>
               ))}
@@ -92,12 +95,12 @@ export function VdevConfigurator({
           <div style={styles.field}>
             <label style={styles.label}>热备盘数</label>
             <select
-              value={draidSpareDisks ?? 0}
+              value={draidSpareDisks !== null ? String(draidSpareDisks) : '0'}
               onChange={(e) => onDraidSpareDisksChange(Number(e.target.value))}
               style={styles.select}
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
-                <option key={s} value={s}>
+                <option key={s} value={String(s)}>
                   {s} 热备盘
                 </option>
               ))}
@@ -107,13 +110,13 @@ export function VdevConfigurator({
           <div style={styles.field}>
             <label style={styles.label}>Vdev 数量</label>
             <select
-              value={vdevsNumber ?? 1}
+              value={vdevsNumber !== null ? String(vdevsNumber) : '1'}
               onChange={(e) => onVdevsNumberChange(Number(e.target.value))}
               style={styles.select}
               disabled={isSingleVdev}
             >
               {vdevOptions.map((n) => (
-                <option key={n} value={n}>
+                <option key={n} value={String(n)}>
                   {n} Vdev{n > 1 ? 's' : ''}
                 </option>
               ))}
@@ -137,15 +140,15 @@ export function VdevConfigurator({
           <div style={styles.field}>
             <label style={styles.label}>每个 Vdev 的硬盘数 (Width)</label>
             <select
-              value={width ?? ''}
+              value={width !== null ? String(width) : ''}
               onChange={(e) => onWidthChange(Number(e.target.value))}
               style={styles.select}
             >
               <option value="">选择宽度...</option>
               {widthOptions.map((w) => (
-                <option key={w} value={w}>
+                <option key={w} value={String(w)}>
                   {w} 块硬盘
-                  {layout === CreateVdevLayoutEnum.Mirror && w > 2 && ' (建议偶数)'}
+                  {layout === CreateVdevLayout.Mirror && w > 2 && ' (建议偶数)'}
                 </option>
               ))}
             </select>
@@ -154,14 +157,14 @@ export function VdevConfigurator({
           <div style={styles.field}>
             <label style={styles.label}>Vdev 数量</label>
             <select
-              value={vdevsNumber ?? ''}
+              value={vdevsNumber !== null ? String(vdevsNumber) : ''}
               onChange={(e) => onVdevsNumberChange(Number(e.target.value))}
               style={styles.select}
               disabled={isSingleVdev}
             >
               <option value="">选择数量...</option>
               {vdevOptions.map((n) => (
-                <option key={n} value={n}>
+                <option key={n} value={String(n)}>
                   {n} Vdev{n > 1 ? 's' : ''} ({n * (width ?? minDisks)} 块硬盘)
                 </option>
               ))}

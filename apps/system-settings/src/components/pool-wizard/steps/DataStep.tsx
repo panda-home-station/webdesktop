@@ -19,10 +19,11 @@ interface DataStepProps {
   warnings: Record<string, string>
 }
 
-export function DataStep({ errors, warnings }: DataStepProps) {
+export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
   const {
     topology,
     unusedDisks,
+    allowNonUniqueSerialDisks,
     setLayout,
     setDiskSize,
     setDiskType,
@@ -38,7 +39,7 @@ export function DataStep({ errors, warnings }: DataStepProps) {
   const category = topology[VDevType.Data]
   const allowedLayouts = LAYOUT_OPTIONS[VDevType.Data]
 
-  // Calculate available disks for this category
+  // Calculate available disks for this category, filtering based on allowNonUniqueSerialDisks
   const usedDisks = new Set<string>()
   Object.entries(topology).forEach(([type, cat]) => {
     if (type !== VDevType.Data) {
@@ -47,7 +48,19 @@ export function DataStep({ errors, warnings }: DataStepProps) {
       })
     }
   })
-  const availableDisks = unusedDisks.filter((d) => !usedDisks.has(d.devname))
+
+  // Filter disks: exclude used disks and disks with non-unique serials if not allowed
+  const availableDisks = unusedDisks.filter((d) => {
+    // Exclude already used disks
+    if (usedDisks.has(d.devname)) {
+      return false
+    }
+    // Exclude disks with duplicate serials if not allowed
+    if (!allowNonUniqueSerialDisks && d.duplicate_serial && d.duplicate_serial.length > 0) {
+      return false
+    }
+    return true
+  })
 
   const handleLayoutChange = (layout: typeof category.layout) => {
     setLayout(VDevType.Data, layout)
@@ -58,18 +71,15 @@ export function DataStep({ errors, warnings }: DataStepProps) {
   }
 
   const handleManualToggle = (disk: DetailsDisk) => {
-    // Simple manual selection: toggle disk in/out of first vdev
     const currentDisks = category.vdevs.flat()
     const isSelected = currentDisks.some((d) => d.devname === disk.devname)
 
     if (isSelected) {
-      // Remove disk
       const newVdevs = category.vdevs
         .map((vdev) => vdev.filter((d) => d.devname !== disk.devname))
         .filter((vdev) => vdev.length > 0)
       setManualDisks(VDevType.Data, newVdevs)
     } else {
-      // Add disk to first vdev or create new vdev
       const newVdevs = [...category.vdevs]
       if (newVdevs.length === 0) {
         newVdevs.push([disk])
@@ -82,17 +92,6 @@ export function DataStep({ errors, warnings }: DataStepProps) {
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>数据 Vdev</h3>
-      <p style={styles.description}>配置池的主要数据存储</p>
-
-      {/* Warnings */}
-      {warnings.layout && (
-        <div style={styles.warning}>
-          <AlertCircle size={16} />
-          {warnings.layout}
-        </div>
-      )}
-
       {/* Layout Selection */}
       <div style={styles.field}>
         <label style={styles.label}>布局 *</label>
@@ -109,12 +108,12 @@ export function DataStep({ errors, warnings }: DataStepProps) {
         )}
       </div>
 
-      {/* Configuration */}
+      {/* Automated Disk Selection */}
       {category.layout && (
         <>
           {/* Disk Size Selection */}
           <div style={styles.field}>
-            <label style={styles.label}>选择硬盘</label>
+            <label style={styles.label}>硬盘大小</label>
             <DiskSizeSelector
               availableDisks={availableDisks}
               selectedSize={category.diskSize}
@@ -130,7 +129,6 @@ export function DataStep({ errors, warnings }: DataStepProps) {
 
           {/* Vdev Configuration */}
           <div style={styles.field}>
-            <label style={styles.label}>Vdev 配置</label>
             <VdevConfigurator
               layout={category.layout}
               width={category.width}
@@ -171,11 +169,11 @@ export function DataStep({ errors, warnings }: DataStepProps) {
               }}
             >
               <Zap size={16} />
-              自动分配硬盘
+              自动选择硬盘
             </button>
           </div>
 
-          {/* Selected Disks */}
+          {/* Selected Disks Preview */}
           {category.vdevs.length > 0 && (
             <div style={styles.field}>
               <label style={styles.label}>
@@ -194,9 +192,31 @@ export function DataStep({ errors, warnings }: DataStepProps) {
             </div>
           )}
 
+          {/* Advanced Options */}
+          <div style={styles.advancedSection}>
+            <div style={styles.advancedHeader}>
+              <span style={styles.advancedTitle}>高级选项</span>
+            </div>
+            <p style={styles.advancedDescription}>
+              手动硬盘选择允许你创建 Vdev 并单独向这些 Vdev 添加硬盘。
+            </p>
+            <button
+              onClick={() => {
+                // Enter manual mode - this would typically open a dialog
+                // For now, we'll show the disk list
+              }}
+              disabled={!category.layout}
+              style={{
+                ...styles.manualButton,
+                ...(!category.layout ? styles.autoButtonDisabled : {}),
+              }}
+            >
+              手动选择硬盘
+            </button>
+          </div>
+
           {/* Manual Selection */}
           <div style={styles.field}>
-            <label style={styles.label}>或手动选择硬盘</label>
             <div style={styles.diskListWrapper}>
               <DiskList
                 disks={availableDisks}
@@ -223,17 +243,6 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     padding: 24,
   },
-  title: {
-    margin: '0 0 8px 0',
-    fontSize: 18,
-    fontWeight: 600,
-    color: colors.text,
-  },
-  description: {
-    margin: '0 0 24px 0',
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
   field: {
     marginBottom: 24,
   },
@@ -243,17 +252,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 600,
     color: colors.text,
-  },
-  warning: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '12px 16px',
-    backgroundColor: '#fff3e0',
-    borderRadius: 8,
-    marginBottom: 24,
-    color: '#e65100',
-    fontSize: 14,
   },
   error: {
     display: 'flex',
@@ -312,5 +310,33 @@ const styles: Record<string, React.CSSProperties> = {
   diskListWrapper: {
     maxHeight: 250,
     overflowY: 'auto' as const,
+  },
+  advancedSection: {
+    marginBottom: 24,
+    padding: 16,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+  },
+  advancedHeader: {
+    marginBottom: 8,
+  },
+  advancedTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: colors.text,
+  },
+  advancedDescription: {
+    margin: '0 0 12px 0',
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  manualButton: {
+    padding: '8px 16px',
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 13,
+    color: colors.text,
   },
 }
