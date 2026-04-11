@@ -118,23 +118,6 @@ function validateOptionalVdev(
 }
 
 /**
- * Validate enclosure settings
- */
-function validateEnclosure(
-  useEnclosure: boolean,
-  limitToEnclosure: string | null,
-  dispersalStrategy: string
-): Record<string, string> {
-  const errors: Record<string, string> = {}
-
-  if (useEnclosure && dispersalStrategy === 'limit' && !limitToEnclosure) {
-    errors.limitToEnclosure = '请选择限制的机箱'
-  }
-
-  return errors
-}
-
-/**
  * Validate review step
  */
 function validateReview(state: PoolWizardState): Record<string, string> {
@@ -165,38 +148,30 @@ export function validateStep(
       }
 
     case 1:
-      // Enclosure step
-      return validateEnclosure(
-        state.useEnclosure,
-        state.limitToEnclosure,
-        state.dispersalStrategy
-      )
-
-    case 2:
       // Data step
       return validateDataVdev(state.topology[VDevType.Data])
 
-    case 3:
+    case 2:
       // Log step
       return validateOptionalVdev(VDevType.Log, state.topology[VDevType.Log])
 
-    case 4:
+    case 3:
       // Spare step
       return validateOptionalVdev(VDevType.Spare, state.topology[VDevType.Spare])
 
-    case 5:
+    case 4:
       // Cache step
       return validateOptionalVdev(VDevType.Cache, state.topology[VDevType.Cache])
 
-    case 6:
+    case 5:
       // Metadata step
       return validateOptionalVdev(VDevType.Special, state.topology[VDevType.Special])
 
-    case 7:
+    case 6:
       // Dedup step
       return validateOptionalVdev(VDevType.Dedup, state.topology[VDevType.Dedup])
 
-    case 8:
+    case 7:
       // Review step
       return validateReview(state)
 
@@ -225,7 +200,7 @@ export function stepHasWarnings(
 ): Record<string, string> {
   const warnings: Record<string, string> = {}
 
-  if (step === 2) {
+  if (step === 1) {
     // Data step - check for stripe warning
     const dataCategory = state.topology[VDevType.Data]
     if (dataCategory.layout === 'STRIPE' && dataCategory.vdevs.length > 0) {
@@ -233,10 +208,10 @@ export function stepHasWarnings(
     }
   }
 
-  if (step >= 3 && step <= 7) {
+  if (step >= 2 && step <= 6) {
     // Optional vdev steps - check for stripe on log/dedup
     const vdevTypes: VDevType[] = [VDevType.Log, VDevType.Spare, VDevType.Cache, VDevType.Special, VDevType.Dedup]
-    const typeIndex = step - 3
+    const typeIndex = step - 2
     if (typeIndex < vdevTypes.length) {
       const vdevType = vdevTypes[typeIndex]
       const category = state.topology[vdevType]

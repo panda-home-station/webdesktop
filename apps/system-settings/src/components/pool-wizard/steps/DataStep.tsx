@@ -132,22 +132,36 @@ const hasMixedDiskSizes = (disks: DetailsDisk[]): boolean => {
   return disks.some((disk) => disk.size !== firstSize)
 }
 
+// VDEV 提示信息类型
+interface VdevTip {
+  message: string
+  isError: boolean // true = error (阻止保存), false = warning (可以保存)
+}
+
 // 获取 VDEV 提示信息
 const getVdevTips = (
   vdev: DetailsDisk[],
   layout: CreateVdevLayout | null,
   minDisks: number
-): string[] => {
-  const tips: string[] = []
+): VdevTip[] => {
+  const tips: VdevTip[] = []
 
   if (!layout) return tips
 
-  if (vdev.length > 0 && vdev.length < minDisks) {
-    tips.push(`至少需要 ${minDisks} 块硬盘，当前 ${vdev.length} 块`)
+  // 磁盘数量不足 = Error (阻止保存)
+  if (vdev.length < minDisks) {
+    tips.push({
+      message: `至少需要 ${minDisks} 块硬盘，当前 ${vdev.length} 块`,
+      isError: true,
+    })
   }
 
+  // 混合不同大小磁盘 = Warning (可以保存但不建议)
   if (vdev.length >= 2 && hasMixedDiskSizes(vdev)) {
-    tips.push('不建议在 vdev 中混合不同大小的磁盘')
+    tips.push({
+      message: '不建议在 vdev 中混合不同大小的磁盘',
+      isError: false,
+    })
   }
 
   return tips
@@ -537,10 +551,15 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
                     </div>
                   )}
                 </div>
-                {vdev.length > 0 && getVdevTips(vdev, category.layout, _minDisks).length > 0 && (
+                {getVdevTips(vdev, category.layout, _minDisks).length > 0 && (
                   <div style={styles.vdevTips}>
                     {getVdevTips(vdev, category.layout, _minDisks).map((tip, i) => (
-                      <div key={i} style={styles.vdevTipItem}>{tip}</div>
+                      <div
+                        key={i}
+                        style={tip.isError ? styles.vdevTipError : styles.vdevTipWarning}
+                      >
+                        {tip.message}
+                      </div>
                     ))}
                   </div>
                 )}
@@ -774,10 +793,14 @@ const styles: Record<string, React.CSSProperties> = {
   },
   vdevTips: {
     padding: '6px 10px',
-    backgroundColor: `${colors.warning}15`,
-    borderTop: `1px solid ${colors.warning}30`,
+    borderTop: `1px solid ${colors.border}`,
   },
-  vdevTipItem: {
+  vdevTipError: {
+    fontSize: 11,
+    color: colors.danger,
+    marginBottom: 2,
+  },
+  vdevTipWarning: {
     fontSize: 11,
     color: colors.warning,
     marginBottom: 2,
