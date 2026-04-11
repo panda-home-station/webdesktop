@@ -11,6 +11,7 @@ import { DiskType } from '@truenas/types/disk-type-enum-types'
 import { usePoolWizardStore, LAYOUT_OPTIONS } from '../store/poolWizardStore'
 import { minDisksPerLayout } from '../store/poolWizardStore'
 import { colors } from '@apps/system-settings/styles/theme'
+import { DiskIcon, DiskInfo } from '../components/DiskIcon'
 
 interface DataStepProps {
   errors: Record<string, string>
@@ -152,19 +153,6 @@ const getVdevTips = (
   return tips
 }
 
-const getTypeColor = (type: DiskType) => {
-  switch (type) {
-    case DiskType.Hdd:
-      return { bg: '#e3f2fd', text: '#1976d2' }
-    case DiskType.Ssd:
-      return { bg: '#e8f5e9', text: '#388e3c' }
-    case DiskType.Nvme:
-      return { bg: '#fff3e0', text: '#f57c00' }
-    default:
-      return { bg: '#f5f5f5', text: '#666' }
-  }
-}
-
 export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
   const {
     topology,
@@ -182,15 +170,78 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
   const [typeFilter, setTypeFilter] = useState<DiskType | ''>('')
   const [sizeFilter, setSizeFilter] = useState<number | ''>('')
 
+  // Drag and drop state
+  const [draggedDisk, setDraggedDisk] = useState<DetailsDisk | null>(null)
+  const [dragOverVdevIndex, setDragOverVdevIndex] = useState<number | null>(null)
+  const [isDraggingFromVdev, setIsDraggingFromVdev] = useState(false)
+
+  // Drag handlers for available disks
+  const handleDragStart = (e: React.DragEvent, disk: DetailsDisk) => {
+    setDraggedDisk(disk)
+    e.dataTransfer.setData('disk', JSON.stringify(disk))
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  const handleDragEnd = () => {
+    setDraggedDisk(null)
+    setDragOverVdevIndex(null)
+  }
+
+  // Drop handlers for vdev areas
+  const handleDragOver = (e: React.DragEvent, vdevIndex: number) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    setDragOverVdevIndex(vdevIndex)
+  }
+
+  const handleDragLeave = () => {
+    setDragOverVdevIndex(null)
+  }
+
+  const handleDrop = (e: React.DragEvent, vdevIndex: number) => {
+    e.preventDefault()
+    setDragOverVdevIndex(null)
+
+    try {
+      const diskData = e.dataTransfer.getData('disk')
+      if (diskData) {
+        const disk = JSON.parse(diskData) as DetailsDisk
+        addDiskToVdev(disk, vdevIndex)
+      }
+    } catch {
+      // Invalid data
+    }
+    setDraggedDisk(null)
+    setIsDraggingFromVdev(false)
+  }
+
+  // Handle drop on left pane to remove disk from vdev
+  const handleDropOnAvailable = (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOverVdevIndex(null)
+
+    try {
+      const vdevDiskData = e.dataTransfer.getData('vdevDisk')
+      if (vdevDiskData) {
+        const { vdevIndex, disk } = JSON.parse(vdevDiskData) as { vdevIndex: number; disk: DetailsDisk }
+        removeDiskFromVdev(vdevIndex, disk.devname)
+      }
+    } catch {
+      // Invalid data
+    }
+    setDraggedDisk(null)
+    setIsDraggingFromVdev(false)
+  }
+
   // Calculate available disks for this category, filtering based on allowNonUniqueSerialDisks
+  // Also exclude disks already in Data vdevs to prevent duplicate selection
   const usedDisks = useMemo(() => {
     const used = new Set<string>()
-    Object.entries(topology).forEach(([type, cat]) => {
-      if (type !== VDevType.Data) {
-        cat.vdevs.forEach((vdev) => {
-          vdev.forEach((disk) => used.add(disk.devname))
-        })
-      }
+    Object.entries(topology).forEach(([_type, cat]) => {
+      // Exclude disks from all categories, including Data itself
+      cat.vdevs.forEach((vdev) => {
+        vdev.forEach((disk) => used.add(disk.devname))
+      })
     })
     return used
   }, [topology])
@@ -360,50 +411,36 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
           </div>
 
           {/* Disk List */}
-          <div style={styles.diskList}>
+          <div
+            style={{
+              ...styles.diskList,
+              ...(isDraggingFromVdev ? styles.diskListDragOver : {}),
+            }}
+            onDragOver={(e) => {
+              if (isDraggingFromVdev) {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+              }
+            }}
+            onDrop={handleDropOnAvailable}
+          >
             {filteredDisks.length === 0 ? (
               <div style={styles.emptyState}>没有可用的硬盘</div>
             ) : (
               filteredDisks.map((disk) => (
                 <div
                   key={disk.devname}
-                  style={styles.diskCard}
-                  onClick={() => {
-                    // Add to first VDEV
-                    if (vdevs.length === 0) {
-                      const newVdevs = [[disk]]
-                      setVdevs(newVdevs)
-                      setManualDisks(VDevType.Data, newVdevs)
-                    } else {
-                      addDiskToVdev(disk, 0)
-                    }
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, disk)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    ...styles.diskCard,
+                    opacity: draggedDisk?.devname === disk.devname ? 0.5 : 1,
+                    cursor: 'grab',
                   }}
                 >
-                  <div style={styles.diskIcon}>
-                    <svg width="36" height="32" viewBox="0 0 40 36">
-                      <rect x="2" y="2" width="36" height="32" rx="2" fill="#1e1e1e" stroke="#414141" />
-                      <rect x="4" y="4" width="32" height="6" fill="rgba(255,255,255,0.3)" />
-                      <rect x="4" y="28" width="32" height="4" fill="rgba(255,255,255,0.3)" />
-                      <text x="20" y="22" textAnchor="middle" fill="#fff" fontSize="7">
-                        {formatSize(disk.size)}
-                      </text>
-                    </svg>
-                  </div>
-                  <div style={styles.diskInfo}>
-                    <div style={styles.diskName}>{disk.name}</div>
-                    <div style={styles.diskDetails}>
-                      <span style={styles.diskModel}>{disk.model || '-'}</span>
-                      <span
-                        style={{
-                          ...styles.diskType,
-                          backgroundColor: getTypeColor(disk.type).bg,
-                          color: getTypeColor(disk.type).text,
-                        }}
-                      >
-                        {disk.type}
-                      </span>
-                    </div>
-                  </div>
+                  <DiskIcon disk={disk} width={52} height={58} />
+                  <DiskInfo disk={disk} />
                 </div>
               ))
             )}
@@ -434,7 +471,16 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
               </div>
             ) : (
               vdevs.map((vdev, vdevIndex) => (
-              <div key={vdevIndex} style={styles.vdevCard}>
+              <div
+                key={vdevIndex}
+                style={{
+                  ...styles.vdevCard,
+                  ...(dragOverVdevIndex === vdevIndex ? styles.vdevCardDragOver : {}),
+                }}
+                onDragOver={(e) => handleDragOver(e, vdevIndex)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, vdevIndex)}
+              >
                 <div style={styles.vdevHeader}>
                   <div style={styles.vdevInfo}>
                     <span style={styles.vdevTitle}>
@@ -459,24 +505,36 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
                 </div>
                 <div style={styles.vdevDisks}>
                   {vdev.length === 0 ? (
-                    <div style={styles.vdevEmpty}>点击左侧硬盘添加</div>
+                    <div style={dragOverVdevIndex === vdevIndex ? styles.vdevEmptyDragOver : styles.vdevEmpty}>
+                      拖动硬盘到此处
+                    </div>
                   ) : (
-                    vdev.map((disk) => (
-                      <div key={disk.devname} style={styles.vdevDisk}>
-                        <span style={styles.vdevDiskName}>{disk.name}</span>
-                        <span style={styles.vdevDiskSize}>{formatSize(disk.size)}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            removeDiskFromVdev(vdevIndex, disk.devname)
+                    <div style={styles.vdevDisksGrid}>
+                      {vdev.map((disk) => (
+                        <div
+                          key={disk.devname}
+                          style={styles.vdevDiskCard}
+                          draggable
+                          onDragStart={(e) => {
+                            setIsDraggingFromVdev(true)
+                            e.dataTransfer.setData('vdevDisk', JSON.stringify({ vdevIndex, disk }))
+                            e.dataTransfer.setData('disk', JSON.stringify(disk))
                           }}
-                          style={styles.removeDiskButton}
                         >
-                          <X size={10} />
-                        </button>
-                      </div>
-                    ))
+                          <DiskIcon disk={disk} width={48} height={54} />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              removeDiskFromVdev(vdevIndex, disk.devname)
+                            }}
+                            style={styles.removeDiskButton}
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
                 {vdev.length > 0 && getVdevTips(vdev, category.layout, _minDisks).length > 0 && (
@@ -643,6 +701,16 @@ const styles: Record<string, React.CSSProperties> = {
     flex: 1,
     overflowY: 'auto' as const,
     padding: 8,
+    transition: 'background-color 0.15s ease',
+  },
+  diskListDragOver: {
+    flex: 1,
+    overflowY: 'auto' as const,
+    padding: 8,
+    backgroundColor: `${colors.danger}10`,
+    outline: `2px dashed ${colors.danger}`,
+    outlineOffset: -8,
+    transition: 'background-color 0.15s ease',
   },
   emptyState: {
     textAlign: 'center' as const,
@@ -652,46 +720,18 @@ const styles: Record<string, React.CSSProperties> = {
   },
   diskCard: {
     display: 'flex',
+    flexDirection: 'column' as const,
     alignItems: 'center',
-    gap: 10,
+    gap: 4,
     padding: 8,
     backgroundColor: colors.background,
     borderRadius: 8,
     marginBottom: 6,
     cursor: 'pointer',
     transition: 'background-color 0.15s ease',
+    width: 80,
   },
   diskIcon: {
-    flexShrink: 0,
-  },
-  diskInfo: {
-    flex: 1,
-    minWidth: 0,
-  },
-  diskName: {
-    fontSize: 13,
-    fontWeight: 600,
-    color: colors.text,
-    marginBottom: 2,
-  },
-  diskDetails: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-  },
-  diskModel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    maxWidth: 80,
-  },
-  diskType: {
-    fontSize: 9,
-    fontWeight: 600,
-    padding: '2px 5px',
-    borderRadius: 4,
     flexShrink: 0,
   },
   vdevsList: {
@@ -704,6 +744,11 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 8,
     marginBottom: 8,
     overflow: 'hidden',
+    transition: 'border-color 0.15s ease, background-color 0.15s ease',
+  },
+  vdevCardDragOver: {
+    border: `2px dashed ${colors.primary}`,
+    backgroundColor: `${colors.primary}10`,
   },
   vdevHeader: {
     display: 'flex',
@@ -751,11 +796,47 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 6,
     minHeight: 50,
   },
+  vdevDisksGrid: {
+    display: 'flex',
+    flexWrap: 'wrap' as const,
+    gap: 8,
+  },
+  vdevDiskCard: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: 2,
+    position: 'relative' as const,
+    padding: 4,
+    backgroundColor: colors.background,
+    borderRadius: 6,
+  },
+  removeDiskButton: {
+    position: 'absolute' as const,
+    top: 0,
+    right: 0,
+    background: 'rgba(255,255,255,0.9)',
+    border: 'none',
+    cursor: 'pointer',
+    padding: 2,
+    borderRadius: 4,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: colors.danger,
+  },
   vdevEmpty: {
     textAlign: 'center' as const,
     padding: 12,
     color: colors.textSecondary,
     fontSize: 12,
+  },
+  vdevEmptyDragOver: {
+    textAlign: 'center' as const,
+    padding: 12,
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: 600,
   },
   vdevEmptyState: {
     textAlign: 'center' as const,
@@ -771,15 +852,6 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: colors.cardBg,
     borderRadius: 6,
     marginBottom: 4,
-  },
-  vdevDiskName: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.text,
-  },
-  vdevDiskSize: {
-    fontSize: 11,
-    color: colors.textSecondary,
   },
   removeDiskButton: {
     background: 'none',
