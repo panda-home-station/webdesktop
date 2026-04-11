@@ -133,9 +133,26 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
             alignItems: 'center',
           }}
         >
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
-            创建存储池
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>
+              创建存储池
+            </h2>
+            <button
+              onClick={handleClose}
+              style={{
+                padding: '6px 12px',
+                backgroundColor: 'transparent',
+                border: '1px solid rgb(229, 229, 234)',
+                borderRadius: 6,
+                cursor: 'pointer',
+                fontSize: 14,
+                color: 'rgb(28, 28, 30)',
+                transition: '0.15s',
+              }}
+            >
+              取消
+            </button>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             {!isLoading && (
               <span style={{ fontSize: 13, color: colors.textSecondary }}>

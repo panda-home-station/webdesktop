@@ -123,9 +123,29 @@ export default function SystemSettings() {
       <Sidebar items={TABS} activeId={activeTab} onSelect={setActiveTab} />
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
-          <h2 style={{ margin: '0 0 24px 0', fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em' }}>
-            {activeTab === 'storage' ? STORAGE_TITLES[storageView] || TABS.find(t => t.id === activeTab)?.label : TABS.find(t => t.id === activeTab)?.label}
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 24 }}>
+            <h2 style={{ margin: 0, fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
+              {activeTab === 'storage' ? STORAGE_TITLES[storageView] || TABS.find(t => t.id === activeTab)?.label : TABS.find(t => t.id === activeTab)?.label}
+            </h2>
+            {activeTab === 'storage' && storageView === 'create-pool' && (
+              <button
+                onClick={() => setStorageView('overview')}
+                style={{
+                  padding: '6px 12px',
+                  backgroundColor: 'rgb(142, 142, 147)',
+                  border: 'none',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                  fontSize: 14,
+                  color: '#FFFFFF',
+                  transition: '0.15s',
+                  marginRight: 16,
+                }}
+              >
+                取消
+              </button>
+            )}
+          </div>
           <TabContent
             id={activeTab}
             storageView={storageView}

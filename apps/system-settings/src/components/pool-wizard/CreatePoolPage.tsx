@@ -18,7 +18,7 @@ interface CreatePoolPageProps {
   onSuccess: () => void
 }
 
-export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPageProps) {
+export function CreatePoolPage({ onBack: _onBack, onSuccess: _onSuccess }: CreatePoolPageProps) {
   const {
     currentStep,
     totalSteps,
@@ -47,11 +47,6 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
 
   const handlePrev = () => {
     prevStep()
-  }
-
-  const handleClose = () => {
-    reset()
-    onBack()
   }
 
   const getCurrentStepContent = () => {
@@ -111,51 +106,6 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
             {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
           </span>
         )}
-
-        {/* Step Progress */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          {Array.from({ length: totalSteps }).map((_, i) => (
-            <div
-              key={i}
-              style={{
-                width: i === currentStep ? 24 : 8,
-                height: 8,
-                borderRadius: 4,
-                backgroundColor: i < currentStep
-                  ? colors.primary
-                  : i === currentStep
-                    ? colors.primary
-                    : colors.border,
-                transition: 'all 0.2s ease',
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Cancel Button */}
-        <button
-          onClick={handleClose}
-          style={{
-            padding: '6px 12px',
-            backgroundColor: 'transparent',
-            border: `1px solid ${colors.border}`,
-            borderRadius: 6,
-            cursor: 'pointer',
-            fontSize: 14,
-            color: colors.text,
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = colors.background
-            e.currentTarget.style.borderColor = colors.text
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent'
-            e.currentTarget.style.borderColor = colors.border
-          }}
-        >
-          取消
-        </button>
       </div>
 
       {/* Loading State */}
@@ -212,6 +162,24 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
               <ChevronLeft size={18} />
               上一步
             </button>
+
+            {/* Step Progress */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              {Array.from({ length: totalSteps }).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: i === currentStep ? 24 : 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: i <= currentStep
+                      ? colors.primary
+                      : colors.border,
+                    transition: 'all 0.2s ease',
+                  }}
+                />
+              ))}
+            </div>
 
             {!isLastStep ? (
               <button
