@@ -126,16 +126,11 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
           >
             <ArrowLeft size={20} />
           </button>
-          <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>
-              创建存储池
-            </h2>
-            {!isLoading && (
-              <span style={{ fontSize: 13, color: colors.textSecondary }}>
-                {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
-              </span>
-            )}
-          </div>
+          {!isLoading && (
+            <span style={{ fontSize: 14, color: colors.textSecondary }}>
+              {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
+            </span>
+          )}
         </div>
 
         {/* Step Progress */}

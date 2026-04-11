@@ -12,42 +12,35 @@ import { CreatePoolPage } from './pool-wizard'
 import { DatasetTree } from './datasets'
 import { colors } from '../styles/theme'
 
-type StorageView = 'overview' | 'create-pool' | 'pool-details'
-
 interface StorageOverviewProps {
+  view: string
+  onViewChange: (view: string) => void
   pools: Pool[]
   datasets: Dataset[]
   onPoolClick?: (pool: Pool) => void
 }
 
-export function StorageOverview({ pools, datasets, onPoolClick }: StorageOverviewProps) {
-  const [view, setView] = useState<StorageView>('overview')
+export function StorageOverview({ view, onViewChange, pools, datasets, onPoolClick }: StorageOverviewProps) {
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null)
 
   // Handle pool creation success
   const handleCreateSuccess = () => {
-    setView('overview')
+    onViewChange('overview')
     // Parent will refresh pools
   }
 
   // Handle back from create pool
   const handleBackFromCreate = () => {
-    setView('overview')
+    onViewChange('overview')
   }
 
-  // Show create pool page - use fixed container to escape parent padding/maxWidth
+  // Show create pool page
   if (view === 'create-pool') {
     return (
-      <div style={{
-        margin: '-32px -40px',
-        maxWidth: 'none',
-        height: 'calc(100vh - 64px)',
-      }}>
-        <CreatePoolPage
-          onBack={handleBackFromCreate}
-          onSuccess={handleCreateSuccess}
-        />
-      </div>
+      <CreatePoolPage
+        onBack={handleBackFromCreate}
+        onSuccess={handleCreateSuccess}
+      />
     )
   }
 
@@ -59,7 +52,7 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
         pool={selectedPool}
         datasets={poolDatasets}
         onBack={() => {
-          setView('overview')
+          onViewChange('overview')
           setSelectedPool(null)
         }}
         onDiskClick={() => {
@@ -79,7 +72,7 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
         <div style={styles.sectionHeader}>
           <h3 style={styles.sectionTitle}>Storage Pools</h3>
           <button
-            onClick={() => setView('create-pool')}
+            onClick={() => onViewChange('create-pool')}
             style={{
               padding: '8px 16px',
               backgroundColor: colors.primary,
@@ -104,7 +97,7 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
               onPoolClick(pool)
             } else {
               setSelectedPool(pool)
-              setView('pool-details')
+              onViewChange('pool-details')
             }
           }}
         />

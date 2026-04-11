@@ -31,8 +31,16 @@ const TABS = [
   { id: 'remote', label: '远程访问', icon: <Globe size={20} /> },
 ]
 
+// Storage tab has sub-views with different titles
+const STORAGE_TITLES: Record<string, string> = {
+  'overview': '存储空间',
+  'create-pool': '创建存储池',
+  'pool-details': '存储空间',
+}
+
 export default function SystemSettings() {
   const [activeTab, setActiveTab] = useState('device')
+  const [storageView, setStorageView] = useState<string>('overview')
 
   // Static system info
   const [systemInfo, setSystemInfo] = useState<SystemInfo | null>(null)
@@ -116,10 +124,12 @@ export default function SystemSettings() {
       <div style={{ flex: 1, overflowY: 'auto' }}>
         <div style={{ padding: '32px 40px', maxWidth: 1200, margin: '0 auto' }}>
           <h2 style={{ margin: '0 0 24px 0', fontSize: 32, fontWeight: 700, letterSpacing: '-0.02em' }}>
-            {TABS.find(t => t.id === activeTab)?.label}
+            {activeTab === 'storage' ? STORAGE_TITLES[storageView] || TABS.find(t => t.id === activeTab)?.label : TABS.find(t => t.id === activeTab)?.label}
           </h2>
           <TabContent
             id={activeTab}
+            storageView={storageView}
+            onStorageViewChange={setStorageView}
             systemInfo={systemInfo}
             realtime={realtime}
             networkInterfaces={networkInterfaces}
@@ -138,6 +148,8 @@ export default function SystemSettings() {
 
 function TabContent({
   id,
+  storageView,
+  onStorageViewChange,
   systemInfo,
   realtime,
   networkInterfaces,
@@ -149,6 +161,8 @@ function TabContent({
   setDisks,
 }: {
   id: string
+  storageView: string
+  onStorageViewChange: (view: string) => void
   systemInfo: SystemInfo | null
   realtime: ReportingRealtimeUpdate | null
   networkInterfaces: NetworkInterfaceFromApi[]
@@ -177,6 +191,8 @@ function TabContent({
     case 'storage':
       return (
         <StorageOverview
+          view={storageView}
+          onViewChange={onStorageViewChange}
           pools={pools}
           datasets={datasets}
         />
