@@ -860,7 +860,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   vdevsList: {
     flex: 1,
-    overflow: 'hidden',
+    overflowY: 'auto',
     padding: 6,
     boxSizing: 'border-box',
   },
