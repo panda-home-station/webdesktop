@@ -119,7 +119,10 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
               alignItems: 'center',
               justifyContent: 'center',
               color: colors.text,
+              transition: 'background-color 0.15s',
             }}
+            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.background}
+            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
             <ArrowLeft size={20} />
           </button>
@@ -134,6 +137,27 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
             )}
           </div>
         </div>
+
+        {/* Step Progress */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {Array.from({ length: totalSteps }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                width: i === currentStep ? 24 : 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: i < currentStep
+                  ? colors.primary
+                  : i === currentStep
+                    ? colors.primary
+                    : colors.border,
+                transition: 'all 0.2s ease',
+              }}
+            />
+          ))}
+        </div>
+
         <button
           onClick={handleClose}
           style={{
@@ -145,7 +169,10 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            transition: 'background-color 0.15s',
           }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.background}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
         >
           <X size={20} color={colors.textSecondary} />
         </button>

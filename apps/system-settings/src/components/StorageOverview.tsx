@@ -35,13 +35,19 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
     setView('overview')
   }
 
-  // Show create pool page
+  // Show create pool page - use fixed container to escape parent padding/maxWidth
   if (view === 'create-pool') {
     return (
-      <CreatePoolPage
-        onBack={handleBackFromCreate}
-        onSuccess={handleCreateSuccess}
-      />
+      <div style={{
+        margin: '-32px -40px',
+        maxWidth: 'none',
+        height: 'calc(100vh - 64px)',
+      }}>
+        <CreatePoolPage
+          onBack={handleBackFromCreate}
+          onSuccess={handleCreateSuccess}
+        />
+      </div>
     )
   }
 
