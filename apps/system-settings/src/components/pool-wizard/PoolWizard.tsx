@@ -107,6 +107,7 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
         alignItems: 'center',
         justifyContent: 'center',
         padding: 24,
+        overflow: 'auto',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget) handleClose()
@@ -114,9 +115,8 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
     >
       <div
         style={{
-          width: '100%',
-          maxWidth: 900,
-          height: 520,
+          width: 800,
+          height: 480,
           backgroundColor: colors.cardBg,
           borderRadius: 20,
           boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
@@ -188,8 +188,9 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
             <div
               style={{
                 flex: 1,
-                overflowY: 'auto',
+                overflow: 'hidden',
                 backgroundColor: colors.background,
+                minHeight: 0,
               }}
             >
               {getCurrentStepContent()}
