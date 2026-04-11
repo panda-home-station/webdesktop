@@ -5,14 +5,14 @@
  */
 
 import React, { useState, useMemo } from 'react'
-import { Plus, Trash2, Search, X, HardDrive, Layers, AlertTriangle, CheckCircle2, GripVertical } from 'lucide-react'
+import { Plus, Trash2, Search, X, HardDrive, Layers, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { VDevType, CreateVdevLayout } from '@truenas/types/vdev-enum-types'
 import { DetailsDisk } from '@truenas/types/disk-types'
 import { DiskType } from '@truenas/types/disk-type-enum-types'
 import { usePoolWizardStore, LAYOUT_OPTIONS } from '../store/poolWizardStore'
 import { minDisksPerLayout } from '../store/poolWizardStore'
 import { colors } from '@apps/system-settings/styles/theme'
-import { DiskIcon, DiskInfo } from '../components/DiskIcon'
+import { DiskIcon } from '../components/DiskIcon'
 
 interface DataStepProps {
   errors: Record<string, string>

@@ -109,14 +109,11 @@ export function PoolWizard({ open, onClose, onSuccess: _onSuccess }: PoolWizardP
         padding: 24,
         overflow: 'auto',
       }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) handleClose()
-      }}
     >
       <div
         style={{
-          width: 800,
-          height: 480,
+          width: 950,
+          height: 560,
           backgroundColor: colors.cardBg,
           borderRadius: 20,
           boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
