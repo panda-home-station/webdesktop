@@ -8,9 +8,11 @@ import { Plus } from 'lucide-react'
 import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
 import { PoolList, PoolDetails } from './pools'
-import { PoolWizard } from './pool-wizard'
+import { CreatePoolPage } from './pool-wizard'
 import { DatasetTree } from './datasets'
 import { colors } from '../styles/theme'
+
+type StorageView = 'overview' | 'create-pool' | 'pool-details'
 
 interface StorageOverviewProps {
   pools: Pool[]
@@ -19,17 +21,41 @@ interface StorageOverviewProps {
 }
 
 export function StorageOverview({ pools, datasets, onPoolClick }: StorageOverviewProps) {
+  const [view, setView] = useState<StorageView>('overview')
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null)
-  const [showCreateForm, setShowCreateForm] = useState(false)
+
+  // Handle pool creation success
+  const handleCreateSuccess = () => {
+    setView('overview')
+    // Parent will refresh pools
+  }
+
+  // Handle back from create pool
+  const handleBackFromCreate = () => {
+    setView('overview')
+  }
+
+  // Show create pool page
+  if (view === 'create-pool') {
+    return (
+      <CreatePoolPage
+        onBack={handleBackFromCreate}
+        onSuccess={handleCreateSuccess}
+      />
+    )
+  }
 
   // If a pool is selected, show its details
-  if (selectedPool) {
+  if (view === 'pool-details' && selectedPool) {
     const poolDatasets = datasets.filter(d => d.pool === selectedPool.name)
     return (
       <PoolDetails
         pool={selectedPool}
         datasets={poolDatasets}
-        onBack={() => setSelectedPool(null)}
+        onBack={() => {
+          setView('overview')
+          setSelectedPool(null)
+        }}
         onDiskClick={() => {
           // Could navigate to disk details
         }}
@@ -47,7 +73,7 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
         <div style={styles.sectionHeader}>
           <h3 style={styles.sectionTitle}>Storage Pools</h3>
           <button
-            onClick={() => setShowCreateForm(true)}
+            onClick={() => setView('create-pool')}
             style={{
               padding: '8px 16px',
               backgroundColor: colors.primary,
@@ -72,6 +98,7 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
               onPoolClick(pool)
             } else {
               setSelectedPool(pool)
+              setView('pool-details')
             }
           }}
         />
@@ -90,16 +117,6 @@ export function StorageOverview({ pools, datasets, onPoolClick }: StorageOvervie
           />
         </div>
       )}
-
-      {/* Create Pool Wizard Modal */}
-      <PoolWizard
-        open={showCreateForm}
-        onClose={() => setShowCreateForm(false)}
-        onSuccess={() => {
-          setShowCreateForm(false)
-          // Parent will refresh pools
-        }}
-      />
     </div>
   )
 }
