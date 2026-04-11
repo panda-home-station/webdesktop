@@ -17,6 +17,42 @@ interface DataStepProps {
   warnings: Record<string, string>
 }
 
+// 布局选项中文标签和描述
+const LAYOUT_INFO: Record<CreateVdevLayout, { label: string; description: string }> = {
+  [CreateVdevLayout.Stripe]: {
+    label: 'Stripe（条带化）',
+    description: '无冗余，数据分散存储在所有磁盘上。需要至少1个磁盘。',
+  },
+  [CreateVdevLayout.Mirror]: {
+    label: 'Mirror（镜像）',
+    description: '数据完全镜像到多个磁盘，提供最高保护。需要至少2个磁盘。',
+  },
+  [CreateVdevLayout.Raidz1]: {
+    label: 'RAIDZ1',
+    description: '单奇偶校验，相当于带一块冗余的 RAID5。需要至少3个磁盘。',
+  },
+  [CreateVdevLayout.Raidz2]: {
+    label: 'RAIDZ2',
+    description: '双奇偶校验，可同时损坏2块磁盘而不丢数据。需要至少4个磁盘。',
+  },
+  [CreateVdevLayout.Raidz3]: {
+    label: 'RAIDZ3',
+    description: '三奇偶校验，可同时损坏3块磁盘。需要至少5个磁盘。',
+  },
+  [CreateVdevLayout.Draid1]: {
+    label: 'dRAID1（分布式）',
+    description: '分布式奇偶校验的镜像，类似于 Mirror 但数据分布存储。需要至少3个磁盘。',
+  },
+  [CreateVdevLayout.Draid2]: {
+    label: 'dRAID2（分布式）',
+    description: '分布式双奇偶校验，提供双磁盘冗余。需要至少4个磁盘。',
+  },
+  [CreateVdevLayout.Draid3]: {
+    label: 'dRAID3（分布式）',
+    description: '分布式三奇偶校验，提供三磁盘冗余。需要至少5个磁盘。',
+  },
+}
+
 const formatSize = (bytes: number): string => {
   if (typeof bytes !== 'number' || bytes <= 0 || isNaN(bytes)) {
     return 'Unknown'
@@ -26,6 +62,94 @@ const formatSize = (bytes: number): string => {
     return `${(gb / 1024).toFixed(1)} TB`
   }
   return `${gb.toFixed(0)} GB`
+}
+
+// 格式化 GiB 单位（用于 VDEV 容量显示）
+const formatGibiBytes = (bytes: number): string => {
+  if (typeof bytes !== 'number' || bytes <= 0 || isNaN(bytes)) {
+    return 'Unknown'
+  }
+  const gib = bytes / (1024 * 1024 * 1024)
+  if (gib >= 1024) {
+    return `${(gib / 1024).toFixed(1)} TiB`
+  }
+  return `${gib.toFixed(1)} GiB`
+}
+
+// 计算 VDEV 的原始容量（根据布局类型）
+const calculateVdevRawCapacity = (
+  disks: DetailsDisk[],
+  layout: CreateVdevLayout | null
+): number => {
+  if (disks.length === 0 || !layout) return 0
+
+  const totalSize = disks.reduce((total, disk) => total + (disk.size || 0), 0)
+  const diskCount = disks.length
+
+  switch (layout) {
+    case CreateVdevLayout.Stripe:
+      // 条带化：所有磁盘容量之和
+      return totalSize
+
+    case CreateVdevLayout.Mirror:
+      // 镜像：单个磁盘容量
+      return disks[0]?.size || 0
+
+    case CreateVdevLayout.Raidz1:
+      // RAIDZ1：(n-1) * 最小磁盘容量
+      return ((disks.reduce((min, d) => (d.size || 0) < (min.size || 0) ? d : min, disks[0])).size || 0) * (diskCount - 1)
+
+    case CreateVdevLayout.Raidz2:
+      // RAIDZ2：(n-2) * 最小磁盘容量
+      return ((disks.reduce((min, d) => (d.size || 0) < (min.size || 0) ? d : min, disks[0])).size || 0) * (diskCount - 2)
+
+    case CreateVdevLayout.Raidz3:
+      // RAIDZ3：(n-3) * 最小磁盘容量
+      return ((disks.reduce((min, d) => (d.size || 0) < (min.size || 0) ? d : min, disks[0])).size || 0) * (diskCount - 3)
+
+    case CreateVdevLayout.Draid1:
+      // dRAID1：(n-1) * 最小磁盘容量
+      return ((disks.reduce((min, d) => (d.size || 0) < (min.size || 0) ? d : min, disks[0])).size || 0) * (diskCount - 1)
+
+    case CreateVdevLayout.Draid2:
+      // dRAID2：(n-2) * 最小磁盘容量
+      return ((disks.reduce((min, d) => (d.size || 0) < (min.size || 0) ? d : min, disks[0])).size || 0) * (diskCount - 2)
+
+    case CreateVdevLayout.Draid3:
+      // dRAID3：(n-3) * 最小磁盘容量
+      return ((disks.reduce((min, d) => (d.size || 0) < (min.size || 0) ? d : min, disks[0])).size || 0) * (diskCount - 3)
+
+    default:
+      return totalSize
+  }
+}
+
+// 检查 VDEV 中磁盘大小是否一致
+const hasMixedDiskSizes = (disks: DetailsDisk[]): boolean => {
+  if (disks.length <= 1) return false
+  const firstSize = disks[0].size
+  return disks.some((disk) => disk.size !== firstSize)
+}
+
+// 获取 VDEV 提示信息
+const getVdevTips = (
+  vdev: DetailsDisk[],
+  layout: CreateVdevLayout | null,
+  minDisks: number
+): string[] => {
+  const tips: string[] = []
+
+  if (!layout) return tips
+
+  if (vdev.length > 0 && vdev.length < minDisks) {
+    tips.push(`至少需要 ${minDisks} 块硬盘，当前 ${vdev.length} 块`)
+  }
+
+  if (vdev.length >= 2 && hasMixedDiskSizes(vdev)) {
+    tips.push('不建议在 vdev 中混合不同大小的磁盘')
+  }
+
+  return tips
 }
 
 const getTypeColor = (type: DiskType) => {
@@ -119,7 +243,7 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
 
   // VDEVs: array of vdevs, each vdev is an array of disks
   const [vdevs, setVdevs] = useState<DetailsDisk[][]>(() => {
-    return category.vdevs.length > 0 ? category.vdevs : [[]]
+    return category.vdevs.length > 0 ? category.vdevs : []
   })
 
   // Add a new empty VDEV
@@ -127,13 +251,10 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
     setVdevs([...vdevs, []])
   }
 
-  // Remove a VDEV and return its disks to available
+  // Remove a VDEV
   const removeVdev = (index: number) => {
     const newVdevs = [...vdevs]
     newVdevs.splice(index, 1)
-    if (newVdevs.length === 0) {
-      newVdevs.push([])
-    }
     setVdevs(newVdevs)
     setManualDisks(VDevType.Data, newVdevs)
   }
@@ -160,25 +281,32 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
   }
 
   // Get min disks for current layout
-  const minDisks = minDisksPerLayout[category.layout ?? CreateVdevLayout.Stripe] ?? 1
+  const _minDisks = minDisksPerLayout[category.layout ?? CreateVdevLayout.Stripe] ?? 1
 
   return (
     <div style={styles.container}>
       {/* Layout Selection */}
       <div style={styles.layoutSection}>
-        <label style={styles.label}>布局</label>
-        <select
-          value={category.layout ?? ''}
-          onChange={(e) => handleLayoutChange(e.target.value ? e.target.value as CreateVdevLayout : null)}
-          style={styles.select}
-        >
-          <option value="">选择布局...</option>
-          {allowedLayouts.map((layout) => (
-            <option key={layout} value={layout}>
-              {layout}
-            </option>
-          ))}
-        </select>
+        <div style={styles.fieldRow}>
+          <label style={styles.label}>布局</label>
+          <select
+            value={category.layout ?? ''}
+            onChange={(e) => handleLayoutChange(e.target.value ? e.target.value as CreateVdevLayout : null)}
+            style={styles.select}
+          >
+            <option value="">选择布局...</option>
+            {allowedLayouts.map((layout) => (
+              <option key={layout} value={layout}>
+                {LAYOUT_INFO[layout]?.label ?? layout}
+              </option>
+            ))}
+          </select>
+        </div>
+        {category.layout && LAYOUT_INFO[category.layout] && (
+          <div style={styles.layoutDescription}>
+            {LAYOUT_INFO[category.layout].description}
+          </div>
+        )}
         {errors.layout && (
           <div style={styles.error}>
             <X size={14} />
@@ -207,30 +335,28 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
                 style={styles.searchInput}
               />
             </div>
-            <div style={styles.filterRow}>
-              <select
-                value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as DiskType | '')}
-                style={styles.filterSelect}
-              >
-                <option value="">所有类型</option>
-                <option value={DiskType.Hdd}>HDD</option>
-                <option value={DiskType.Ssd}>SSD</option>
-                <option value={DiskType.Nvme}>NVMe</option>
-              </select>
-              <select
-                value={sizeFilter}
-                onChange={(e) => setSizeFilter(e.target.value ? Number(e.target.value) : '')}
-                style={styles.filterSelect}
-              >
-                <option value="">所有大小</option>
-                {diskSizes.map((size) => (
-                  <option key={size} value={size}>
-                    {formatSize(size)}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as DiskType | '')}
+              style={styles.filterSelect}
+            >
+              <option value="">所有类型</option>
+              <option value={DiskType.Hdd}>HDD</option>
+              <option value={DiskType.Ssd}>SSD</option>
+              <option value={DiskType.Nvme}>NVMe</option>
+            </select>
+            <select
+              value={sizeFilter}
+              onChange={(e) => setSizeFilter(e.target.value ? Number(e.target.value) : '')}
+              style={styles.filterSelect}
+            >
+              <option value="">所有大小</option>
+              {diskSizes.map((size) => (
+                <option key={size} value={size}>
+                  {formatSize(size)}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Disk List */}
@@ -245,7 +371,9 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
                   onClick={() => {
                     // Add to first VDEV
                     if (vdevs.length === 0) {
-                      setVdevs([[disk]])
+                      const newVdevs = [[disk]]
+                      setVdevs(newVdevs)
+                      setManualDisks(VDevType.Data, newVdevs)
                     } else {
                       addDiskToVdev(disk, 0)
                     }
@@ -286,22 +414,44 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
         <div style={styles.rightPane}>
           <div style={styles.sectionHeader}>
             <span style={styles.sectionTitle}>VDEVs ({vdevs.length})</span>
-            <button onClick={addVdev} style={styles.addVdevButton}>
+            <button
+              onClick={addVdev}
+              disabled={!category.layout}
+              style={{
+                ...styles.addVdevButton,
+                ...(category.layout ? {} : styles.addVdevButtonDisabled),
+              }}
+            >
               <Plus size={14} />
               添加
             </button>
           </div>
 
           <div style={styles.vdevsList}>
-            {vdevs.map((vdev, vdevIndex) => (
+            {vdevs.length === 0 ? (
+              <div style={styles.vdevEmptyState}>
+                {!category.layout ? '请先选择布局' : '点击「添加」创建 VDEV'}
+              </div>
+            ) : (
+              vdevs.map((vdev, vdevIndex) => (
               <div key={vdevIndex} style={styles.vdevCard}>
                 <div style={styles.vdevHeader}>
-                  <span style={styles.vdevTitle}>Vdev {vdevIndex + 1}</span>
-                  <span style={styles.vdevCount}>
-                    {vdev.length} / {minDisks}+ 硬盘
-                  </span>
+                  <div style={styles.vdevInfo}>
+                    <span style={styles.vdevTitle}>
+                      {category.layout ? LAYOUT_INFO[category.layout]?.label ?? category.layout : 'Vdev'}
+                    </span>
+                    {vdev.length > 0 && (
+                      <span style={styles.vdevCapacity}>
+                        {formatGibiBytes(calculateVdevRawCapacity(vdev, category.layout))} 估计可用原始容量
+                      </span>
+                    )}
+                  </div>
                   <button
-                    onClick={() => removeVdev(vdevIndex)}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      removeVdev(vdevIndex)
+                    }}
                     style={styles.removeVdevButton}
                   >
                     <Trash2 size={12} />
@@ -316,7 +466,11 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
                         <span style={styles.vdevDiskName}>{disk.name}</span>
                         <span style={styles.vdevDiskSize}>{formatSize(disk.size)}</span>
                         <button
-                          onClick={() => removeDiskFromVdev(vdevIndex, disk.devname)}
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            removeDiskFromVdev(vdevIndex, disk.devname)
+                          }}
                           style={styles.removeDiskButton}
                         >
                           <X size={10} />
@@ -325,8 +479,16 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
                     ))
                   )}
                 </div>
+                {vdev.length > 0 && getVdevTips(vdev, category.layout, _minDisks).length > 0 && (
+                  <div style={styles.vdevTips}>
+                    {getVdevTips(vdev, category.layout, _minDisks).map((tip, i) => (
+                      <div key={i} style={styles.vdevTipItem}>{tip}</div>
+                    ))}
+                  </div>
+                )}
               </div>
-            ))}
+            ))
+            )}
           </div>
         </div>
       </div>
@@ -354,28 +516,48 @@ const styles: Record<string, React.CSSProperties> = {
   layoutSection: {
     flexShrink: 0,
   },
+  layoutDescription: {
+    marginTop: 6,
+    marginLeft: 84,
+    fontSize: 12,
+    color: colors.textSecondary,
+    lineHeight: 1.4,
+  },
+  fieldRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    height: 36,
+  },
   label: {
-    display: 'block',
-    marginBottom: 8,
     fontSize: 13,
-    fontWeight: 600,
+    fontWeight: 500,
     color: colors.text,
+    minWidth: 72,
+    lineHeight: '36px',
   },
   select: {
-    width: '100%',
-    padding: '10px 12px',
+    flex: 1,
+    height: 36,
+    padding: '0 32px 0 10px',
     fontSize: 14,
     border: `1px solid ${colors.border}`,
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: colors.cardBg,
     color: colors.text,
     cursor: 'pointer',
+    appearance: 'none' as const,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238e8e93' d='M5 7L1 3h8z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 8px center',
   },
   error: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    fontSize: 13,
+    gap: 4,
+    marginTop: 4,
+    marginLeft: 84,
+    fontSize: 12,
     color: colors.danger,
     flexShrink: 0,
   },
@@ -417,13 +599,16 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.text,
   },
   filters: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
     padding: 10,
     borderBottom: `1px solid ${colors.border}`,
     flexShrink: 0,
   },
   searchContainer: {
     position: 'relative' as const,
-    marginBottom: 8,
+    flex: 1,
   },
   searchIcon: {
     position: 'absolute' as const,
@@ -443,12 +628,9 @@ const styles: Record<string, React.CSSProperties> = {
     outline: 'none',
     boxSizing: 'border-box' as const,
   },
-  filterRow: {
-    display: 'flex',
-    gap: 8,
-  },
   filterSelect: {
-    flex: 1,
+    flex: '0 0 auto',
+    width: 90,
     padding: '6px 8px',
     fontSize: 12,
     border: `1px solid ${colors.border}`,
@@ -530,15 +712,30 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '8px 10px',
     backgroundColor: colors.border,
   },
+  vdevInfo: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 2,
+  },
   vdevTitle: {
     fontSize: 12,
     fontWeight: 600,
     color: colors.text,
   },
-  vdevCount: {
-    flex: 1,
-    fontSize: 11,
+  vdevCapacity: {
+    fontSize: 10,
     color: colors.textSecondary,
+  },
+  vdevTips: {
+    padding: '6px 10px',
+    backgroundColor: `${colors.warning}15`,
+    borderTop: `1px solid ${colors.warning}30`,
+  },
+  vdevTipItem: {
+    fontSize: 11,
+    color: colors.warning,
+    marginBottom: 2,
   },
   removeVdevButton: {
     background: 'none',
@@ -559,6 +756,12 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 12,
     color: colors.textSecondary,
     fontSize: 12,
+  },
+  vdevEmptyState: {
+    textAlign: 'center' as const,
+    padding: 24,
+    color: colors.textSecondary,
+    fontSize: 13,
   },
   vdevDisk: {
     display: 'flex',
@@ -582,10 +785,11 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    padding: 2,
+    padding: 4,
     borderRadius: 4,
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     color: colors.textSecondary,
   },
   addVdevButton: {
@@ -600,5 +804,10 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     fontSize: 12,
     fontWeight: 500,
+  },
+  addVdevButtonDisabled: {
+    backgroundColor: colors.border,
+    cursor: 'not-allowed',
+    opacity: 0.6,
   },
 }
