@@ -271,3 +271,7 @@ export interface Pool {
 - **禁止**在 `truenas/` 中直接引用 UI 组件
 - 所有类型定义尽量放在 `shared/types/` 集中管理
 - 新增模块时，先确认属于哪个目录，遵循职责划分
+
+## 功能索引
+
+详细的功能索引文档位于 [docs/](docs/README.md)。
