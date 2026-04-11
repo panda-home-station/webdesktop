@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect } from 'react'
-import { X, ChevronLeft, ChevronRight, Loader2, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { usePoolWizardStore, WIZARD_STEPS } from './store/poolWizardStore'
 import { validateStep, stepHasWarnings } from './utils/validation'
 import { GeneralStep } from './steps/GeneralStep'
@@ -106,32 +106,11 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <button
-            onClick={handleClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 8,
-              borderRadius: 8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: colors.text,
-              transition: 'background-color 0.15s',
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.background}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-          >
-            <ArrowLeft size={20} />
-          </button>
-          {!isLoading && (
-            <span style={{ fontSize: 14, color: colors.textSecondary }}>
-              {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
-            </span>
-          )}
-        </div>
+        {!isLoading && (
+          <span style={{ fontSize: 14, color: colors.textSecondary }}>
+            {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
+          </span>
+        )}
 
         {/* Step Progress */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -153,23 +132,29 @@ export function CreatePoolPage({ onBack, onSuccess: _onSuccess }: CreatePoolPage
           ))}
         </div>
 
+        {/* Cancel Button */}
         <button
           onClick={handleClose}
           style={{
-            background: 'none',
-            border: 'none',
+            padding: '6px 12px',
+            backgroundColor: 'transparent',
+            border: `1px solid ${colors.border}`,
+            borderRadius: 6,
             cursor: 'pointer',
-            padding: 8,
-            borderRadius: 8,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'background-color 0.15s',
+            fontSize: 14,
+            color: colors.text,
+            transition: 'all 0.15s ease',
           }}
-          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = colors.background}
-          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = colors.background
+            e.currentTarget.style.borderColor = colors.text
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent'
+            e.currentTarget.style.borderColor = colors.border
+          }}
         >
-          <X size={20} color={colors.textSecondary} />
+          取消
         </button>
       </div>
 
