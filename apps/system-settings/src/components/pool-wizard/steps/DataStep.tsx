@@ -7,7 +7,7 @@
 import React, { useState, useMemo } from 'react'
 import { Plus, Trash2, Search, X, HardDrive, Layers, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { VDevType, CreateVdevLayout } from '@truenas/types/vdev-enum-types'
-import { DetailsDisk } from '@truenas/types/disk-types'
+import { DetailsDisk, getDiskTypeLabel, getDiskBusLabel } from '@truenas/types/disk-types'
 import { DiskType } from '@truenas/types/disk-type-enum-types'
 import { usePoolWizardStore, LAYOUT_OPTIONS } from '../store/poolWizardStore'
 import { minDisksPerLayout } from '../store/poolWizardStore'
@@ -390,25 +390,15 @@ export function DataStep({ errors }: DataStepProps) {
                 <span>没有可用硬盘</span>
               </div>
             ) : (
-              <div style={styles.diskGrid}>
+              <div style={styles.diskListContainer}>
                 {filteredDisks.map((disk) => (
-                  <div
+                  <DiskCard
                     key={disk.devname}
-                    className="disk-card"
-                    draggable
-                    onDragStart={(e) => handleDragStart(e, disk)}
+                    disk={disk}
+                    isDragging={draggedDisk?.devname === disk.devname}
+                    onDragStart={handleDragStart}
                     onDragEnd={handleDragEnd}
-                    style={{
-                      ...styles.diskCard,
-                      opacity: draggedDisk?.devname === disk.devname ? 0.5 : 1,
-                    }}
-                  >
-                    <DiskIcon disk={disk} width={40} height={45} />
-                    <div style={styles.diskCardInfo}>
-                      <span style={styles.diskCardName}>{disk.devname}</span>
-                      <span style={styles.diskCardSize}>{formatSize(disk.size || 0)}</span>
-                    </div>
-                  </div>
+                  />
                 ))}
               </div>
             )}
@@ -530,8 +520,7 @@ export function DataStep({ errors }: DataStepProps) {
 
       <style>{`
         .disk-card:hover {
-          border-color: ${colors.primary}60 !important;
-          transform: translateY(-1px);
+          box-shadow: 0 0 0 2px ${colors.primary}40;
         }
         .vdev-disk-card:hover {
           border-color: ${colors.primary}60 !important;
@@ -542,6 +531,131 @@ export function DataStep({ errors }: DataStepProps) {
       `}</style>
     </div>
   )
+}
+
+// Disk Card Component - TrueNAS SCALE style
+function DiskCard({
+  disk,
+  isDragging,
+  onDragStart,
+  onDragEnd,
+}: {
+  disk: DetailsDisk
+  isDragging: boolean
+  onDragStart: (e: React.DragEvent, disk: DetailsDisk) => void
+  onDragEnd: () => void
+}) {
+  const typeColors: Record<DiskType, { bg: string; text: string }> = {
+    [DiskType.Hdd]: { bg: '#e3f2fd', text: '#1976d2' },
+    [DiskType.Ssd]: { bg: '#e8f5e9', text: '#388e3c' },
+    [DiskType.Nvme]: { bg: '#fff3e0', text: '#f57c00' },
+    [DiskType.Usb]: { bg: '#f5f5f5', text: '#666' },
+    [DiskType.Hda]: { bg: '#f5f5f5', text: '#666' },
+  }
+  const typeColor = typeColors[disk.type] || typeColors[DiskType.Hdd]
+
+  return (
+    <div
+      className="disk-card"
+      draggable
+      onDragStart={(e) => onDragStart(e, disk)}
+      onDragEnd={onDragEnd}
+      style={{
+        ...diskCardStyles.card,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+    >
+      {/* Left: Disk Icon */}
+      <div style={diskCardStyles.iconContainer}>
+        <DiskIcon disk={disk} width={40} height={45} />
+      </div>
+
+      {/* Middle: Disk Info */}
+      <div style={diskCardStyles.infoContainer}>
+        {/* Size - prominent */}
+        <div style={diskCardStyles.sizeRow}>
+          <span style={diskCardStyles.size}>{formatSize(disk.size || 0)}</span>
+        </div>
+        {/* Details row */}
+        <div style={diskCardStyles.detailsRow}>
+          <span
+            style={{
+              ...diskCardStyles.typeBadge,
+              backgroundColor: typeColor.bg,
+              color: typeColor.text,
+            }}
+          >
+            {getDiskTypeLabel(disk.type)}
+          </span>
+          <span style={diskCardStyles.bus}>{getDiskBusLabel(disk.bus)}</span>
+          <span style={diskCardStyles.divider}>|</span>
+          <span style={diskCardStyles.model} title={disk.model}>
+            {disk.model || '-'}
+          </span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const diskCardStyles: Record<string, React.CSSProperties> = {
+  card: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '10px 12px',
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    cursor: 'grab',
+    transition: 'all 0.15s ease',
+    boxSizing: 'border-box',
+  },
+  iconContainer: {
+    flexShrink: 0,
+  },
+  infoContainer: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    minWidth: 0,
+  },
+  sizeRow: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  size: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: colors.text,
+  },
+  detailsRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    fontSize: 12,
+  },
+  typeBadge: {
+    padding: '1px 6px',
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 600,
+  },
+  bus: {
+    color: colors.textSecondary,
+    fontSize: 11,
+  },
+  divider: {
+    color: colors.border,
+  },
+  model: {
+    color: colors.textSecondary,
+    fontSize: 11,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -733,39 +847,10 @@ const styles: Record<string, React.CSSProperties> = {
     outline: `2px dashed ${colors.danger}40`,
     outlineOffset: -8,
   },
-  diskGrid: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: 8,
-    alignContent: 'flex-start',
-  },
-  diskCard: {
+  diskListContainer: {
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center',
-    gap: 4,
-    padding: 8,
-    backgroundColor: colors.cardBg,
-    borderRadius: 8,
-    cursor: 'grab',
-    transition: 'all 0.15s ease',
-    border: `1px solid ${colors.border}`,
-  },
-  diskCardInfo: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 1,
-  },
-  diskCardName: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: colors.text,
-    fontFamily: 'monospace',
-  },
-  diskCardSize: {
-    fontSize: 10,
-    color: colors.textSecondary,
+    gap: 6,
   },
   emptyState: {
     display: 'flex',
