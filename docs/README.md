@@ -9,7 +9,7 @@ webdesktop
 │       └── src/
 │           ├── components/
 │           │   └── pool-wizard/       # 存储池向导
-│           │       ├── PoolWizard.tsx          # 向导主入口
+│           │       ├── CreatePoolPage.tsx       # 向导主入口 (全屏页面)
 │           │       ├── store/
 │           │       │   └── poolWizardStore.ts  # 状态管理 (Zustand)
 │           │       ├── steps/
@@ -19,10 +19,15 @@ webdesktop
 │           │       │   └── ReviewStep.tsx      # 审查步骤
 │           │       ├── components/
 │           │       │   ├── DiskIcon.tsx        # 硬盘图标组件
+│           │       │   ├── DiskList.tsx         # 硬盘列表组件
+│           │       │   ├── DiskSizeSelector.tsx # 硬盘容量选择器
+│           │       │   ├── LayoutSelector.tsx   # 布局选择器
+│           │       │   ├── PoolSummary.tsx      # 存储池摘要组件
 │           │       │   └── VdevConfigurator.tsx # VDEV 配置器
 │           │       └── utils/
 │           │           ├── validation.ts       # 步骤验证逻辑
-│           │           └── layouts.ts          # 布局配置 (最小硬盘数等)
+│           │           ├── disk-selection.ts  # 硬盘自动选择逻辑
+│           │           └── topology-utils.ts   # 拓扑工具函数
 │           └── styles/
 │               └── theme.ts            # 颜色/主题配置
 │
@@ -62,16 +67,21 @@ webdesktop
 ### 存储管理 (Storage)
 
 #### 存储池向导 (Pool Wizard)
-- 向导主入口 → [PoolWizard.tsx](apps/system-settings/src/components/pool-wizard/PoolWizard.tsx)
+- 向导主入口 → [CreatePoolPage.tsx](apps/system-settings/src/components/pool-wizard/CreatePoolPage.tsx)
 - 状态管理 (Zustand) → [poolWizardStore.ts](apps/system-settings/src/components/pool-wizard/store/poolWizardStore.ts)
 - 通用步骤 (池名称、加密) → [GeneralStep.tsx](apps/system-settings/src/components/pool-wizard/steps/GeneralStep.tsx)
 - 数据步骤 (布局选择、硬盘分配) → [DataStep.tsx](apps/system-settings/src/components/pool-wizard/steps/DataStep.tsx)
 - 可选 VDEV 步骤 (Log/Spare/Cache/Metadata/Dedup) → [VdevStep.tsx](apps/system-settings/src/components/pool-wizard/steps/VdevStep.tsx)
 - 审查步骤 → [ReviewStep.tsx](apps/system-settings/src/components/pool-wizard/steps/ReviewStep.tsx)
 - 硬盘图标组件 → [DiskIcon.tsx](apps/system-settings/src/components/pool-wizard/components/DiskIcon.tsx)
+- 硬盘列表组件 → [DiskList.tsx](apps/system-settings/src/components/pool-wizard/components/DiskList.tsx)
+- 硬盘容量选择器 → [DiskSizeSelector.tsx](apps/system-settings/src/components/pool-wizard/components/DiskSizeSelector.tsx)
+- 布局选择器 → [LayoutSelector.tsx](apps/system-settings/src/components/pool-wizard/components/LayoutSelector.tsx)
+- 存储池摘要组件 → [PoolSummary.tsx](apps/system-settings/src/components/pool-wizard/components/PoolSummary.tsx)
 - VDEV 配置器 → [VdevConfigurator.tsx](apps/system-settings/src/components/pool-wizard/components/VdevConfigurator.tsx)
 - 步骤验证逻辑 → [validation.ts](apps/system-settings/src/components/pool-wizard/utils/validation.ts)
-- 布局配置 (最小硬盘数等) → [layouts.ts](apps/system-settings/src/components/pool-wizard/utils/layouts.ts)
+- 硬盘自动选择逻辑 → [disk-selection.ts](apps/system-settings/src/components/pool-wizard/utils/disk-selection.ts)
+- 拓扑工具函数 → [topology-utils.ts](apps/system-settings/src/components/pool-wizard/utils/topology-utils.ts)
 
 #### 存储相关服务
 - 存储池 API 服务 → [pool.ts](src/truenas/services/pool.ts)

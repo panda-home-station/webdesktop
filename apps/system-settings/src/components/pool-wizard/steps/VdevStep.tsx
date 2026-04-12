@@ -90,139 +90,162 @@ export function VdevStep({ type, title, description, errors, warnings }: VdevSte
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>{title}</h3>
-      <p style={styles.description}>{description}</p>
+      {/* 气泡框 1: 标题和描述 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <div style={styles.bubbleTitleRow}>
+            <h3 style={styles.title}>{title}</h3>
+          </div>
+          <p style={styles.description}>{description}</p>
+        </div>
+      </div>
 
-      {/* Clear Button */}
-      {category.layout && (
-        <button onClick={handleClear} style={styles.clearButton}>
-          <Trash2 size={14} />
-          清除 {title} 配置
-        </button>
-      )}
-
-      {/* Warnings */}
+      {/* 警告信息 */}
       {warnings.layout && (
-        <div style={styles.warning}>
-          <AlertCircle size={16} />
-          {warnings.layout}
+        <div style={styles.warningBubble}>
+          <AlertCircle size={18} color={colors.warning} />
+          <span>{warnings.layout}</span>
         </div>
       )}
 
-      {/* Layout Selection */}
-      <div style={styles.field}>
-        <label style={styles.label}>布局</label>
-        <LayoutSelector
-          value={category.layout}
-          onChange={handleLayoutChange}
-          allowedLayouts={allowedLayouts}
-        />
+      {/* 气泡框 2: 布局选择 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <span style={styles.bubbleTitle}>存储布局</span>
+        </div>
+        <div style={styles.bubbleContent}>
+          <LayoutSelector
+            value={category.layout}
+            onChange={handleLayoutChange}
+            allowedLayouts={allowedLayouts}
+          />
+        </div>
       </div>
 
       {/* Configuration */}
       {category.layout && (
         <>
-          {/* Disk Size Selection */}
-          <div style={styles.field}>
-            <label style={styles.label}>选择硬盘</label>
-            <DiskSizeSelector
-              availableDisks={availableDisks}
-              selectedSize={category.diskSize}
-              selectedType={category.diskType}
-              treatAsMinimum={category.treatDiskSizeAsMinimum}
-              onSizeChange={(size) => setDiskSize(type, size)}
-              onTypeChange={(t) => setDiskType(type, t)}
-              onTreatAsMinimumChange={(treat) =>
-                setTreatDiskSizeAsMinimum(type, treat)
-              }
-            />
-          </div>
-
-          {/* Vdev Configuration */}
-          <div style={styles.field}>
-            <label style={styles.label}>Vdev 配置</label>
-            <VdevConfigurator
-              layout={category.layout}
-              width={category.width}
-              vdevsNumber={category.vdevsNumber}
-              draidDataDisks={category.draidDataDisks}
-              draidSpareDisks={category.draidSpareDisks}
-              availableDiskCount={availableDisks.length}
-              isSingleVdev={isSingleVdev}
-              onWidthChange={(width) => setWidth(type, width)}
-              onVdevsNumberChange={(number) => setVdevsNumber(type, number)}
-              onDraidDataDisksChange={(disks) =>
-                setDraidDataDisks(type, disks)
-              }
-              onDraidSpareDisksChange={(disks) =>
-                setDraidSpareDisks(type, disks)
-              }
-            />
-          </div>
-
-          {/* Auto Selection Button */}
-          <div style={styles.actions}>
-            <button
-              onClick={handleAutoSelect}
-              disabled={
-                !category.layout ||
-                !category.diskSize ||
-                !category.diskType ||
-                availableDisks.length === 0
-              }
-              style={{
-                ...styles.autoButton,
-                ...(!category.layout ||
-                !category.diskSize ||
-                !category.diskType ||
-                availableDisks.length === 0
-                  ? styles.autoButtonDisabled
-                  : {}),
-              }}
-            >
-              <Zap size={16} />
-              自动分配硬盘
-            </button>
-          </div>
-
-          {/* Selected Disks */}
-          {category.vdevs.length > 0 && (
-            <div style={styles.field}>
-              <label style={styles.label}>
-                已选择 ({category.vdevs.flat().length} 块硬盘)
-              </label>
-              <div style={styles.vdevPreview}>
-                {category.vdevs.map((vdev, index) => (
-                  <div key={index} style={styles.vdevCard}>
-                    <span style={styles.vdevTitle}>Vdev {index + 1}</span>
-                    <span style={styles.vdevDisks}>
-                      {vdev.map((d) => d.name).join(', ')}
-                    </span>
-                  </div>
-                ))}
-              </div>
+          {/* 气泡框 3: 硬盘选择 */}
+          <div style={styles.bubbleCard}>
+            <div style={styles.bubbleHeader}>
+              <span style={styles.bubbleTitle}>选择硬盘</span>
             </div>
-          )}
-
-          {/* Manual Selection */}
-          <div style={styles.field}>
-            <label style={styles.label}>或手动选择硬盘</label>
-            <div style={styles.diskListWrapper}>
-              <DiskList
-                disks={availableDisks}
-                selectedDisks={category.vdevs.flat()}
-                onToggle={handleManualToggle}
+            <div style={styles.bubbleContent}>
+              <DiskSizeSelector
+                availableDisks={availableDisks}
+                selectedSize={category.diskSize}
+                selectedType={category.diskType}
+                treatAsMinimum={category.treatDiskSizeAsMinimum}
+                onSizeChange={(size) => setDiskSize(type, size)}
+                onTypeChange={(t) => setDiskType(type, t)}
+                onTreatAsMinimumChange={(treat) =>
+                  setTreatDiskSizeAsMinimum(type, treat)
+                }
               />
+            </div>
+          </div>
+
+          {/* 气泡框 4: Vdev 配置 */}
+          <div style={styles.bubbleCard}>
+            <div style={styles.bubbleHeader}>
+              <span style={styles.bubbleTitle}>Vdev 配置</span>
+            </div>
+            <div style={styles.bubbleContent}>
+              <VdevConfigurator
+                layout={category.layout}
+                width={category.width}
+                vdevsNumber={category.vdevsNumber}
+                draidDataDisks={category.draidDataDisks}
+                draidSpareDisks={category.draidSpareDisks}
+                availableDiskCount={availableDisks.length}
+                isSingleVdev={isSingleVdev}
+                onWidthChange={(width) => setWidth(type, width)}
+                onVdevsNumberChange={(number) => setVdevsNumber(type, number)}
+                onDraidDataDisksChange={(disks) =>
+                  setDraidDataDisks(type, disks)
+                }
+                onDraidSpareDisksChange={(disks) =>
+                  setDraidSpareDisks(type, disks)
+                }
+              />
+            </div>
+          </div>
+
+          {/* 气泡框 5: 自动/手动分配 */}
+          <div style={styles.bubbleCard}>
+            <div style={styles.bubbleHeader}>
+              <span style={styles.bubbleTitle}>硬盘分配</span>
+              {category.layout && (
+                <button onClick={handleClear} style={styles.clearButtonSmall}>
+                  <Trash2 size={12} />
+                  清除
+                </button>
+              )}
+            </div>
+            <div style={styles.bubbleContent}>
+              {/* 自动选择按钮 */}
+              <button
+                onClick={handleAutoSelect}
+                disabled={
+                  !category.layout ||
+                  !category.diskSize ||
+                  !category.diskType ||
+                  availableDisks.length === 0
+                }
+                style={{
+                  ...styles.autoButton,
+                  ...(!category.layout ||
+                  !category.diskSize ||
+                  !category.diskType ||
+                  availableDisks.length === 0
+                    ? styles.autoButtonDisabled
+                    : {}),
+                }}
+              >
+                <Zap size={16} />
+                自动分配硬盘
+              </button>
+
+              {/* 已选择硬盘预览 */}
+              {category.vdevs.length > 0 && (
+                <div style={styles.selectedInfo}>
+                  <span style={styles.selectedLabel}>
+                    已选择 {category.vdevs.flat().length} 块硬盘
+                  </span>
+                  <div style={styles.vdevPreview}>
+                    {category.vdevs.map((vdev, index) => (
+                      <div key={index} style={styles.vdevCard}>
+                        <span style={styles.vdevTitle}>Vdev {index + 1}</span>
+                        <span style={styles.vdevDisks}>
+                          {vdev.map((d) => d.name).join(', ')}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 手动选择 */}
+              <div style={styles.manualSelection}>
+                <span style={styles.manualLabel}>或手动选择:</span>
+                <div style={styles.diskListWrapper}>
+                  <DiskList
+                    disks={availableDisks}
+                    selectedDisks={category.vdevs.flat()}
+                    onToggle={handleManualToggle}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </>
       )}
 
-      {/* Errors */}
+      {/* 错误信息 */}
       {errors.vdevs && (
-        <div style={styles.error}>
-          <AlertCircle size={14} />
-          {errors.vdevs}
+        <div style={styles.errorBubble}>
+          <AlertCircle size={16} />
+          <span>{errors.vdevs}</span>
         </div>
       )}
     </div>
@@ -287,109 +310,172 @@ export function DedupStep(props: Omit<VdevStepProps, 'type' | 'title' | 'descrip
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
   },
-  title: {
-    margin: '0 0 8px 0',
-    fontSize: 18,
+
+  // 气泡框基础样式
+  bubbleCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+    border: `1px solid ${colors.border}`,
+    overflow: 'hidden',
+  },
+  bubbleHeader: {
+    padding: '14px 16px',
+    borderBottom: `1px solid ${colors.border}`,
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bubbleTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bubbleTitle: {
+    fontSize: 15,
     fontWeight: 600,
+    color: colors.text,
+  },
+  bubbleContent: {
+    padding: 16,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+
+  // 标题和描述
+  title: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 700,
     color: colors.text,
   },
   description: {
-    margin: '0 0 16px 0',
+    margin: '6px 0 0 0',
     fontSize: 14,
     color: colors.textSecondary,
   },
-  clearButton: {
+
+  // 警告气泡
+  warningBubble: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    padding: '8px 14px',
-    backgroundColor: '#ffebee',
-    color: colors.danger,
-    border: 'none',
-    borderRadius: 8,
-    cursor: 'pointer',
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  field: {
-    marginBottom: 24,
-  },
-  label: {
-    display: 'block',
-    marginBottom: 12,
+    gap: 10,
+    padding: '12px 16px',
+    backgroundColor: `${colors.warning}15`,
+    borderRadius: 12,
+    border: `1px solid ${colors.warning}30`,
     fontSize: 14,
-    fontWeight: 600,
-    color: colors.text,
+    color: colors.warning,
   },
-  warning: {
+
+  // 错误气泡
+  errorBubble: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
     padding: '12px 16px',
-    backgroundColor: '#fff3e0',
-    borderRadius: 8,
-    marginBottom: 24,
-    color: '#e65100',
+    backgroundColor: `${colors.danger}10`,
+    borderRadius: 12,
+    border: `1px solid ${colors.danger}30`,
     fontSize: 14,
-  },
-  error: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
-    fontSize: 13,
     color: colors.danger,
   },
-  actions: {
-    marginBottom: 24,
+
+  // 清除按钮
+  clearButtonSmall: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '6px 10px',
+    backgroundColor: `${colors.danger}10`,
+    color: colors.danger,
+    border: 'none',
+    borderRadius: 6,
+    cursor: 'pointer',
+    fontSize: 12,
+    fontWeight: 500,
   },
+
+  // 自动分配按钮
   autoButton: {
-    padding: '10px 20px',
+    padding: '12px 20px',
     backgroundColor: colors.primary,
     color: '#fff',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 10,
     cursor: 'pointer',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 600,
     display: 'flex',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
+    minHeight: 48,
   },
   autoButtonDisabled: {
     opacity: 0.5,
     cursor: 'not-allowed',
   },
+
+  // 已选择信息
+  selectedInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  },
+  selectedLabel: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: colors.text,
+  },
   vdevPreview: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     gap: 8,
   },
   vdevCard: {
-    padding: '10px 14px',
+    padding: '12px 16px',
     backgroundColor: colors.background,
-    borderRadius: 8,
+    borderRadius: 10,
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    border: `1px solid ${colors.border}`,
   },
   vdevTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: 600,
     color: colors.text,
   },
   vdevDisks: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textSecondary,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap' as const,
-    maxWidth: '70%',
+    whiteSpace: 'nowrap',
+    maxWidth: '60%',
+  },
+
+  // 手动选择
+  manualSelection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 10,
+  },
+  manualLabel: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: colors.text,
   },
   diskListWrapper: {
-    maxHeight: 250,
-    overflowY: 'auto' as const,
+    maxHeight: 200,
+    overflowY: 'auto',
+    borderRadius: 10,
+    border: `1px solid ${colors.border}`,
   },
 }

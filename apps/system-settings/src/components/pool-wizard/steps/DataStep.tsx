@@ -335,17 +335,19 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
 
   return (
     <div style={styles.container}>
-      {/* Layout Selection - Compact Dropdown Style */}
-      <div style={styles.layoutSection}>
-        <div style={styles.layoutRow}>
-          <div style={styles.layoutLabel}>
+      {/* 气泡框 1: 存储布局选择 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <div style={styles.bubbleTitleRow}>
             <Layers size={16} color={colors.primary} />
-            <span>存储布局</span>
+            <span style={styles.bubbleTitle}>存储布局</span>
           </div>
+        </div>
+        <div style={styles.bubbleContent}>
           <select
             value={category.layout ?? ''}
             onChange={(e) => handleLayoutChange(e.target.value ? e.target.value as CreateVdevLayout : null)}
-            style={styles.layoutSelect}
+            style={styles.iOSSelect}
           >
             <option value="">选择存储布局...</option>
             {allowedLayouts.map((layout) => {
@@ -357,25 +359,40 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
               )
             })}
           </select>
+          {currentLayoutInfo && (
+            <div style={styles.layoutInfoPill}>
+              <CheckCircle2 size={14} color={colors.primary} />
+              <span>{currentLayoutInfo.badge}</span>
+              <span style={styles.layoutInfoDivider}>|</span>
+              <span>{currentLayoutInfo.description}</span>
+            </div>
+          )}
+          {errors.layout && (
+            <div style={styles.errorRow}>
+              <AlertTriangle size={14} />
+              {errors.layout}
+            </div>
+          )}
         </div>
-        {currentLayoutInfo && (
-          <div style={styles.layoutInfoPill}>
-            <CheckCircle2 size={14} color={colors.primary} />
-            <span>{currentLayoutInfo.badge}</span>
-            <span style={styles.layoutInfoDivider}>|</span>
-            <span>{currentLayoutInfo.description}</span>
-          </div>
-        )}
-        {errors.layout && (
-          <div style={styles.errorRow}>
-            <AlertTriangle size={14} />
-            {errors.layout}
-          </div>
-        )}
       </div>
 
-      {/* Disk Selection UI - Split Panel */}
-      <div style={styles.selectionContainer}>
+      {/* 气泡框 2: 磁盘分配 - 左右分栏 */}
+      <div style={styles.bubbleCardNoPadding}>
+        <div style={styles.splitPaneHeader}>
+          {/* Left Pane Header */}
+          <div style={styles.splitPaneTitle}>
+            <HardDrive size={16} color={colors.primary} />
+            <span>可用硬盘</span>
+            <span style={styles.diskCountBadge}>{filteredDisks.length}</span>
+          </div>
+          {/* Right Pane Header */}
+          <div style={styles.splitPaneTitle}>
+            <Layers size={16} color={colors.primary} />
+            <span>VDEVs</span>
+            <span style={styles.diskCountBadge}>{vdevs.length}</span>
+          </div>
+        </div>
+
         {/* Left Pane - Available Disks */}
         <div style={styles.leftPane}>
           <div style={styles.paneHeader}>
@@ -600,6 +617,218 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
             )}
           </div>
         </div>
+
+        {/* Left Pane - Available Disks */}
+        <div style={styles.leftPane}>
+          {/* Filters */}
+          <div style={styles.filtersRow}>
+            <div style={styles.searchContainer}>
+              <Search size={14} style={styles.searchIcon} />
+              <input
+                type="text"
+                placeholder="搜索硬盘..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                style={styles.searchInput}
+              />
+            </div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as DiskType | '')}
+              style={styles.filterSelect}
+            >
+              <option value="">类型</option>
+              <option value={DiskType.Hdd}>HDD</option>
+              <option value={DiskType.Ssd}>SSD</option>
+              <option value={DiskType.Nvme}>NVMe</option>
+            </select>
+            <select
+              value={sizeFilter}
+              onChange={(e) => setSizeFilter(e.target.value ? Number(e.target.value) : '')}
+              style={styles.filterSelect}
+            >
+              <option value="">容量</option>
+              {diskSizes.map((size) => (
+                <option key={size} value={size}>
+                  {formatSize(size)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Disk List */}
+          <div
+            style={{
+              ...styles.diskList,
+              ...(isDraggingFromVdev ? styles.diskListDragOver : {}),
+            }}
+            onDragOver={(e) => {
+              if (isDraggingFromVdev) {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+              }
+            }}
+            onDrop={handleDropOnAvailable}
+          >
+            {filteredDisks.length === 0 ? (
+              <div style={styles.emptyState}>
+                <HardDrive size={32} color={colors.border} />
+                <span>没有可用的硬盘</span>
+              </div>
+            ) : (
+              <div style={styles.diskGrid}>
+                {filteredDisks.map((disk) => (
+                  <div
+                    key={disk.devname}
+                    className="disk-card"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, disk)}
+                    onDragEnd={handleDragEnd}
+                    style={{
+                      ...styles.diskCard,
+                      opacity: draggedDisk?.devname === disk.devname ? 0.5 : 1,
+                    }}
+                  >
+                    <DiskIcon disk={disk} width={48} height={54} />
+                    <div style={styles.diskCardInfo}>
+                      <span style={styles.diskCardName}>{disk.devname}</span>
+                      <span style={styles.diskCardSize}>{formatSize(disk.size || 0)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Pane - VDEVs */}
+        <div style={styles.rightPane}>
+          <div style={styles.vdevHeaderRow}>
+            <button
+              onClick={addVdev}
+              disabled={!category.layout}
+              style={{
+                ...styles.addVdevButton,
+                ...(category.layout ? {} : styles.addVdevButtonDisabled),
+              }}
+            >
+              <Plus size={14} />
+              新建 VDEV
+            </button>
+          </div>
+
+          <div style={styles.vdevsList}>
+            {vdevs.length === 0 ? (
+              <div style={styles.vdevEmptyState}>
+                <div style={styles.vdevEmptyIcon}>
+                  <Layers size={40} color={colors.border} />
+                </div>
+                {!category.layout ? (
+                  <>
+                    <span style={styles.vdevEmptyTitle}>请先选择布局</span>
+                    <span style={styles.vdevEmptyHint}>在上方选择一个存储布局以开始配置</span>
+                  </>
+                ) : (
+                  <>
+                    <span style={styles.vdevEmptyTitle}>创建第一个 VDEV</span>
+                    <span style={styles.vdevEmptyHint}>点击「新建 VDEV」按钮添加磁盘组</span>
+                  </>
+                )}
+              </div>
+            ) : (
+              vdevs.map((vdev, vdevIndex) => (
+                <div
+                  key={vdevIndex}
+                  style={{
+                    ...styles.vdevCard,
+                    ...(dragOverVdevIndex === vdevIndex ? styles.vdevCardDragOver : {}),
+                  }}
+                  onDragOver={(e) => handleDragOver(e, vdevIndex)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, vdevIndex)}
+                >
+                  <div style={styles.vdevHeader}>
+                    <span style={styles.vdevTitle}>
+                      {currentLayoutInfo?.label ?? 'VDEV'} #{vdevIndex + 1}
+                    </span>
+                    <span style={styles.vdevDiskCount}>
+                      {vdev.length} 块硬盘 {vdev.length < _minDisks && `（需要 ${_minDisks} 块）`}
+                    </span>
+                    {vdev.length > 0 && (
+                      <span style={styles.vdevCapacity}>
+                        {formatGibiBytes(calculateVdevRawCapacity(vdev, category.layout))}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeVdev(vdevIndex)
+                      }}
+                      style={styles.removeVdevButton}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div style={styles.vdevDisks}>
+                    {vdev.length === 0 ? (
+                      <div style={dragOverVdevIndex === vdevIndex ? styles.vdevEmptyDragOver : styles.vdevEmpty}>
+                        <HardDrive size={24} color={colors.textSecondary} />
+                        <span>拖动硬盘到此处</span>
+                      </div>
+                    ) : (
+                      <div style={styles.vdevDisksGrid}>
+                        {vdev.map((disk) => (
+                          <div
+                            key={disk.devname}
+                            className="vdev-disk-card"
+                            style={styles.vdevDiskCard}
+                            draggable
+                            onDragStart={(e) => {
+                              setIsDraggingFromVdev(true)
+                              e.dataTransfer.setData('vdevDisk', JSON.stringify({ vdevIndex, disk }))
+                              e.dataTransfer.setData('disk', JSON.stringify(disk))
+                            }}
+                          >
+                            <DiskIcon disk={disk} width={40} height={45} />
+                            <div style={styles.vdevDiskInfo}>
+                              <span style={styles.vdevDiskName}>{disk.devname}</span>
+                              <span style={styles.vdevDiskSize}>{formatSize(disk.size || 0)}</span>
+                            </div>
+                            <button
+                              type="button"
+                              className="vdev-remove-btn"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                removeDiskFromVdev(vdevIndex, disk.devname)
+                              }}
+                              style={styles.vdevRemoveDiskBtn}
+                            >
+                              <X size={10} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {getVdevTips(vdev, category.layout, _minDisks).length > 0 && (
+                    <div style={styles.vdevTips}>
+                      {getVdevTips(vdev, category.layout, _minDisks).map((tip, i) => (
+                        <div
+                          key={i}
+                          style={tip.isError ? styles.vdevTipError : styles.vdevTipWarning}
+                        >
+                          {tip.isError ? <AlertTriangle size={12} /> : <AlertTriangle size={12} />}
+                          {tip.message}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       <style>{`
@@ -620,88 +849,122 @@ export function DataStep({ errors, warnings: _warnings }: DataStepProps) {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: 12,
     display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 12,
-    overflow: 'auto',
+    flexDirection: 'column',
+    gap: 16,
     height: '100%',
     boxSizing: 'border-box',
-    background: `
-      radial-gradient(ellipse at top left, ${colors.primary}08 0%, transparent 50%),
-      radial-gradient(ellipse at bottom right, ${colors.primary}05 0%, transparent 50%),
-      ${colors.background}
-    `,
   },
-  mainLayout: {
-    flex: 1,
-    display: 'flex',
-    gap: 12,
-    minHeight: 0,
-    overflow: 'hidden',
-  },
-  leftColumn: {
-    flex: '0 0 320px',
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 10,
-    overflow: 'hidden',
-  },
-  // Layout Section - Compact Dropdown
-  layoutSection: {
-    flexShrink: 0,
+
+  // 气泡框基础样式
+  bubbleCard: {
     backgroundColor: colors.cardBg,
-    borderRadius: 10,
-    padding: 10,
+    borderRadius: 16,
     boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-    border: `1px solid ${colors.border}40`,
-  },
-  layoutRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-  },
-  layoutLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontSize: 12,
-    fontWeight: 500,
-    color: colors.text,
+    border: `1px solid ${colors.border}`,
+    overflow: 'hidden',
     flexShrink: 0,
   },
-  layoutSelect: {
-    flex: 1,
-    padding: '6px 28px 6px 10px',
-    fontSize: 12,
+  bubbleCardNoPadding: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
     border: `1px solid ${colors.border}`,
-    borderRadius: 6,
+    overflow: 'hidden',
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+  },
+  bubbleHeader: {
+    padding: '12px 16px',
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  bubbleTitleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  bubbleTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: colors.text,
+  },
+  bubbleContent: {
+    padding: 16,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+
+  // iOS 风格选择框
+  iOSSelect: {
+    width: '100%',
+    padding: '14px 16px',
+    fontSize: 16,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 10,
     backgroundColor: colors.background,
     color: colors.text,
-    cursor: 'pointer',
     outline: 'none',
-    appearance: 'none' as const,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238e8e93' d='M5 7L1 3h8z'/%3E%3C/svg%3E")`,
+    cursor: 'pointer',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238e8e93' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 8px center',
+    backgroundPosition: 'right 16px center',
   },
   layoutInfoPill: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    padding: '6px 10px',
+    gap: 8,
+    padding: '10px 14px',
     backgroundColor: `${colors.primary}10`,
-    borderRadius: 6,
-    fontSize: 11,
+    borderRadius: 10,
+    fontSize: 13,
     color: colors.primary,
     border: `1px solid ${colors.primary}20`,
-    flexShrink: 0,
-    marginTop: 6,
   },
   layoutInfoDivider: {
     color: colors.border,
-    margin: '0 2px',
+    margin: '0 4px',
   },
+  errorRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 14px',
+    backgroundColor: `${colors.danger}10`,
+    borderRadius: 10,
+    fontSize: 12,
+    color: colors.danger,
+    border: `1px solid ${colors.danger}30`,
+  },
+
+  // Split pane styles
+  splitPaneHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '10px 16px',
+    borderBottom: `1px solid ${colors.border}`,
+    flexShrink: 0,
+  },
+  splitPaneTitle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 14,
+    fontWeight: 600,
+    color: colors.text,
+  },
+  diskCountBadge: {
+    padding: '2px 8px',
+    backgroundColor: `${colors.primary}15`,
+    color: colors.primary,
+    borderRadius: 10,
+    fontSize: 12,
+    fontWeight: 600,
+  },
+
   // Selection Container
   selectionContainer: {
     flex: 1,
@@ -709,102 +972,71 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 12,
     overflow: 'hidden',
     minHeight: 0,
+    padding: 12,
     boxSizing: 'border-box',
   },
   leftPane: {
     flex: 1,
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     overflow: 'hidden',
     minWidth: 0,
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.background,
     borderRadius: 12,
-    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-    border: `1px solid ${colors.border}40`,
     boxSizing: 'border-box',
   },
   rightPane: {
     flex: 1,
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     overflow: 'hidden',
     minWidth: 0,
-    backgroundColor: colors.cardBg,
+    backgroundColor: colors.background,
     borderRadius: 12,
-    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-    border: `1px solid ${colors.border}40`,
     boxSizing: 'border-box',
-  },
-  paneHeader: {
-    padding: '8px 10px',
-    borderBottom: `1px solid ${colors.border}40`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  paneTitle: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    fontSize: 13,
-    fontWeight: 600,
-    color: colors.text,
-  },
-  diskCountBadge: {
-    padding: '2px 6px',
-    backgroundColor: `${colors.primary}15`,
-    color: colors.primary,
-    borderRadius: 8,
-    fontSize: 10,
-    fontWeight: 600,
   },
   filtersRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    padding: 6,
-    borderBottom: `1px solid ${colors.border}40`,
+    gap: 8,
+    padding: '8px 0',
     flexShrink: 0,
   },
   searchContainer: {
-    position: 'relative' as const,
+    position: 'relative',
     flex: 1,
   },
   searchIcon: {
-    position: 'absolute' as const,
-    left: 8,
+    position: 'absolute',
+    left: 10,
     top: '50%',
     transform: 'translateY(-50%)',
     color: colors.textSecondary,
   },
   searchInput: {
     width: '100%',
-    padding: '5px 8px 5px 26px',
-    fontSize: 11,
+    padding: '10px 10px 10px 32px',
+    fontSize: 14,
     border: `1px solid ${colors.border}`,
-    borderRadius: 6,
-    backgroundColor: colors.background,
+    borderRadius: 8,
+    backgroundColor: colors.cardBg,
     color: colors.text,
     outline: 'none',
-    boxSizing: 'border-box' as const,
-    transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+    boxSizing: 'border-box',
   },
   filterSelect: {
-    flex: '0 0 auto',
-    width: 60,
-    padding: '4px 4px',
-    fontSize: 10,
+    padding: '8px 10px',
+    fontSize: 13,
     border: `1px solid ${colors.border}`,
-    borderRadius: 4,
-    backgroundColor: colors.background,
+    borderRadius: 8,
+    backgroundColor: colors.cardBg,
     color: colors.text,
     cursor: 'pointer',
     outline: 'none',
   },
   diskList: {
     flex: 1,
-    overflow: 'hidden',
+    overflow: 'auto',
     padding: 8,
     transition: 'background-color 0.15s ease',
     boxSizing: 'border-box',
@@ -816,83 +1048,89 @@ const styles: Record<string, React.CSSProperties> = {
   },
   diskGrid: {
     display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 10,
     alignContent: 'flex-start',
   },
   diskCard: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 4,
-    padding: 8,
-    backgroundColor: colors.background,
-    borderRadius: 8,
+    gap: 6,
+    padding: 10,
+    backgroundColor: colors.cardBg,
+    borderRadius: 10,
     cursor: 'grab',
     transition: 'all 0.15s ease',
-    border: `1px solid ${colors.border}40`,
+    border: `1px solid ${colors.border}`,
   },
   diskCardInfo: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 1,
+    gap: 2,
   },
   diskCardName: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 600,
     color: colors.text,
     fontFamily: 'monospace',
   },
   diskCardSize: {
-    fontSize: 9,
+    fontSize: 11,
     color: colors.textSecondary,
   },
   emptyState: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    padding: 20,
+    gap: 8,
+    padding: 32,
     color: colors.textSecondary,
-    fontSize: 11,
+    fontSize: 13,
+  },
+  vdevHeaderRow: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    padding: '8px 0',
+    flexShrink: 0,
   },
   vdevsList: {
     flex: 1,
     overflowY: 'auto',
-    padding: 6,
+    padding: 4,
     boxSizing: 'border-box',
   },
   vdevEmptyState: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    padding: 24,
-    textAlign: 'center' as const,
+    gap: 8,
+    padding: 32,
+    textAlign: 'center',
   },
   vdevEmptyIcon: {
     marginBottom: 8,
     opacity: 0.5,
   },
   vdevEmptyTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: 600,
     color: colors.text,
   },
   vdevEmptyHint: {
-    fontSize: 12,
+    fontSize: 13,
     color: colors.textSecondary,
   },
   vdevCard: {
-    backgroundColor: colors.background,
-    borderRadius: 8,
-    marginBottom: 6,
+    backgroundColor: colors.cardBg,
+    borderRadius: 12,
+    marginBottom: 10,
     overflow: 'hidden',
     transition: 'all 0.15s ease',
-    border: `1px solid ${colors.border}40`,
+    border: `1px solid ${colors.border}`,
   },
   vdevCardDragOver: {
     border: `2px dashed ${colors.primary}`,
@@ -904,25 +1142,25 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    padding: '6px 8px',
-    backgroundColor: `${colors.border}30`,
+    padding: '10px 12px',
+    backgroundColor: `${colors.border}20`,
     borderBottom: `1px solid ${colors.border}30`,
   },
   vdevTitle: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 600,
     color: colors.text,
   },
   vdevCapacity: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.primary,
     fontWeight: 500,
     backgroundColor: `${colors.primary}10`,
-    padding: '1px 4px',
-    borderRadius: 4,
+    padding: '2px 8px',
+    borderRadius: 6,
   },
   vdevDiskCount: {
-    fontSize: 10,
+    fontSize: 12,
     color: colors.textSecondary,
     flex: 1,
   },
@@ -930,61 +1168,61 @@ const styles: Record<string, React.CSSProperties> = {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    padding: 4,
-    borderRadius: 4,
+    padding: 6,
+    borderRadius: 6,
     display: 'flex',
     alignItems: 'center',
     color: colors.textSecondary,
     transition: 'all 0.15s ease',
   },
   vdevDisks: {
-    padding: 6,
-    minHeight: 40,
+    padding: 10,
+    minHeight: 60,
     boxSizing: 'border-box',
   },
   vdevDisksGrid: {
     display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: 6,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   vdevDiskCard: {
-    position: 'relative' as const,
+    position: 'relative',
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 2,
-    padding: 6,
-    backgroundColor: colors.cardBg,
-    borderRadius: 6,
-    border: `1px solid ${colors.border}40`,
+    gap: 4,
+    padding: 8,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    border: `1px solid ${colors.border}`,
     cursor: 'grab',
     transition: 'all 0.15s ease',
   },
   vdevDiskInfo: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 1,
+    gap: 2,
   },
   vdevDiskName: {
-    fontSize: 9,
+    fontSize: 11,
     fontWeight: 600,
     color: colors.text,
     fontFamily: 'monospace',
   },
   vdevDiskSize: {
-    fontSize: 8,
+    fontSize: 10,
     color: colors.textSecondary,
   },
   vdevRemoveDiskBtn: {
-    position: 'absolute' as const,
-    top: -4,
-    right: -4,
-    width: 14,
-    height: 14,
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 18,
+    height: 18,
     backgroundColor: colors.danger,
     border: 'none',
-    borderRadius: 3,
+    borderRadius: 4,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
@@ -995,64 +1233,64 @@ const styles: Record<string, React.CSSProperties> = {
   },
   vdevEmpty: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    padding: 12,
+    gap: 6,
+    padding: 16,
     color: colors.textSecondary,
-    fontSize: 10,
+    fontSize: 12,
     border: `2px dashed ${colors.border}`,
-    borderRadius: 6,
-    minHeight: 50,
+    borderRadius: 10,
+    minHeight: 70,
   },
   vdevEmptyDragOver: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
-    padding: 12,
+    gap: 6,
+    padding: 16,
     color: colors.primary,
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: 500,
     border: `2px dashed ${colors.primary}`,
-    borderRadius: 6,
+    borderRadius: 10,
     backgroundColor: `${colors.primary}08`,
   },
   vdevTips: {
-    padding: '8px 12px',
+    padding: '10px 14px',
     borderTop: `1px solid ${colors.border}30`,
     display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 4,
+    flexDirection: 'column',
+    gap: 6,
   },
   vdevTipError: {
     display: 'flex',
     alignItems: 'center',
-    gap: 4,
-    fontSize: 11,
+    gap: 6,
+    fontSize: 12,
     color: colors.danger,
   },
   vdevTipWarning: {
     display: 'flex',
     alignItems: 'center',
-    gap: 4,
-    fontSize: 11,
+    gap: 6,
+    fontSize: 12,
     color: '#f59e0b',
   },
   addVdevButton: {
     display: 'flex',
     alignItems: 'center',
-    gap: 4,
-    padding: '5px 10px',
+    gap: 6,
+    padding: '10px 16px',
     backgroundColor: colors.primary,
     color: '#fff',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: 10,
     cursor: 'pointer',
-    fontSize: 11,
-    fontWeight: 500,
+    fontSize: 13,
+    fontWeight: 600,
     transition: 'all 0.15s ease',
     boxShadow: `0 2px 8px ${colors.primary}30`,
   },
@@ -1061,18 +1299,5 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'not-allowed',
     opacity: 0.6,
     boxShadow: 'none',
-  },
-  errorRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    padding: '10px 14px',
-    backgroundColor: 'rgba(255, 59, 48, 0.063)',
-    borderRadius: 8,
-    fontSize: 12,
-    color: '#ff3b30',
-    border: '1px solid rgba(255, 59, 48, 0.125)',
-    flexShrink: 0,
-    marginTop: 8,
   },
 }

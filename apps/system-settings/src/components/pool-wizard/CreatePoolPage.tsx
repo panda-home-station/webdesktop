@@ -90,23 +90,19 @@ export function CreatePoolPage({ onBack: _onBack, onSuccess: _onSuccess }: Creat
       }}
     >
       {/* Header */}
-      <div
-        style={{
-          padding: '16px 24px',
-          borderBottom: `1px solid ${colors.border}`,
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          backgroundColor: colors.cardBg,
-          flexShrink: 0,
-        }}
-      >
-        {!isLoading && (
-          <span style={{ fontSize: 14, color: colors.textSecondary }}>
+      {!isLoading && (
+        <div
+          style={{
+            padding: '16px 24px',
+            backgroundColor: 'transparent',
+            flexShrink: 0,
+          }}
+        >
+          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: colors.textSecondary }}>
             {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
-          </span>
-        )}
-      </div>
+          </h3>
+        </div>
+      )}
 
       {/* Loading State */}
       {isLoading && (

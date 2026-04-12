@@ -29,37 +29,49 @@ export function ReviewStep() {
 
   return (
     <div style={styles.container}>
-      <h3 style={styles.title}>评审</h3>
-      <p style={styles.description}>检查配置并创建池</p>
+      {/* 气泡框 1: 标题 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <h3 style={styles.title}>评审配置</h3>
+          <p style={styles.description}>检查以下配置并创建存储池</p>
+        </div>
+      </div>
 
       {/* Pool Summary */}
-      <PoolSummary
-        name={name}
-        topology={topology}
-        encryption={encryption}
-        encryptionType={encryptionType}
-      />
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <span style={styles.bubbleTitle}>配置摘要</span>
+        </div>
+        <div style={styles.bubbleContent}>
+          <PoolSummary
+            name={name}
+            topology={topology}
+            encryption={encryption}
+            encryptionType={encryptionType}
+          />
+        </div>
+      </div>
 
       {/* Validation Errors */}
       {!validation.isValid && (
-        <div style={styles.errorBox}>
-          <div style={styles.errorHeader}>
-            <AlertCircle size={18} />
-            请修复以下问题
+        <div style={styles.errorBubble}>
+          <AlertCircle size={18} color={colors.danger} />
+          <div>
+            <div style={styles.errorHeader}>请修复以下问题</div>
+            <ul style={styles.errorList}>
+              {Object.entries(validation.errors).map(([key, message]) => (
+                <li key={key} style={styles.errorItem}>
+                  {message}
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul style={styles.errorList}>
-            {Object.entries(validation.errors).map(([key, message]) => (
-              <li key={key} style={styles.errorItem}>
-                {message}
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 
       {/* Warnings */}
       {Object.keys(validation.warnings).length > 0 && (
-        <div style={styles.warningBox}>
+        <div style={styles.warningBubble}>
           <div style={styles.warningHeader}>注意事项</div>
           <ul style={styles.warningList}>
             {Object.entries(validation.warnings).map(([key, message]) => (
@@ -73,12 +85,12 @@ export function ReviewStep() {
 
       {/* Global Error */}
       {error && (
-        <div style={styles.errorBox}>
-          <div style={styles.errorHeader}>
-            <AlertCircle size={18} />
-            创建失败
+        <div style={styles.errorBubble}>
+          <AlertCircle size={18} color={colors.danger} />
+          <div>
+            <div style={styles.errorHeader}>创建失败</div>
+            <p style={styles.errorMessage}>{error}</p>
           </div>
-          <p style={styles.errorMessage}>{error}</p>
         </div>
       )}
 
@@ -97,7 +109,7 @@ export function ReviewStep() {
             创建中...
           </>
         ) : (
-          '创建池'
+          '创建存储池'
         )}
       </button>
     </div>
@@ -106,34 +118,59 @@ export function ReviewStep() {
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    padding: 24,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
   },
-  title: {
-    margin: '0 0 8px 0',
-    fontSize: 18,
+
+  // 气泡框基础样式
+  bubbleCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+    border: `1px solid ${colors.border}`,
+    overflow: 'hidden',
+  },
+  bubbleHeader: {
+    padding: '14px 16px',
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  bubbleTitle: {
+    fontSize: 15,
     fontWeight: 600,
     color: colors.text,
   },
+  bubbleContent: {
+    padding: 16,
+  },
+
+  // 标题和描述
+  title: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 700,
+    color: colors.text,
+  },
   description: {
-    margin: '0 0 24px 0',
+    margin: '6px 0 0 0',
     fontSize: 14,
     color: colors.textSecondary,
   },
-  errorBox: {
-    marginTop: 24,
+
+  // 错误气泡
+  errorBubble: {
+    display: 'flex',
+    gap: 12,
     padding: 16,
-    backgroundColor: '#ffebee',
+    backgroundColor: `${colors.danger}10`,
     borderRadius: 12,
     border: `1px solid ${colors.danger}30`,
   },
   errorHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
     fontSize: 14,
     fontWeight: 600,
     color: colors.danger,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   errorList: {
     margin: 0,
@@ -149,17 +186,18 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     color: colors.danger,
   },
-  warningBox: {
-    marginTop: 24,
+
+  // 警告气泡
+  warningBubble: {
     padding: 16,
-    backgroundColor: '#fff3e0',
+    backgroundColor: `${colors.warning}10`,
     borderRadius: 12,
-    border: '1px solid #ff980030',
+    border: `1px solid ${colors.warning}30`,
   },
   warningHeader: {
     fontSize: 14,
     fontWeight: 600,
-    color: '#e65100',
+    color: colors.warning,
     marginBottom: 8,
   },
   warningList: {
@@ -168,24 +206,27 @@ const styles: Record<string, React.CSSProperties> = {
   },
   warningItem: {
     fontSize: 13,
-    color: '#e65100',
+    color: colors.warning,
     marginBottom: 4,
   },
+
+  // 创建按钮
   createButton: {
-    marginTop: 24,
     width: '100%',
-    padding: '14px 24px',
+    padding: '16px 24px',
     backgroundColor: colors.primary,
     color: '#fff',
     border: 'none',
-    borderRadius: 10,
+    borderRadius: 12,
     cursor: 'pointer',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 600,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 10,
+    minHeight: 54,
+    marginTop: 8,
   },
   createButtonDisabled: {
     opacity: 0.5,

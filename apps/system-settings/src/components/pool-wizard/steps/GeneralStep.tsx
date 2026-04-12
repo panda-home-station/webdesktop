@@ -1,10 +1,11 @@
 /**
  * General Step Component
  * Pool name and encryption settings
+ * iPad-style bubble card layout
  */
 
 import React, { useState, useEffect } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Shield, Key, AlertTriangle } from 'lucide-react'
 import { ConfirmDialog } from '@desktop/components/ConfirmDialog'
 import { usePoolWizardStore } from '../store/poolWizardStore'
 import { poolService } from '@truenas/services/pool'
@@ -123,38 +124,50 @@ export function GeneralStep({ errors }: GeneralStepProps) {
 
   return (
     <div style={styles.container}>
-      {/* Pool Name */}
-      <div style={styles.compactSection}>
-        <div style={styles.fieldRow}>
-          <label style={styles.label}>池名称 *</label>
+      {/* 气泡框 1: 池名称 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <div style={styles.bubbleTitleRow}>
+            <span style={styles.bubbleTitle}>池名称</span>
+            <span style={styles.requiredBadge}>必填</span>
+          </div>
+        </div>
+        <div style={styles.bubbleContent}>
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="例如: pool1"
             style={{
-              ...styles.input,
+              ...styles.iOSInput,
               ...(errors.name ? styles.inputError : {}),
             }}
           />
+          {!errors.name && (
+            <span style={styles.hint}>仅支持字母、数字和下划线</span>
+          )}
+          {errors.name && (
+            <div style={styles.errorRow}>
+              <AlertCircle size={12} />
+              <span>{errors.name}</span>
+            </div>
+          )}
         </div>
-        {errors.name && (
-          <div style={styles.error}>
-            <AlertCircle size={12} />
-            {errors.name}
-          </div>
-        )}
-        {!errors.name && <span style={styles.hint}>仅支持字母、数字和下划线</span>}
       </div>
 
-      {/* Encryption */}
-      <div style={styles.compactSection}>
-        <div style={styles.fieldRow}>
-          <label style={styles.label}>加密</label>
+      {/* 气泡框 2: 加密选项 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <div style={styles.bubbleTitleRow}>
+            <Shield size={16} color={colors.primary} />
+            <span style={styles.bubbleTitle}>加密</span>
+          </div>
+        </div>
+        <div style={styles.bubbleContent}>
           <select
             value={encryption ? encryptionType : 'none'}
             onChange={(e) => handleEncryptionSelectChange(e.target.value)}
-            style={styles.select}
+            style={styles.iOSSelect}
           >
             <option value="none">无加密</option>
             <option value="software">软件加密</option>
@@ -163,15 +176,20 @@ export function GeneralStep({ errors }: GeneralStepProps) {
         </div>
       </div>
 
-      {/* Encryption Standard */}
+      {/* 气泡框 3: 加密标准 (条件显示) */}
       {encryption && encryptionType === 'software' && (
-        <div style={styles.compactSection}>
-          <div style={styles.fieldRow}>
-            <label style={styles.label}>加密标准</label>
+        <div style={styles.bubbleCard}>
+          <div style={styles.bubbleHeader}>
+            <div style={styles.bubbleTitleRow}>
+              <Key size={16} color={colors.primary} />
+              <span style={styles.bubbleTitle}>加密标准</span>
+            </div>
+          </div>
+          <div style={styles.bubbleContent}>
             <select
               value={encryptionAlgorithm}
               onChange={(e) => setEncryptionAlgorithm(e.target.value)}
-              style={styles.select}
+              style={styles.iOSSelect}
             >
               {algorithmOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -183,57 +201,65 @@ export function GeneralStep({ errors }: GeneralStepProps) {
         </div>
       )}
 
-      {/* SED Password */}
+      {/* 气泡框 4: SED 密码 (条件显示) */}
       {encryption && encryptionType === 'sed' && (
-        <div style={styles.compactSection}>
-          <div style={styles.fieldRow}>
-            <label style={styles.label}>SED 密码 *</label>
+        <div style={styles.bubbleCard}>
+          <div style={styles.bubbleHeader}>
+            <div style={styles.bubbleTitleRow}>
+              <Key size={16} color={colors.primary} />
+              <span style={styles.bubbleTitle}>SED 密码</span>
+              <span style={styles.requiredBadge}>必填</span>
+            </div>
+          </div>
+          <div style={styles.bubbleContent}>
             <input
               type="password"
               value={sedPassword || ''}
               onChange={(e) => setSedPassword(e.target.value || null)}
               placeholder="至少8个字符"
               style={{
-                ...styles.input,
+                ...styles.iOSInput,
                 ...(errors.sedPassword ? styles.inputError : {}),
               }}
             />
+            {errors.sedPassword && (
+              <div style={styles.errorRow}>
+                <AlertCircle size={12} />
+                <span>{errors.sedPassword}</span>
+              </div>
+            )}
+            <span style={styles.hint}>此密码将用于解锁自加密硬盘，请妥善保管</span>
           </div>
-          {errors.sedPassword && (
-            <div style={styles.error}>
-              <AlertCircle size={12} />
-              {errors.sedPassword}
-            </div>
-          )}
-          <span style={styles.hint}>此密码将用于解锁自加密硬盘，请妥善保管</span>
         </div>
       )}
 
-      {/* Non-Unique Serial Disks Warning */}
+      {/* 警告气泡框: 非唯一序列号硬盘 */}
       {nonUniqueSerialDisksCount > 0 && (
-        <div style={styles.warningSection}>
-          <div style={styles.warningHeader}>
-            <AlertCircle size={14} style={{ color: colors.warning }} />
+        <div style={styles.warningBubble}>
+          <div style={styles.warningIcon}>
+            <AlertTriangle size={20} color={colors.warning} />
+          </div>
+          <div style={styles.warningContent}>
             <span style={styles.warningTitle}>
               检测到 {nonUniqueSerialDisksCount} 块硬盘序列号非唯一
             </span>
-          </div>
-          <p style={styles.warningText}>
-            可能因线缆问题导致，添加到池中可能丢失数据
-          </p>
-          <div style={styles.radioGroup}>
-            <RadioOption
-              label="不允许"
-              description="推荐，将排除这些硬盘"
-              checked={!allowNonUniqueSerialDisks}
-              onChange={() => setAllowNonUniqueSerialDisks(false)}
-            />
-            <RadioOption
-              label="允许"
-              description="不推荐，存在数据风险"
-              checked={allowNonUniqueSerialDisks}
-              onChange={() => setAllowNonUniqueSerialDisks(true)}
-            />
+            <span style={styles.warningText}>
+              可能因线缆问题导致，添加到池中可能丢失数据
+            </span>
+            <div style={styles.radioGroup}>
+              <RadioOption
+                label="不允许"
+                description="推荐，将排除这些硬盘"
+                checked={!allowNonUniqueSerialDisks}
+                onChange={() => setAllowNonUniqueSerialDisks(false)}
+              />
+              <RadioOption
+                label="允许"
+                description="不推荐，存在数据风险"
+                checked={allowNonUniqueSerialDisks}
+                onChange={() => setAllowNonUniqueSerialDisks(true)}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -285,126 +311,164 @@ function RadioOption({
   )
 }
 
+// ════════════════════════════════════════════════════════════
+// iPad-style Bubble Card Layout
+// ════════════════════════════════════════════════════════════
 const styles: Record<string, React.CSSProperties> = {
   container: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+  },
+
+  // 气泡框基础样式
+  bubbleCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+    border: `1px solid ${colors.border}`,
+    overflow: 'hidden',
+  },
+  bubbleHeader: {
     padding: '12px 16px',
+    borderBottom: `1px solid ${colors.border}`,
   },
-  compactSection: {
-    marginBottom: 12,
-  },
-  fieldRow: {
+  bubbleTitleRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
   },
-  label: {
-    fontSize: 13,
+  bubbleTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: colors.text,
+  },
+  requiredBadge: {
+    fontSize: 11,
     fontWeight: 500,
-    color: colors.text,
-    minWidth: 72,
+    color: colors.primary,
+    backgroundColor: `${colors.primary}15`,
+    padding: '2px 8px',
+    borderRadius: 10,
   },
-  input: {
-    flex: 1,
-    padding: '8px 10px',
-    fontSize: 14,
+  bubbleContent: {
+    padding: 16,
+  },
+
+  // iOS 风格输入框
+  iOSInput: {
+    width: '100%',
+    padding: '14px 16px',
+    fontSize: 16,
     border: `1px solid ${colors.border}`,
-    borderRadius: 6,
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    backgroundColor: colors.cardBg,
+    borderRadius: 10,
+    backgroundColor: colors.background,
     color: colors.text,
+    outline: 'none',
+    boxSizing: 'border-box',
+    transition: 'border-color 0.15s',
+  },
+  iOSSelect: {
+    width: '100%',
+    padding: '14px 16px',
+    fontSize: 16,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+    color: colors.text,
+    outline: 'none',
+    cursor: 'pointer',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238e8e93' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 16px center',
   },
   inputError: {
-    border: `1px solid ${colors.danger}`,
+    borderColor: colors.danger,
   },
-  select: {
-    flex: 1,
-    padding: '8px 10px',
-    fontSize: 14,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 6,
-    outline: 'none',
-    boxSizing: 'border-box' as const,
-    backgroundColor: colors.cardBg,
-    cursor: 'pointer',
-    color: colors.text,
-    appearance: 'none' as const,
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%238e8e93' d='M5 7L1 3h8z'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 8px center',
-  },
-  error: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
-    fontSize: 12,
-    color: colors.danger,
-  },
+
+  // 提示和错误
   hint: {
     display: 'block',
-    marginTop: 4,
-    marginLeft: 84,
-    fontSize: 11,
+    marginTop: 8,
+    fontSize: 12,
     color: colors.textSecondary,
   },
-  warningSection: {
-    marginTop: 8,
-    padding: '10px 12px',
-    backgroundColor: `${colors.warning}10`,
-    border: `1px solid ${colors.warning}30`,
-    borderRadius: 8,
-  },
-  warningHeader: {
+  errorRow: {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
+    marginTop: 8,
+    fontSize: 12,
+    color: colors.danger,
+  },
+
+  // 警告气泡框
+  warningBubble: {
+    display: 'flex',
+    gap: 12,
+    padding: 16,
+    backgroundColor: `${colors.warning}10`,
+    borderRadius: 16,
+    border: `1px solid ${colors.warning}30`,
+  },
+  warningIcon: {
+    flexShrink: 0,
+    marginTop: 2,
+  },
+  warningContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
   },
   warningTitle: {
-    fontSize: 12,
-    fontWeight: 500,
+    fontSize: 14,
+    fontWeight: 600,
     color: colors.text,
   },
   warningText: {
-    margin: '4px 0 8px 0',
-    fontSize: 11,
+    fontSize: 12,
     color: colors.textSecondary,
   },
   radioGroup: {
     display: 'flex',
-    flexDirection: 'row' as const,
-    gap: 8,
+    gap: 12,
+    marginTop: 8,
   },
   radioOption: {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
-    gap: 6,
-    padding: '8px 10px',
+    gap: 10,
+    padding: '12px 14px',
     border: `1px solid ${colors.border}`,
-    borderRadius: 6,
+    borderRadius: 10,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     backgroundColor: colors.cardBg,
   },
   radioOptionSelected: {
-    border: `1px solid ${colors.primary}`,
+    border: `2px solid ${colors.primary}`,
     backgroundColor: `${colors.primary}10`,
   },
   radioInput: {
     accentColor: colors.primary,
+    width: 18,
+    height: 18,
   },
   radioContent: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
+    gap: 2,
   },
   radioLabel: {
-    fontSize: 12,
-    fontWeight: 500,
+    fontSize: 14,
+    fontWeight: 600,
     color: colors.text,
   },
   radioDescription: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.textSecondary,
   },
 }
