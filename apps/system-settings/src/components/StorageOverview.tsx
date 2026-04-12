@@ -30,7 +30,7 @@ export function StorageOverview({ view, onViewChange, pools, datasets, onPoolCli
     onViewChange('overview')
     // Refresh pools to show the newly created pool
     try {
-      const updatedPools = await poolService.query([], { extra: { is_upgraded: true } } as unknown as undefined)
+      const updatedPools = await poolService.query([], { extra: { is_upgraded: true } })
       onPoolsRefresh?.(updatedPools as Pool[])
     } catch (err) {
       console.error('Failed to refresh pools:', err)

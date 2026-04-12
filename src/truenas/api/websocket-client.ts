@@ -27,6 +27,8 @@ export interface IncomingMessage {
   id?: string
   jsonrpc?: string
   result?: unknown
+  method?: string
+  params?: unknown
   error?: {
     code: number
     message: string
@@ -267,14 +269,79 @@ export class TrueNASWebSocketClient {
 
   /**
    * Handle event notification message
+   * TrueNAS sends events in two formats:
+   * 1. { method: 'event_name', params: data } - used for collection_update, etc.
+   * 2. { id: 'event_name', result: data } - used for some other events
+   *
+   * For collection_update events, params contains:
+   * { msg: 'ADDED'|'CHANGED'|'REMOVED', collection: 'pool.query', id: ..., fields: {...} }
    */
   private handleEventMessage(message: IncomingMessage): void {
-    // TODO: Implement event handling
-    // Events will have `id` and `result` with event data
-    if (!message.id && message.result) {
-      // This is an event notification
-      // Event format: { id: 'event_name', result: event_data }
-      this.log('Event received:', message)
+    // Format 1: { method: 'event_name', params: data }
+    if (message.method && message.params !== undefined) {
+      const eventName = message.method
+      const eventData = message.params
+
+      this.log(`Event received: method='${eventName}'`, eventData)
+
+      // Dispatch to event listeners registered for this event name
+      const listeners = this.eventListeners.get(eventName)
+      if (listeners) {
+        this.log(`Dispatching event '${eventName}' to ${listeners.size} listener(s)`)
+        listeners.forEach((callback) => {
+          try {
+            callback(eventData)
+          } catch (error) {
+            this.log(`Error in event listener for '${eventName}':`, error)
+          }
+        })
+      }
+
+      // For collection_update events, also dispatch to listeners for the specific collection
+      // The collection name is in params.collection (e.g., 'pool.query', 'disk.query')
+      if (eventName === 'collection_update' && typeof eventData === 'object' && eventData !== null) {
+        const collectionEvent = eventData as { collection?: string }
+        if (collectionEvent.collection) {
+          const collectionListeners = this.eventListeners.get(collectionEvent.collection)
+          if (collectionListeners) {
+            this.log(`Dispatching collection_update for '${collectionEvent.collection}' to ${collectionListeners.size} listener(s)`)
+            collectionListeners.forEach((callback) => {
+              try {
+                callback(eventData)
+              } catch (error) {
+                this.log(`Error in collection listener for '${collectionEvent.collection}':`, error)
+              }
+            })
+          }
+        }
+      }
+      return
+    }
+
+    // Format 2: { id: 'event_name', result: data }
+    if (message.id && message.result !== undefined) {
+      // Skip if this is a response to a pending request
+      if (this.pendingRequests.has(message.id as string)) {
+        return
+      }
+
+      const eventName = message.id as string
+      const eventData = message.result
+
+      this.log(`Event received: id='${eventName}'`, eventData)
+
+      // Dispatch to event listeners
+      const listeners = this.eventListeners.get(eventName)
+      if (listeners) {
+        this.log(`Dispatching event '${eventName}' to ${listeners.size} listener(s)`)
+        listeners.forEach((callback) => {
+          try {
+            callback(eventData)
+          } catch (error) {
+            this.log(`Error in event listener for '${eventName}':`, error)
+          }
+        })
+      }
     }
   }
 
@@ -573,21 +640,51 @@ export class TrueNASWebSocketClient {
 
   /**
    * Subscribe to an event
+   * This registers a local callback AND tells TrueNAS backend to send events for this channel
    */
   subscribe(event: string, callback: (data: unknown) => void): () => void {
+    this.log(`subscribe('${event}') called`)
+
+    // Register callback locally
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set())
     }
     this.eventListeners.get(event)!.add(callback)
 
+    // Tell TrueNAS backend to subscribe to this event channel
+    // Only send subscribe if we don't already have listeners for this event
+    if (this.eventListeners.get(event)!.size === 1) {
+      this.log(`First listener for '${event}', sending core.subscribe`)
+      this.sendSubscription(event, true).catch((error) => {
+        this.log(`Failed to subscribe to '${event}':`, error)
+      })
+    } else {
+      this.log(`Additional listener for '${event}', not sending core.subscribe (already subscribed)`)
+    }
+
     // Return unsubscribe function
     return () => {
+      this.log(`unsubscribe('${event}') called`)
       this.eventListeners.get(event)?.delete(callback)
-      // Clean up empty sets
+      // Clean up empty sets and unsubscribe from backend
       if (this.eventListeners.get(event)?.size === 0) {
         this.eventListeners.delete(event)
+        this.log(`Last listener removed for '${event}', sending core.unsubscribe`)
+        this.sendSubscription(event, false).catch((error) => {
+          this.log(`Failed to unsubscribe from '${event}':`, error)
+        })
       }
     }
+  }
+
+  /**
+   * Send subscription/unsubscription request to TrueNAS backend
+   */
+  private async sendSubscription(event: string, subscribe: boolean): Promise<void> {
+    const method = subscribe ? 'core.subscribe' : 'core.unsubscribe'
+    this.log(`sendSubscription: calling ${method}('${event}')`)
+    await this.call(method, [event])
+    this.log(`sendSubscription: ${subscribe ? 'Subscribed' : 'Unsubscribed'} to '${event}' successfully`)
   }
 
   /**

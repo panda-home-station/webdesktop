@@ -65,7 +65,7 @@ export default function SystemSettings() {
         const [sysInfo, ifaces, poolsData, disksData, datasetsData] = await Promise.all([
           systemService.getSystemInfo(),
           systemService.getNetworkInterfaces(),
-          poolService.query([], { extra: { is_upgraded: true } } as unknown as undefined),
+          poolService.query([], { extra: { is_upgraded: true } }),
           diskService.query([], { extra: { pools: true } }),
           datasetService.query(),
         ])
@@ -115,7 +115,7 @@ export default function SystemSettings() {
 
     const refreshPools = async () => {
       try {
-        const poolsData = await poolService.query([], { extra: { is_upgraded: true } } as unknown as undefined)
+        const poolsData = await poolService.query([], { extra: { is_upgraded: true } })
         setPools(poolsData as Pool[])
       } catch (err) {
         console.error('Failed to refresh pools:', err)

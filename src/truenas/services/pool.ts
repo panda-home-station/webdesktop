@@ -24,8 +24,8 @@ export class PoolService {
   /**
    * Query pools with optional filters
    */
-  async query(filters?: unknown[][]): Promise<Pool[]> {
-    return truenasApi.call('pool.query', filters || []) as Promise<Pool[]>;
+  async query(filters?: unknown[][], extra?: unknown): Promise<Pool[]> {
+    return truenasApi.call('pool.query', filters || [], extra) as Promise<Pool[]>;
   }
 
   /**

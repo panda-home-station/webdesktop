@@ -28,7 +28,7 @@ describe('PoolService', () => {
 
       const result = await poolService.query()
 
-      expect(truenasApi.call).toHaveBeenCalledWith('pool.query', [])
+      expect(truenasApi.call).toHaveBeenCalledWith('pool.query', [], undefined)
       expect(result).toEqual(mockPools)
     })
 
@@ -39,7 +39,7 @@ describe('PoolService', () => {
 
       const result = await poolService.query(filters)
 
-      expect(truenasApi.call).toHaveBeenCalledWith('pool.query', filters)
+      expect(truenasApi.call).toHaveBeenCalledWith('pool.query', filters, undefined)
       expect(result).toHaveLength(1)
     })
   })
