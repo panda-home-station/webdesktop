@@ -4,7 +4,7 @@
  */
 
 import React from 'react'
-import { AlertCircle, Zap, Trash2 } from 'lucide-react'
+import { AlertCircle, AlertTriangle, Zap, Trash2 } from 'lucide-react'
 import { VDevType } from '@truenas/types/vdev-enum-types'
 import { DetailsDisk } from '@truenas/types/disk-types'
 import { usePoolWizardStore, LAYOUT_OPTIONS } from '../store/poolWizardStore'
@@ -20,6 +20,21 @@ interface VdevStepProps {
   description: string
   errors: Record<string, string>
   warnings: Record<string, string>
+}
+
+// 检查 VDEV 中磁盘大小是否一致（使用 10MB 阈值，与 webui 一致）
+const MiB = 1024 * 1024
+function hasMixedDiskSizes(disks: DetailsDisk[]): boolean {
+  if (disks.length <= 1) return false
+  const firstDisk = disks[0]
+  const threshold = 10 * MiB
+  for (const disk of disks) {
+    if (disk.size < firstDisk.size + threshold && disk.size > firstDisk.size - threshold) {
+      continue
+    }
+    return true
+  }
+  return false
 }
 
 export function VdevStep({ type, title, description, errors, warnings }: VdevStepProps) {
@@ -222,6 +237,13 @@ export function VdevStep({ type, title, description, errors, warnings }: VdevSte
                       </div>
                     ))}
                   </div>
+                  {/* 混合磁盘大小警告 */}
+                  {hasMixedDiskSizes(category.vdevs.flat()) && (
+                    <div style={styles.mixedSizeWarning}>
+                      <AlertTriangle size={12} color={colors.warning} />
+                      <span>在 vdev 中混合不同大小的磁盘是不建议的</span>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -459,6 +481,19 @@ const styles: Record<string, React.CSSProperties> = {
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
     maxWidth: '60%',
+  },
+
+  // 混合磁盘大小警告
+  mixedSizeWarning: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 12px',
+    fontSize: 12,
+    color: colors.warning,
+    backgroundColor: `${colors.warning}10`,
+    borderRadius: 8,
+    border: `1px solid ${colors.warning}30`,
   },
 
   // 手动选择

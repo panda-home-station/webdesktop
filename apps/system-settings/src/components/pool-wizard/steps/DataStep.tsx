@@ -123,11 +123,19 @@ const calculateVdevRawCapacity = (
   }
 }
 
-// 检查 VDEV 中磁盘大小是否一致（预留）
-const _hasMixedDiskSizes = (disks: DetailsDisk[]): boolean => {
+// 检查 VDEV 中磁盘大小是否一致（使用 10MB 阈值，与 webui 一致）
+const MiB = 1024 * 1024
+const hasMixedDiskSizes = (disks: DetailsDisk[]): boolean => {
   if (disks.length <= 1) return false
-  const firstSize = disks[0].size
-  return disks.some((disk) => disk.size !== firstSize)
+  const firstDisk = disks[0]
+  const threshold = 10 * MiB
+  for (const disk of disks) {
+    if (disk.size < firstDisk.size + threshold && disk.size > firstDisk.size - threshold) {
+      continue
+    }
+    return true
+  }
+  return false
 }
 
 export function DataStep({ errors }: DataStepProps) {
@@ -517,6 +525,13 @@ export function DataStep({ errors }: DataStepProps) {
                       </div>
                     )}
                   </div>
+                  {/* 混合磁盘大小警告 */}
+                  {vdev.length >= 2 && hasMixedDiskSizes(vdev) && (
+                    <div style={styles.vdevWarning}>
+                      <AlertTriangle size={12} color={colors.warning} />
+                      <span>在 vdev 中混合不同大小的磁盘是不建议的</span>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -1054,6 +1069,15 @@ const styles: Record<string, React.CSSProperties> = {
     border: `2px dashed ${colors.primary}`,
     borderRadius: 8,
     backgroundColor: `${colors.primary}08`,
+  },
+  vdevWarning: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 10px',
+    fontSize: 11,
+    color: colors.warning,
+    borderTop: `1px solid ${colors.border}30`,
   },
 
   // 添加按钮
