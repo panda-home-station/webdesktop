@@ -13,6 +13,7 @@ import { usePoolWizardStore, LAYOUT_OPTIONS } from '../store/poolWizardStore'
 import { minDisksPerLayout } from '../store/poolWizardStore'
 import { colors } from '@apps/system-settings/styles/theme'
 import { DiskIcon } from '../components/DiskIcon'
+import { formatBytes } from '@truenas/utils/storage.utils'
 
 interface DataStepProps {
   errors: Record<string, string>
@@ -491,9 +492,10 @@ export function DataStep({ errors }: DataStepProps) {
                               e.dataTransfer.setData('disk', JSON.stringify(disk))
                             }}
                           >
-                            <DiskIcon disk={disk} width={32} height={36} />
+                            <DiskIcon disk={disk} width={36} height={40} />
                             <div style={styles.vdevDiskInfo}>
                               <span style={styles.vdevDiskName}>{disk.devname}</span>
+                              <span style={styles.vdevDiskSize}>{formatBytes(disk.size)}</span>
                             </div>
                             <button
                               type="button"
@@ -504,7 +506,7 @@ export function DataStep({ errors }: DataStepProps) {
                               }}
                               style={styles.vdevRemoveDiskBtn}
                             >
-                              <X size={8} />
+                              <X size={12} />
                             </button>
                           </div>
                         ))}
@@ -572,11 +574,12 @@ function DiskCard({
 
       {/* Middle: Disk Info */}
       <div style={diskCardStyles.infoContainer}>
-        {/* Size - prominent */}
-        <div style={diskCardStyles.sizeRow}>
+        {/* Row 1: Name + Size */}
+        <div style={diskCardStyles.nameSizeRow}>
+          <span style={diskCardStyles.diskName}>{disk.devname}</span>
           <span style={diskCardStyles.size}>{formatSize(disk.size || 0)}</span>
         </div>
-        {/* Details row */}
+        {/* Row 2: Details */}
         <div style={diskCardStyles.detailsRow}>
           <span
             style={{
@@ -621,12 +624,19 @@ const diskCardStyles: Record<string, React.CSSProperties> = {
     gap: 4,
     minWidth: 0,
   },
-  sizeRow: {
+  nameSizeRow: {
     display: 'flex',
-    alignItems: 'center',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  diskName: {
+    fontSize: 14,
+    fontWeight: 700,
+    color: colors.text,
+    fontFamily: 'monospace',
   },
   size: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 600,
     color: colors.text,
   },
@@ -970,36 +980,41 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 2,
-    padding: 6,
+    gap: 4,
+    padding: 10,
     backgroundColor: colors.background,
-    borderRadius: 6,
+    borderRadius: 8,
     border: `1px solid ${colors.border}`,
     cursor: 'grab',
     transition: 'all 0.15s ease',
-    minHeight: 54,
+    minHeight: 72,
   },
   vdevDiskInfo: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
-    gap: 1,
+    gap: 2,
   },
   vdevDiskName: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 600,
     color: colors.text,
     fontFamily: 'monospace',
   },
+  vdevDiskSize: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    fontFamily: 'system-ui, sans-serif',
+  },
   vdevRemoveDiskBtn: {
     position: 'absolute',
-    top: -4,
-    right: -4,
-    width: 14,
-    height: 14,
+    top: -6,
+    right: -6,
+    width: 18,
+    height: 18,
     backgroundColor: colors.danger,
     border: 'none',
-    borderRadius: 3,
+    borderRadius: 4,
     cursor: 'pointer',
     display: 'flex',
     alignItems: 'center',
