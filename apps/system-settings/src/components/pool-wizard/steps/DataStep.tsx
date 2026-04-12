@@ -4,7 +4,7 @@
  * Redesigned with compact, efficient layout
  */
 
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Plus, Trash2, Search, X, HardDrive, Layers, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { VDevType, CreateVdevLayout } from '@truenas/types/vdev-enum-types'
 import { DetailsDisk, getDiskTypeLabel, getDiskBusLabel } from '@truenas/types/disk-types'
@@ -259,10 +259,27 @@ export function DataStep({ errors }: DataStepProps) {
     return Array.from(sizes).sort((a, b) => a - b)
   }, [availableDisks])
 
-  // VDEVs state
+  // VDEVs state - 初始化时同步 store 中的 vdevs
   const [vdevs, setVdevs] = useState<DetailsDisk[][]>(() => {
     return category.vdevs.length > 0 ? category.vdevs : []
   })
+
+  // 同步 category.vdevs 到本地 vdevs 状态
+  // 解决布局切换或步骤返回时，category.vdevs 被清空但本地 vdevs 未同步的问题
+  useEffect(() => {
+    // 如果 category.vdevs 被重置为空，但本地 vdevs 还有数据，说明是布局切换导致的不一致
+    if (category.vdevs.length === 0 && vdevs.length > 0) {
+      setVdevs([])
+    }
+    // 如果 category.vdevs 有数据且与本地 vdevs 不同步（步骤返回场景），以 store 为准
+    else if (category.vdevs.length > 0) {
+      const storeVdevsStr = JSON.stringify(category.vdevs)
+      const localVdevsStr = JSON.stringify(vdevs)
+      if (storeVdevsStr !== localVdevsStr) {
+        setVdevs(category.vdevs)
+      }
+    }
+  }, [category.vdevs, vdevs])
 
   const addVdev = () => {
     setVdevs([...vdevs, []])
