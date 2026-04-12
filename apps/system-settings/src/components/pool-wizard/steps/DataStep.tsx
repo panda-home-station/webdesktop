@@ -334,6 +334,16 @@ export function DataStep({ errors }: DataStepProps) {
 
   return (
     <div style={styles.container}>
+      {/* 标题气泡框 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <div style={styles.bubbleTitleRow}>
+            <h3 style={styles.title}>数据 Vdev</h3>
+          </div>
+          <p style={styles.description}>配置池的数据存储设备（必填）</p>
+        </div>
+      </div>
+
       {/* 存储布局选择 */}
       <div style={styles.bubbleCard}>
         <div style={styles.bubbleHeader}>
@@ -751,6 +761,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 14,
     fontWeight: 600,
     color: colors.text,
+  },
+  title: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 700,
+    color: colors.text,
+  },
+  description: {
+    margin: '6px 0 0 0',
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   bubbleContent: {
     padding: 12,
