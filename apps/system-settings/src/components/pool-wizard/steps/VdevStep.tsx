@@ -285,10 +285,8 @@ export function VdevStep({ type, title, description, errors, warnings }: VdevSte
     <div style={styles.container}>
       {/* 气泡框 1: 标题和描述 */}
       <div style={styles.bubbleCard}>
-        <div style={styles.bubbleHeader}>
-          <div style={styles.bubbleTitleRow}>
-            <h3 style={styles.title}>{title}</h3>
-          </div>
+        <div style={styles.titleBubbleHeader}>
+          <h3 style={styles.title}>{title}</h3>
           <p style={styles.description}>{description}</p>
         </div>
       </div>
@@ -757,6 +755,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  titleBubbleHeader: {
+    padding: '10px 14px',
+    borderBottom: `1px solid ${colors.border}`,
   },
   bubbleTitleRow: {
     display: 'flex',
