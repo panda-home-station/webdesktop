@@ -100,8 +100,12 @@ const calculateVdevRawCapacity = (
   switch (layout) {
     case CreateVdevLayout.Stripe:
       return totalSize
-    case CreateVdevLayout.Mirror:
-      return disks[0]?.size || 0
+    case CreateVdevLayout.Mirror: {
+      // MIRROR uses the smallest disk's size
+      const smallestDiskMirror = disks.reduce((min, disk) =>
+        (disk.size || 0) < (min.size || 0) ? disk : min, disks[0])
+      return smallestDiskMirror?.size || 0
+    }
     case CreateVdevLayout.Raidz1:
       return ((disks.reduce((min, d) => (d.size || 0) < (min.size || 0) ? d : min, disks[0])).size || 0) * (diskCount - 1)
     case CreateVdevLayout.Raidz2:

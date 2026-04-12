@@ -6,7 +6,7 @@
 import React from 'react'
 import { VDevType, vdevTypeLabels } from '@truenas/types/vdev-enum-types'
 import { PoolManagerTopology } from '../store/poolWizardStore'
-import { getNonEmptyCategories, formatBytes } from '../utils/topology-utils'
+import { getNonEmptyCategories, formatBytes, calculateVdevUsableCapacity } from '../utils/topology-utils'
 import { colors } from '@apps/system-settings/styles/theme'
 
 interface PoolSummaryProps {
@@ -32,7 +32,7 @@ export function PoolSummary({
   const getCategoryStats = (category: PoolManagerTopology[VDevType]) => {
     const totalDisks = category.vdevs.reduce((sum, vdev) => sum + vdev.length, 0)
     const totalSize = category.vdevs.reduce(
-      (sum, vdev) => sum + vdev.reduce((s, d) => s + d.size, 0),
+      (sum, vdev) => sum + calculateVdevUsableCapacity(vdev, category.layout ?? null),
       0
     )
     return { totalDisks, totalSize }
@@ -91,7 +91,7 @@ export function PoolSummary({
                   {/* Vdev breakdown */}
                   <div style={styles.vdevList}>
                     {category.vdevs.map((vdev, index) => {
-                      const vdevSize = vdev.reduce((s, d) => s + d.size, 0)
+                      const vdevSize = calculateVdevUsableCapacity(vdev, category.layout ?? null)
                       return (
                         <div key={index} style={styles.vdevItem}>
                           <span style={styles.vdevLabel}>
