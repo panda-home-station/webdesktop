@@ -491,15 +491,17 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 10,
     padding: '12px 14px',
-    border: `1px solid ${colors.border}`,
+    border: `2px solid transparent`,
     borderRadius: 10,
     cursor: 'pointer',
     transition: 'all 0.15s ease',
     backgroundColor: colors.cardBg,
+    boxSizing: 'border-box',
   },
   radioOptionSelected: {
     border: `2px solid ${colors.primary}`,
     backgroundColor: `${colors.primary}10`,
+    boxSizing: 'border-box',
   },
   radioInput: {
     accentColor: colors.primary,
