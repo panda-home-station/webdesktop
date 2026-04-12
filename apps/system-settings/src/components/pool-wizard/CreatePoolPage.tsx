@@ -18,16 +18,29 @@ interface CreatePoolPageProps {
   onSuccess: () => void
 }
 
-export function CreatePoolPage({ onBack: _onBack, onSuccess: _onSuccess }: CreatePoolPageProps) {
+export function CreatePoolPage({ onBack: _onBack, onSuccess }: CreatePoolPageProps) {
   const {
     currentStep,
     totalSteps,
     isLoading,
+    createdSuccessfully,
     initialize,
     reset,
     nextStep,
     prevStep,
   } = usePoolWizardStore()
+
+  // Handle pool creation success - navigate back when pool is created
+  useEffect(() => {
+    if (createdSuccessfully) {
+      // Small delay to let the UI show success state briefly
+      const timer = setTimeout(() => {
+        onSuccess()
+        reset()
+      }, 1000)
+      return () => clearTimeout(timer)
+    }
+  }, [createdSuccessfully, onSuccess, reset])
 
   // Initialize on mount
   useEffect(() => {

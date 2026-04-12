@@ -452,7 +452,7 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundPosition: 'right 16px center',
   },
   inputError: {
-    borderColor: colors.danger,
+    border: `1px solid ${colors.danger}`,
     backgroundColor: `${colors.danger}08`,
     boxShadow: `0 0 0 3px ${colors.danger}15`,
   },

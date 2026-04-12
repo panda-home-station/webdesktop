@@ -6,6 +6,7 @@
  */
 
 import { TrueNASWebSocketClient, ConnectionState } from './websocket-client'
+import { Job } from '../../shared/types/job-types';
 
 let wsClient: TrueNASWebSocketClient | null = null
 
@@ -50,6 +51,15 @@ export const truenasApi = {
   async call(method: string, ...params: unknown[]): Promise<unknown> {
     const client = getTrueNASClient()
     return client.call(method, params)
+  },
+
+  /**
+   * Call a TrueNAS API job method
+   * Returns a Promise that resolves with the job result
+   */
+  job<T>(method: string, ...params: unknown[]): Promise<Job<T>> {
+    const client = getTrueNASClient()
+    return client.job<T>(method, params)
   },
 
   /**

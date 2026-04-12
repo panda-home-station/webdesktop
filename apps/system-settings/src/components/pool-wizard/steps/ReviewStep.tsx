@@ -3,11 +3,12 @@
  * Review configuration and create pool
  */
 
-import React from 'react'
+import React, { useState } from 'react'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { usePoolWizardStore } from '../store/poolWizardStore'
 import { PoolSummary } from '../components/PoolSummary'
 import { validateAllSteps } from '../utils/validation'
+import { ConfirmDialog } from '@desktop/components/ConfirmDialog'
 import { colors } from '@apps/system-settings/styles/theme'
 
 export function ReviewStep() {
@@ -17,14 +18,26 @@ export function ReviewStep() {
     encryption,
     encryptionType,
     isCreating,
+    createdSuccessfully,
     error,
     createPool,
   } = usePoolWizardStore()
 
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+
   const validation = validateAllSteps(usePoolWizardStore.getState())
 
-  const handleCreate = async () => {
-    await createPool()
+  const handleCreate = () => {
+    setShowConfirmDialog(true)
+  }
+
+  const handleConfirm = async () => {
+    setShowConfirmDialog(false)
+    try {
+      await createPool()
+    } catch {
+      // Error is handled in store
+    }
   }
 
   return (
@@ -97,10 +110,11 @@ export function ReviewStep() {
       {/* Create Button */}
       <button
         onClick={handleCreate}
-        disabled={!validation.isValid || isCreating}
+        disabled={!validation.isValid || isCreating || createdSuccessfully}
         style={{
           ...styles.createButton,
-          ...(!validation.isValid || isCreating ? styles.createButtonDisabled : {}),
+          ...(!validation.isValid || isCreating || createdSuccessfully ? styles.createButtonDisabled : {}),
+          ...(createdSuccessfully ? styles.createButtonSuccess : {}),
         }}
       >
         {isCreating ? (
@@ -108,10 +122,24 @@ export function ReviewStep() {
             <Loader2 size={18} className="spin" />
             创建中...
           </>
+        ) : createdSuccessfully ? (
+          '存储池已创建'
         ) : (
           '创建存储池'
         )}
       </button>
+
+      {/* Confirmation Dialog */}
+      <ConfirmDialog
+        open={showConfirmDialog}
+        title="警告"
+        message="所有添加的磁盘上的内容将被擦除。确定要继续吗？"
+        confirmText="确认"
+        cancelText="取消"
+        onConfirm={handleConfirm}
+        onCancel={() => setShowConfirmDialog(false)}
+        dangerous={true}
+      />
     </div>
   )
 }
@@ -231,5 +259,8 @@ const styles: Record<string, React.CSSProperties> = {
   createButtonDisabled: {
     opacity: 0.5,
     cursor: 'not-allowed',
+  },
+  createButtonSuccess: {
+    backgroundColor: colors.success,
   },
 }

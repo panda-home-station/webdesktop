@@ -14,6 +14,7 @@
  */
 
 import { environment } from '../../environments/environment';
+import { Job } from '../../shared/types/job-types';
 
 export interface WebSocketMessage {
   jsonrpc: string
@@ -533,6 +534,41 @@ export class TrueNASWebSocketClient {
         reject(error)
       }
     })
+  }
+
+  /**
+   * Make a job call to TrueNAS API
+   * Returns a Promise that resolves with the job result
+   */
+  async job<T>(method: string, params?: unknown[]): Promise<Job<T>> {
+    // First, call the method - it returns a job result immediately
+    const result = await this.call(method, params);
+
+    // The result contains the job info with an id
+    const jobResult = result as { id: number };
+
+    // Subscribe to job events - TrueNAS sends events on 'method.job_id' channel
+    return new Promise((resolve, reject) => {
+      const unsubscribe = this.subscribe(`${method}.${jobResult.id}`, (data) => {
+        const eventData = data as { msg: string; job?: Job<T> };
+
+        if (eventData.msg === 'changed' && eventData.job) {
+          // Job progress update - we could emit this but for simplicity we just track it
+        } else if (eventData.msg === 'finished') {
+          // Job finished
+          unsubscribe();
+          if (eventData.job) {
+            if (eventData.job.state === 'Failed') {
+              reject(new Error(eventData.job.error?.message || 'Job failed'));
+            } else {
+              resolve(eventData.job);
+            }
+          } else {
+            resolve(eventData as unknown as Job<T>);
+          }
+        }
+      });
+    });
   }
 
   /**

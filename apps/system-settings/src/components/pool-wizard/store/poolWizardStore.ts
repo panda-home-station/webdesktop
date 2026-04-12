@@ -43,6 +43,7 @@ export interface PoolWizardState {
   totalSteps: number
   isLoading: boolean
   isCreating: boolean
+  createdSuccessfully: boolean
   error: string | null
 
   // General
@@ -210,6 +211,7 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
   totalSteps: WIZARD_STEPS.length,
   isLoading: false,
   isCreating: false,
+  createdSuccessfully: false,
   error: null,
 
   name: '',
@@ -257,6 +259,7 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
       currentStep: 0,
       isLoading: false,
       isCreating: false,
+      createdSuccessfully: false,
       error: null,
       name: '',
       encryption: false,
@@ -476,7 +479,7 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
 
   createPool: async () => {
     const state = get()
-    set({ isCreating: true, error: null })
+    set({ isCreating: true, error: null, createdSuccessfully: false })
 
     try {
       const payload = {
@@ -493,13 +496,16 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
         allow_duplicate_serials: state.allowNonUniqueSerialDisks,
       }
 
-      await poolService.create(payload)
-      set({ isCreating: false })
+      const result = await poolService.create(payload)
+      set({ isCreating: false, createdSuccessfully: true })
+      return result
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : '创建池失败',
         isCreating: false,
+        createdSuccessfully: false,
       })
+      throw err
     }
   },
 }))
