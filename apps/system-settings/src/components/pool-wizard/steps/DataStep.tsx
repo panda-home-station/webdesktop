@@ -295,7 +295,9 @@ export function DataStep({ errors }: DataStepProps) {
   }, [category.vdevs, vdevs])
 
   const addVdev = () => {
-    setVdevs([...vdevs, []])
+    const newVdevs = [...vdevs, []]
+    setVdevs(newVdevs)
+    setManualDisks(VDevType.Data, newVdevs)
   }
 
   const removeVdev = (index: number) => {
