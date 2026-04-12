@@ -821,10 +821,11 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 8,
     overflow: 'hidden',
     transition: 'all 0.15s ease',
-    border: `1px solid ${colors.border}`,
+    border: `2px solid ${colors.border}`,
+    boxSizing: 'border-box',
   },
   vdevCardDragOver: {
-    border: `2px dashed ${colors.primary}`,
+    border: `2px solid ${colors.primary}`,
     backgroundColor: `${colors.primary}08`,
   },
   vdevHeader: {
@@ -869,13 +870,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   vdevDisks: {
     padding: 8,
-    minHeight: 50,
+    minHeight: 70,
     boxSizing: 'border-box',
   },
   vdevDisksGrid: {
     display: 'flex',
     flexWrap: 'wrap',
     gap: 6,
+    minHeight: 54,
+    alignContent: 'flex-start',
   },
   vdevDiskCard: {
     position: 'relative',
@@ -889,6 +892,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: `1px solid ${colors.border}`,
     cursor: 'grab',
     transition: 'all 0.15s ease',
+    minHeight: 54,
   },
   vdevDiskInfo: {
     display: 'flex',
@@ -930,7 +934,8 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     border: `2px dashed ${colors.border}`,
     borderRadius: 8,
-    minHeight: 60,
+    minHeight: 54,
+    boxSizing: 'border-box',
   },
   vdevEmptyDragOver: {
     display: 'flex',
