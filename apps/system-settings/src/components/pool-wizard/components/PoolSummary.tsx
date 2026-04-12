@@ -129,7 +129,7 @@ export function PoolSummary({
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    backgroundColor: colors.cardBg,
+    backgroundColor: '#fff',
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -192,10 +192,10 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.text,
   },
   categoryLayout: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: 500,
     color: colors.primary,
-    backgroundColor: `${colors.primary}15`,
+    backgroundColor: 'rgba(0, 122, 255, 0.082)',
     padding: '2px 8px',
     borderRadius: 4,
   },
@@ -214,7 +214,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: '4px 8px',
-    backgroundColor: colors.cardBg,
+    backgroundColor: '#fff',
     borderRadius: 4,
     fontSize: 12,
   },
@@ -235,7 +235,7 @@ const styles: Record<string, React.CSSProperties> = {
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
-    backgroundColor: `${colors.primary}10`,
+    backgroundColor: 'rgba(0, 122, 255, 0.063)',
   },
   totalLabel: {
     fontSize: 14,
