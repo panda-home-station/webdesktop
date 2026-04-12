@@ -109,6 +109,90 @@ export default function SystemSettings() {
     }
   }, [])
 
+  // Subscribe to pool changes for real-time updates
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null
+
+    const refreshPools = async () => {
+      try {
+        const poolsData = await poolService.query([], { extra: { is_upgraded: true } } as unknown as undefined)
+        setPools(poolsData as Pool[])
+      } catch (err) {
+        console.error('Failed to refresh pools:', err)
+      }
+    }
+
+    try {
+      unsubscribe = poolService.subscribeToChanges(() => {
+        refreshPools()
+      })
+    } catch (err) {
+      console.error('Failed to subscribe to pool changes:', err)
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }, [])
+
+  // Subscribe to disk changes for real-time updates
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null
+
+    const refreshDisks = async () => {
+      try {
+        const disksData = await diskService.query([], { extra: { pools: true } })
+        setDisks(disksData as Disk[])
+      } catch (err) {
+        console.error('Failed to refresh disks:', err)
+      }
+    }
+
+    try {
+      unsubscribe = diskService.subscribeToChanges(() => {
+        refreshDisks()
+      })
+    } catch (err) {
+      console.error('Failed to subscribe to disk changes:', err)
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }, [])
+
+  // Subscribe to dataset changes for real-time updates
+  useEffect(() => {
+    let unsubscribe: (() => void) | null = null
+
+    const refreshDatasets = async () => {
+      try {
+        const datasetsData = await datasetService.query()
+        setDatasets(datasetsData as Dataset[])
+      } catch (err) {
+        console.error('Failed to refresh datasets:', err)
+      }
+    }
+
+    try {
+      unsubscribe = datasetService.subscribeToChanges(() => {
+        refreshDatasets()
+      })
+    } catch (err) {
+      console.error('Failed to subscribe to dataset changes:', err)
+    }
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe()
+      }
+    }
+  }, [])
+
   return (
     <div
       style={{
@@ -179,6 +263,7 @@ function TabContent({
   loading,
   error,
   setDisks,
+  setPools,
 }: {
   id: string
   storageView: string
@@ -192,6 +277,7 @@ function TabContent({
   loading: boolean
   error: string | null
   setDisks: Dispatch<React.SetStateAction<Disk[]>>
+  setPools: Dispatch<React.SetStateAction<Pool[]>>
 }) {
   switch (id) {
     case 'device':
@@ -215,6 +301,7 @@ function TabContent({
           onViewChange={onStorageViewChange}
           pools={pools}
           datasets={datasets}
+          onPoolsRefresh={setPools}
         />
       )
     case 'disk':

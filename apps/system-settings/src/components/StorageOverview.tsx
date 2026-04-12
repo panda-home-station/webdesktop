@@ -3,10 +3,11 @@
  * Main storage tab showing pool overview and datasets
  */
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Plus } from 'lucide-react'
 import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
+import { poolService } from '@truenas/services/pool'
 import { PoolList, PoolDetails } from './pools'
 import { CreatePoolPage } from './pool-wizard'
 import { DatasetTree } from './datasets'
@@ -18,16 +19,23 @@ interface StorageOverviewProps {
   pools: Pool[]
   datasets: Dataset[]
   onPoolClick?: (pool: Pool) => void
+  onPoolsRefresh?: (pools: Pool[]) => void
 }
 
-export function StorageOverview({ view, onViewChange, pools, datasets, onPoolClick }: StorageOverviewProps) {
+export function StorageOverview({ view, onViewChange, pools, datasets, onPoolClick, onPoolsRefresh }: StorageOverviewProps) {
   const [selectedPool, setSelectedPool] = useState<Pool | null>(null)
 
   // Handle pool creation success
-  const handleCreateSuccess = () => {
+  const handleCreateSuccess = useCallback(async () => {
     onViewChange('overview')
-    // Parent will refresh pools
-  }
+    // Refresh pools to show the newly created pool
+    try {
+      const updatedPools = await poolService.query([], { extra: { is_upgraded: true } } as unknown as undefined)
+      onPoolsRefresh?.(updatedPools as Pool[])
+    } catch (err) {
+      console.error('Failed to refresh pools:', err)
+    }
+  }, [onViewChange, onPoolsRefresh])
 
   // Handle back from create pool
   const handleBackFromCreate = () => {

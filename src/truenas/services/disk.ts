@@ -79,6 +79,13 @@ export class DiskService {
   async temperatureAgg(devnames: string[], days?: number): Promise<DiskTemperatureAgg> {
     return truenasApi.call('disk.temperature_agg', devnames, { days }) as Promise<DiskTemperatureAgg>;
   }
+
+  /**
+   * Subscribe to disk changes
+   */
+  subscribeToChanges(callback: (data: { id: string; fields: Record<string, unknown> }) => void): () => void {
+    return truenasApi.subscribe('disk.query', callback) as () => void;
+  }
 }
 
 // Singleton instance

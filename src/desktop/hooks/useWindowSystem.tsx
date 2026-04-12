@@ -232,10 +232,7 @@ export function useWindowSystem(options: UseWindowSystemOptions = {}) {
           content: windowContent,
         })
       } finally {
-        // Don't delete if content was async loaded (AppLoader will do it)
-        if (!content) {
-          loadingApps.current.delete(appId)
-        }
+        loadingApps.current.delete(appId)
       }
     },
     [windowsStore, getApp, getAppMinDimensions]
