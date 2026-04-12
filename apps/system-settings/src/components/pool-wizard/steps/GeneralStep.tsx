@@ -316,19 +316,19 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 16,
+    gap: 12,
   },
 
   // 气泡框基础样式
   bubbleCard: {
     backgroundColor: colors.cardBg,
-    borderRadius: 16,
+    borderRadius: 12,
     boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
     border: `1px solid ${colors.border}`,
     overflow: 'hidden',
   },
   bubbleHeader: {
-    padding: '12px 16px',
+    padding: '10px 14px',
     borderBottom: `1px solid ${colors.border}`,
   },
   bubbleTitleRow: {
@@ -350,7 +350,7 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 10,
   },
   bubbleContent: {
-    padding: 16,
+    padding: 12,
   },
 
   // 表单布局
@@ -361,17 +361,17 @@ const styles: Record<string, React.CSSProperties> = {
   formRow: {
     display: 'flex',
     alignItems: 'flex-start',
-    gap: 16,
-    padding: '12px 16px',
+    gap: 12,
+    padding: '10px 14px',
     borderBottom: `1px solid ${colors.border}`,
   },
   formLabel: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: 500,
     color: colors.text,
     flexShrink: 0,
-    minWidth: 80,
-    paddingTop: 12,
+    minWidth: 70,
+    paddingTop: 10,
   },
   formInput: {
     flex: 1,
@@ -386,10 +386,10 @@ const styles: Record<string, React.CSSProperties> = {
   // 现代风格输入框
   modernInput: {
     width: '100%',
-    padding: '14px 16px',
-    fontSize: 16,
+    padding: '10px 12px',
+    fontSize: 14,
     border: `1px solid ${colors.border}`,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: colors.background,
     color: colors.text,
     outline: 'none',
@@ -399,10 +399,10 @@ const styles: Record<string, React.CSSProperties> = {
   },
   modernSelect: {
     width: '100%',
-    padding: '14px 40px 14px 16px',
-    fontSize: 16,
+    padding: '10px 36px 10px 12px',
+    fontSize: 14,
     border: `1px solid ${colors.border}`,
-    borderRadius: 12,
+    borderRadius: 10,
     backgroundColor: colors.background,
     color: colors.text,
     outline: 'none',
@@ -413,7 +413,7 @@ const styles: Record<string, React.CSSProperties> = {
     appearance: 'none',
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238e8e93' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 16px center',
+    backgroundPosition: 'right 12px center',
   },
   iOSSelect: {
     width: '100%',
@@ -439,7 +439,7 @@ const styles: Record<string, React.CSSProperties> = {
   // 提示和错误
   hint: {
     display: 'block',
-    marginTop: 8,
+    marginTop: 4,
     fontSize: 12,
     color: colors.textSecondary,
   },
@@ -447,7 +447,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    marginTop: 8,
+    marginTop: 4,
     fontSize: 12,
     color: colors.danger,
   },
@@ -455,10 +455,10 @@ const styles: Record<string, React.CSSProperties> = {
   // 警告气泡框
   warningBubble: {
     display: 'flex',
-    gap: 12,
-    padding: 16,
+    gap: 10,
+    padding: 12,
     backgroundColor: `${colors.warning}10`,
-    borderRadius: 16,
+    borderRadius: 12,
     border: `1px solid ${colors.warning}30`,
   },
   warningIcon: {
@@ -482,15 +482,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   radioGroup: {
     display: 'flex',
-    gap: 12,
-    marginTop: 8,
+    gap: 10,
+    marginTop: 6,
   },
   radioOption: {
     flex: 1,
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    padding: '12px 14px',
+    gap: 8,
+    padding: '10px 12px',
     border: `2px solid transparent`,
     borderRadius: 10,
     cursor: 'pointer',
