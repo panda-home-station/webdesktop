@@ -133,7 +133,6 @@ export class TrueNASWebSocketClient {
 
   constructor(config?: Partial<WebSocketClientConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config }
-    this.log('WebSocket client initialized with config:', this.config)
     this.connect()
   }
 
@@ -156,7 +155,6 @@ export class TrueNASWebSocketClient {
 
     try {
       const url = this.getWebSocketUrl()
-      this.log('Connecting to WebSocket:', url)
 
       this.ws = new WebSocket(url)
       this.ws.onopen = this.handleOpen.bind(this)
@@ -166,12 +164,10 @@ export class TrueNASWebSocketClient {
 
       // Set connection timeout
       this.connectionTimer = setTimeout(() => {
-        this.log('Connection timeout')
         this.ws?.close()
       }, this.config.connectionTimeout)
 
     } catch (error) {
-      this.log('WebSocket connection failed:', error)
       this.handleConnectionError(error as Error)
     }
   }
@@ -194,7 +190,6 @@ export class TrueNASWebSocketClient {
       this.connectionTimer = null
     }
 
-    this.log('WebSocket connected')
     this.setConnectionState(ConnectionState.Connected)
 
     // Reset reconnection state
@@ -215,8 +210,8 @@ export class TrueNASWebSocketClient {
     this.flushPendingCalls()
 
     // Send core.set_options as required by TrueNAS
-    this.call('core.set_options', [{ legacy_jobs: false }]).catch((error) => {
-      this.log('Failed to send core.set_options:', error)
+    this.call('core.set_options', [{ legacy_jobs: false }]).catch(() => {
+      // Silently ignore
     })
   }
 
@@ -228,8 +223,6 @@ export class TrueNASWebSocketClient {
       const text = event.data
       const message = JSON.parse(text) as IncomingMessage
 
-      this.log('WebSocket message received:', message)
-
       // Update last message time for heartbeat
       this.lastMessageTime = Date.now()
       this.heartbeatMissed = 0
@@ -240,8 +233,6 @@ export class TrueNASWebSocketClient {
         this.pendingRequests.delete(message.id)
 
         if (message.error) {
-          this.log('WebSocket error response:', JSON.stringify(message, null, 2))
-
           const error = new TrueNASError(
             message.error.message || message.error.strerror || 'Unknown error',
             message.error.code,
@@ -262,8 +253,8 @@ export class TrueNASWebSocketClient {
       // Handle event notification
       this.handleEventMessage(message)
 
-    } catch (error) {
-      this.log('Failed to parse WebSocket message:', error, text)
+    } catch {
+      // Silently ignore parse errors
     }
   }
 
@@ -282,34 +273,46 @@ export class TrueNASWebSocketClient {
       const eventName = message.method
       const eventData = message.params
 
-      this.log(`Event received: method='${eventName}'`, eventData)
-
       // Dispatch to event listeners registered for this event name
       const listeners = this.eventListeners.get(eventName)
       if (listeners) {
-        this.log(`Dispatching event '${eventName}' to ${listeners.size} listener(s)`)
         listeners.forEach((callback) => {
           try {
             callback(eventData)
-          } catch (error) {
-            this.log(`Error in event listener for '${eventName}':`, error)
+          } catch {
+            // Silently ignore listener errors
           }
         })
       }
 
       // For collection_update events, also dispatch to listeners for the specific collection
-      // The collection name is in params.collection (e.g., 'pool.query', 'disk.query')
       if (eventName === 'collection_update' && typeof eventData === 'object' && eventData !== null) {
         const collectionEvent = eventData as { collection?: string }
         if (collectionEvent.collection) {
           const collectionListeners = this.eventListeners.get(collectionEvent.collection)
           if (collectionListeners) {
-            this.log(`Dispatching collection_update for '${collectionEvent.collection}' to ${collectionListeners.size} listener(s)`)
             collectionListeners.forEach((callback) => {
               try {
                 callback(eventData)
-              } catch (error) {
-                this.log(`Error in collection listener for '${collectionEvent.collection}':`, error)
+              } catch {
+                // Silently ignore listener errors
+              }
+            })
+          }
+        }
+      }
+
+      // Also check if this looks like a job event (has job info in params)
+      if (typeof eventData === 'object' && eventData !== null) {
+        const data = eventData as { msg?: string; job?: unknown }
+        if (data.msg && data.job) {
+          const listeners = this.eventListeners.get(eventName)
+          if (listeners) {
+            listeners.forEach((callback) => {
+              try {
+                callback(eventData)
+              } catch {
+                // Silently ignore listener errors
               }
             })
           }
@@ -328,17 +331,14 @@ export class TrueNASWebSocketClient {
       const eventName = message.id as string
       const eventData = message.result
 
-      this.log(`Event received: id='${eventName}'`, eventData)
-
       // Dispatch to event listeners
       const listeners = this.eventListeners.get(eventName)
       if (listeners) {
-        this.log(`Dispatching event '${eventName}' to ${listeners.size} listener(s)`)
         listeners.forEach((callback) => {
           try {
             callback(eventData)
-          } catch (error) {
-            this.log(`Error in event listener for '${eventName}':`, error)
+          } catch {
+            // Silently ignore listener errors
           }
         })
       }
@@ -349,7 +349,6 @@ export class TrueNASWebSocketClient {
    * Handle WebSocket close event
    */
   private handleClose(event: CloseEvent): void {
-    this.log('WebSocket disconnected:', event.code, event.reason)
     this.cleanup()
 
     if (this.connectionState === ConnectionState.Connected) {
@@ -366,8 +365,8 @@ export class TrueNASWebSocketClient {
   /**
    * Handle WebSocket error event
    */
-  private handleError(error: Event): void {
-    this.log('WebSocket error:', error)
+  private handleError(): void {
+    // Silently ignore WebSocket errors
   }
 
   /**
@@ -390,7 +389,6 @@ export class TrueNASWebSocketClient {
    */
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.config.maxRetries) {
-      this.log('Max reconnection attempts reached, giving up')
       this.setConnectionState(ConnectionState.Disconnected)
       return
     }
@@ -403,7 +401,6 @@ export class TrueNASWebSocketClient {
     this.reconnectAttempts++
 
     const delay = this.currentReconnectDelay
-    this.log(`Scheduling reconnection attempt ${this.reconnectAttempts} in ${delay}ms`)
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
@@ -435,10 +432,8 @@ export class TrueNASWebSocketClient {
 
       if (timeSinceLastMessage > this.config.heartbeatInterval * this.maxMissedHeartbeats) {
         this.heartbeatMissed++
-        this.log(`Heartbeat missed (${this.heartbeatMissed}/${this.maxMissedHeartbeats})`)
 
         if (this.heartbeatMissed >= this.maxMissedHeartbeats) {
-          this.log('Too many missed heartbeats, forcing reconnection')
           this.ws?.close()
           return
         }
@@ -448,8 +443,8 @@ export class TrueNASWebSocketClient {
       if (this.ws?.readyState === WebSocket.OPEN) {
         try {
           this.ws.send(JSON.stringify({ jsonrpc: '2.0', id: '_ping', method: 'core.ping' }))
-        } catch (error) {
-          this.log('Failed to send ping:', error)
+        } catch {
+          // Silently ignore ping errors
         }
       }
     }, this.config.heartbeatInterval)
@@ -490,14 +485,13 @@ export class TrueNASWebSocketClient {
    */
   private setConnectionState(state: ConnectionState): void {
     if (this.connectionState !== state) {
-      this.log('Connection state changed:', this.connectionState, '->', state)
       this.connectionState = state
 
       this.stateChangeListeners.forEach(listener => {
         try {
           listener(state)
-        } catch (error) {
-          this.log('Error in state change listener:', error)
+        } catch {
+          // Silently ignore listener errors
         }
       })
     }
@@ -510,11 +504,9 @@ export class TrueNASWebSocketClient {
     const calls = [...this.pendingCalls]
     this.pendingCalls = []
 
-    this.log(`Flushing ${calls.length} pending calls`)
-
     calls.forEach(({ method, params }) => {
-      this.call(method, params).catch(error => {
-        this.log('Failed to execute pending call:', method, error)
+      this.call(method, params).catch(() => {
+        // Silently ignore pending call errors
       })
     })
   }
@@ -524,16 +516,6 @@ export class TrueNASWebSocketClient {
    */
   private generateId(): string {
     return (++this.messageId).toString()
-  }
-
-  /**
-   * Log debug message if debug mode is enabled
-   */
-  private log(...args: unknown[]): void {
-    if (this.config.debug) {
-      // eslint-disable-next-line no-console
-      console.debug('[TrueNAS WebSocket]', ...args)
-    }
   }
 
   /**
@@ -592,8 +574,6 @@ export class TrueNASWebSocketClient {
         params: params || [],
       }
 
-      this.log('Sending WebSocket message:', method, JSON.stringify(message))
-
       try {
         this.ws.send(JSON.stringify(message))
       } catch (error) {
@@ -606,35 +586,149 @@ export class TrueNASWebSocketClient {
   /**
    * Make a job call to TrueNAS API
    * Returns a Promise that resolves with the job result
+   * Progress updates are emitted via the optional onProgress callback
+   *
+   * This works by:
+   * 1. Calling the method which returns either a job object, direct result, or job id
+   * 2. If it's a direct result (like pool.create), resolve immediately with progress 100%
+   * 3. If it's a job reference, subscribe to core.get_jobs for progress updates
    */
-  async job<T>(method: string, params?: unknown[]): Promise<Job<T>> {
-    // First, call the method - it returns a job result immediately
+  async job<T>(
+    method: string,
+    params?: unknown[],
+    onProgress?: (progress: { percent: number; description?: string }) => void
+  ): Promise<Job<T>> {
+    // First, call the method
     const result = await this.call(method, params);
 
-    // The result contains the job info with an id
-    const jobResult = result as { id: number };
+    // Check if result looks like a direct result (has Name, guid, status - typical for pool.create)
+    const resultObj = result as Record<string, unknown>;
 
-    // Subscribe to job events - TrueNAS sends events on 'method.job_id' channel
+    // If result has 'Name' or 'guid' fields, it's likely a direct result
+    // (e.g., pool.create returns the pool object directly, not a job)
+    if (resultObj.Name !== undefined || resultObj.guid !== undefined) {
+      // For methods like pool.create that return directly, resolve with a synthetic success job
+      if (onProgress) {
+        onProgress({ percent: 100, description: '完成' });
+      }
+      return Promise.resolve({
+        id: resultObj.id as number,
+        method,
+        arguments: params || [],
+        progress: { percent: 100, description: '' },
+        state: 'SUCCESS' as const,
+        result: result as T,
+      } as Job<T>);
+    }
+
+    // If result has 'state' and 'method' fields, it's already a Job object
+    if (resultObj.state !== undefined && resultObj.method !== undefined) {
+      return Promise.resolve(result as Job<T>);
+    }
+
+    // If result is just {id: number}, treat it as a job reference and poll
+    const jobId = resultObj.id as number;
+    if (typeof jobId !== 'number' || Object.keys(resultObj).length !== 1) {
+      // Unknown result format, treat as direct result
+      if (onProgress) {
+        onProgress({ percent: 100, description: '完成' });
+      }
+      return Promise.resolve({
+        id: 0,
+        method,
+        arguments: params || [],
+        progress: { percent: 100, description: '' },
+        state: 'SUCCESS' as const,
+        result: result as T,
+      } as Job<T>);
+    }
+
+    // Subscribe to core.get_jobs collection updates to get job progress notifications
+    let unsubscribeCoreJobs: (() => void) | null = null;
+    let jobFoundViaSubscription = false;
+
+    // Create a promise that handles both subscription-based and polling-based progress
     return new Promise((resolve, reject) => {
-      const unsubscribe = this.subscribe(`${method}.${jobResult.id}`, (data) => {
-        const eventData = data as { msg: string; job?: Job<T> };
+      let finished = false;
 
-        if (eventData.msg === 'changed' && eventData.job) {
-          // Job progress update - we could emit this but for simplicity we just track it
-        } else if (eventData.msg === 'finished') {
-          // Job finished
-          unsubscribe();
-          if (eventData.job) {
-            if (eventData.job.state === 'Failed') {
-              reject(new Error(eventData.job.error?.message || 'Job failed'));
+      // Subscribe to core.get_jobs for real-time job updates
+      unsubscribeCoreJobs = this.subscribe('core.get_jobs', (data) => {
+        const eventData = data as { msg: string; id?: number; fields?: Job<T> };
+
+        // Look for our job by id
+        if (eventData.id === jobId && eventData.fields && eventData.msg === 'ADDED') {
+          jobFoundViaSubscription = true;
+          if (onProgress && eventData.fields.progress) {
+            onProgress({
+              percent: eventData.fields.progress.percent ?? 0,
+              description: eventData.fields.progress.description,
+            });
+          }
+        }
+        if (eventData.id === jobId && eventData.fields && eventData.msg === 'CHANGED') {
+          jobFoundViaSubscription = true;
+          if (onProgress && eventData.fields.progress) {
+            onProgress({
+              percent: eventData.fields.progress.percent ?? 0,
+              description: eventData.fields.progress.description,
+            });
+          }
+          // Check if job is complete
+          if (eventData.fields.state === 'SUCCESS' || eventData.fields.state === 'FAILED') {
+            finished = true;
+            if (unsubscribeCoreJobs) unsubscribeCoreJobs();
+            clearInterval(pollInterval);
+            if (eventData.fields.state === 'FAILED') {
+              reject(new Error(eventData.fields.error?.message || 'Job failed'));
             } else {
-              resolve(eventData.job);
+              resolve(eventData.fields);
             }
-          } else {
-            resolve(eventData as unknown as Job<T>);
           }
         }
       });
+
+      // Poll core.get_jobs as a fallback
+      const pollInterval = setInterval(async () => {
+        if (finished) return;
+
+        try {
+          const jobs = await this.call('core.get_jobs') as Job<T>[];
+          const ourJob = jobs.find(j => j.id === jobId);
+
+          if (ourJob) {
+            if (onProgress && ourJob.progress && !jobFoundViaSubscription) {
+              onProgress({
+                percent: ourJob.progress.percent ?? 0,
+                description: ourJob.progress.description,
+              });
+            }
+
+            if (ourJob.state === 'SUCCESS' || ourJob.state === 'FAILED' || ourJob.state === 'ABORTED') {
+              finished = true;
+              if (unsubscribeCoreJobs) unsubscribeCoreJobs();
+              clearInterval(pollInterval);
+
+              if (ourJob.state === 'FAILED') {
+                reject(new Error(ourJob.error?.message || 'Job failed'));
+              } else {
+                resolve(ourJob);
+              }
+            }
+          }
+        } catch {
+          // Silently ignore polling errors
+        }
+      }, 1000);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        if (!finished) {
+          finished = true;
+          if (unsubscribeCoreJobs) unsubscribeCoreJobs();
+          clearInterval(pollInterval);
+          reject(new Error('Job timed out'));
+        }
+      }, 300000);
     });
   }
 
@@ -643,8 +737,6 @@ export class TrueNASWebSocketClient {
    * This registers a local callback AND tells TrueNAS backend to send events for this channel
    */
   subscribe(event: string, callback: (data: unknown) => void): () => void {
-    this.log(`subscribe('${event}') called`)
-
     // Register callback locally
     if (!this.eventListeners.has(event)) {
       this.eventListeners.set(event, new Set())
@@ -654,24 +746,19 @@ export class TrueNASWebSocketClient {
     // Tell TrueNAS backend to subscribe to this event channel
     // Only send subscribe if we don't already have listeners for this event
     if (this.eventListeners.get(event)!.size === 1) {
-      this.log(`First listener for '${event}', sending core.subscribe`)
-      this.sendSubscription(event, true).catch((error) => {
-        this.log(`Failed to subscribe to '${event}':`, error)
+      this.sendSubscription(event, true).catch(() => {
+        // Silently ignore subscription errors
       })
-    } else {
-      this.log(`Additional listener for '${event}', not sending core.subscribe (already subscribed)`)
     }
 
     // Return unsubscribe function
     return () => {
-      this.log(`unsubscribe('${event}') called`)
       this.eventListeners.get(event)?.delete(callback)
       // Clean up empty sets and unsubscribe from backend
       if (this.eventListeners.get(event)?.size === 0) {
         this.eventListeners.delete(event)
-        this.log(`Last listener removed for '${event}', sending core.unsubscribe`)
-        this.sendSubscription(event, false).catch((error) => {
-          this.log(`Failed to unsubscribe from '${event}':`, error)
+        this.sendSubscription(event, false).catch(() => {
+          // Silently ignore unsubscription errors
         })
       }
     }
@@ -682,9 +769,7 @@ export class TrueNASWebSocketClient {
    */
   private async sendSubscription(event: string, subscribe: boolean): Promise<void> {
     const method = subscribe ? 'core.subscribe' : 'core.unsubscribe'
-    this.log(`sendSubscription: calling ${method}('${event}')`)
     await this.call(method, [event])
-    this.log(`sendSubscription: ${subscribe ? 'Subscribed' : 'Unsubscribed'} to '${event}' successfully`)
   }
 
   /**
@@ -731,8 +816,6 @@ export class TrueNASWebSocketClient {
    * Disconnect WebSocket
    */
   disconnect(): void {
-    this.log('Disconnecting WebSocket')
-
     // Clear all timers
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer)

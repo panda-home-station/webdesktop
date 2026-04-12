@@ -56,10 +56,17 @@ export const truenasApi = {
   /**
    * Call a TrueNAS API job method
    * Returns a Promise that resolves with the job result
+   * Progress updates are emitted via the optional onProgress callback
    */
-  job<T>(method: string, ...params: unknown[]): Promise<Job<T>> {
+  job<T>(
+    method: string,
+    params?: unknown[],
+    onProgress?: (progress: { percent: number; description?: string }) => void
+  ): Promise<Job<T>> {
     const client = getTrueNASClient()
-    return client.job<T>(method, params)
+    // params is already an array from the rest params (...params)
+    const paramsArray = params || []
+    return client.job<T>(method, paramsArray, onProgress)
   },
 
   /**

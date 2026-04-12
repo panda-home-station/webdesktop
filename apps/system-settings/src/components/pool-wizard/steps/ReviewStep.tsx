@@ -21,6 +21,8 @@ export function ReviewStep() {
     createdSuccessfully,
     error,
     createPool,
+    jobProgress,
+    jobProgressDescription,
   } = usePoolWizardStore()
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
@@ -39,6 +41,8 @@ export function ReviewStep() {
       // Error is handled in store
     }
   }
+
+  const progressPercent = Math.min(100, Math.max(0, jobProgress))
 
   return (
     <div style={styles.container}>
@@ -120,7 +124,7 @@ export function ReviewStep() {
         {isCreating ? (
           <>
             <Loader2 size={18} className="spin" />
-            创建中...
+            创建中，完成 {progressPercent.toFixed(1)}%
           </>
         ) : createdSuccessfully ? (
           '存储池已创建'
@@ -128,6 +132,13 @@ export function ReviewStep() {
           '创建存储池'
         )}
       </button>
+
+      {/* Progress Description */}
+      {isCreating && jobProgressDescription && (
+        <div style={styles.progressDescription}>
+          {jobProgressDescription}
+        </div>
+      )}
 
       {/* Confirmation Dialog */}
       <ConfirmDialog
@@ -262,5 +273,13 @@ const styles: Record<string, React.CSSProperties> = {
   },
   createButtonSuccess: {
     backgroundColor: colors.success,
+  },
+
+  // Progress description (shown below button during creation)
+  progressDescription: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 8,
   },
 }

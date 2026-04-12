@@ -44,6 +44,20 @@ export class PoolService {
   }
 
   /**
+   * Create a new pool with progress tracking
+   * @param params Pool creation parameters
+   * @param onProgress Callback for progress updates
+   * @returns The created pool result
+   */
+  async createWithProgress(
+    params: CreatePool,
+    onProgress?: (progress: { percent: number; description?: string }) => void
+  ): Promise<CreatePoolResult> {
+    const result = await truenasApi.job<CreatePoolResult>('pool.create', [params], onProgress);
+    return result.result as CreatePoolResult;
+  }
+
+  /**
    * Update pool settings
    */
   async update(id: number, params: UpdatePool): Promise<Pool> {

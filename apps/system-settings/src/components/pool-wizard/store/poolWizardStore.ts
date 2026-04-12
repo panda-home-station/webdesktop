@@ -46,6 +46,10 @@ export interface PoolWizardState {
   createdSuccessfully: boolean
   error: string | null
 
+  // Job progress
+  jobProgress: number
+  jobProgressDescription: string | null
+
   // General
   name: string
   encryption: boolean
@@ -113,6 +117,7 @@ interface PoolWizardActions {
 
   // Pool creation
   createPool: () => Promise<void>
+  setJobProgress: (progress: number, description: string | null) => void
 }
 
 type PoolWizardStore = PoolWizardState & PoolWizardActions
@@ -213,6 +218,8 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
   isCreating: false,
   createdSuccessfully: false,
   error: null,
+  jobProgress: 0,
+  jobProgressDescription: null,
 
   name: '',
   encryption: false,
@@ -272,6 +279,8 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
       allowNonUniqueSerialDisks: false,
       topology: createInitialTopology(),
       stepErrors: {},
+      jobProgress: 0,
+      jobProgressDescription: null,
     })
   },
 
@@ -479,7 +488,7 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
 
   createPool: async () => {
     const state = get()
-    set({ isCreating: true, error: null, createdSuccessfully: false })
+    set({ isCreating: true, error: null, createdSuccessfully: false, jobProgress: 0, jobProgressDescription: null })
 
     try {
       const payload = {
@@ -496,17 +505,27 @@ export const usePoolWizardStore = create<PoolWizardStore>((set, get) => ({
         allow_duplicate_serials: state.allowNonUniqueSerialDisks,
       }
 
-      const result = await poolService.create(payload)
-      set({ isCreating: false, createdSuccessfully: true })
+      const result = await poolService.createWithProgress(payload, (progress) => {
+        set({
+          jobProgress: progress.percent,
+          jobProgressDescription: progress.description || null,
+        })
+      })
+      set({ isCreating: false, createdSuccessfully: true, jobProgress: 100 })
       return result
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : '创建池失败',
         isCreating: false,
         createdSuccessfully: false,
+        jobProgress: 0,
       })
       throw err
     }
+  },
+
+  setJobProgress: (progress: number, description: string | null) => {
+    set({ jobProgress: progress, jobProgressDescription: description })
   },
 }))
 
