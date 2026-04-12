@@ -5,7 +5,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { AlertCircle, Shield, Key, AlertTriangle } from 'lucide-react'
+import { AlertCircle, HardDrive, Key, AlertTriangle } from 'lucide-react'
 import { ConfirmDialog } from '@desktop/components/ConfirmDialog'
 import { usePoolWizardStore } from '../store/poolWizardStore'
 import { poolService } from '@truenas/services/pool'
@@ -124,82 +124,80 @@ export function GeneralStep({ errors }: GeneralStepProps) {
 
   return (
     <div style={styles.container}>
-      {/* 气泡框 1: 池名称 */}
+      {/* 气泡框: 存储池设置 */}
       <div style={styles.bubbleCard}>
         <div style={styles.bubbleHeader}>
           <div style={styles.bubbleTitleRow}>
-            <span style={styles.bubbleTitle}>池名称</span>
-            <span style={styles.requiredBadge}>必填</span>
+            <HardDrive size={16} color={colors.primary} />
+            <span style={styles.bubbleTitle}>存储池</span>
           </div>
         </div>
-        <div style={styles.bubbleContent}>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="例如: pool1"
-            style={{
-              ...styles.iOSInput,
-              ...(errors.name ? styles.inputError : {}),
-            }}
-          />
-          {!errors.name && (
-            <span style={styles.hint}>仅支持字母、数字和下划线</span>
-          )}
-          {errors.name && (
-            <div style={styles.errorRow}>
-              <AlertCircle size={12} />
-              <span>{errors.name}</span>
+        <div style={styles.formBody}>
+          {/* 池名称 */}
+          <div style={styles.formRow}>
+            <span style={styles.formLabel}>
+              池名称 <span style={styles.requiredStar}>*</span>
+            </span>
+            <div style={styles.formInput}>
+              <input
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="例如: pool1"
+                style={{
+                  ...styles.modernInput,
+                  ...(errors.name ? styles.inputError : {}),
+                }}
+              />
+              {errors.name && (
+                <div style={styles.errorRow}>
+                  <AlertCircle size={12} />
+                  <span>{errors.name}</span>
+                </div>
+              )}
+              {!errors.name && (
+                <span style={styles.hint}>仅支持字母、数字和下划线</span>
+              )}
+            </div>
+          </div>
+
+          {/* 加密 */}
+          <div style={styles.formRow}>
+            <span style={styles.formLabel}>加密</span>
+            <div style={styles.formInput}>
+              <select
+                value={encryption ? encryptionType : 'none'}
+                onChange={(e) => handleEncryptionSelectChange(e.target.value)}
+                style={styles.modernSelect}
+              >
+                <option value="none">无加密</option>
+                <option value="software">软件加密</option>
+                {hasSedCapableDisks && <option value="sed">SED</option>}
+              </select>
+            </div>
+          </div>
+
+          {/* 加密标准 (条件显示) */}
+          {encryption && encryptionType === 'software' && (
+            <div style={styles.formRow}>
+              <span style={styles.formLabel}>加密标准</span>
+              <div style={styles.formInput}>
+                <select
+                  value={encryptionAlgorithm}
+                  onChange={(e) => setEncryptionAlgorithm(e.target.value)}
+                  style={styles.modernSelect}
+                >
+                  {algorithmOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* 气泡框 2: 加密选项 */}
-      <div style={styles.bubbleCard}>
-        <div style={styles.bubbleHeader}>
-          <div style={styles.bubbleTitleRow}>
-            <Shield size={16} color={colors.primary} />
-            <span style={styles.bubbleTitle}>加密</span>
-          </div>
-        </div>
-        <div style={styles.bubbleContent}>
-          <select
-            value={encryption ? encryptionType : 'none'}
-            onChange={(e) => handleEncryptionSelectChange(e.target.value)}
-            style={styles.iOSSelect}
-          >
-            <option value="none">无加密</option>
-            <option value="software">软件加密</option>
-            {hasSedCapableDisks && <option value="sed">SED</option>}
-          </select>
-        </div>
-      </div>
-
-      {/* 气泡框 3: 加密标准 (条件显示) */}
-      {encryption && encryptionType === 'software' && (
-        <div style={styles.bubbleCard}>
-          <div style={styles.bubbleHeader}>
-            <div style={styles.bubbleTitleRow}>
-              <Key size={16} color={colors.primary} />
-              <span style={styles.bubbleTitle}>加密标准</span>
-            </div>
-          </div>
-          <div style={styles.bubbleContent}>
-            <select
-              value={encryptionAlgorithm}
-              onChange={(e) => setEncryptionAlgorithm(e.target.value)}
-              style={styles.iOSSelect}
-            >
-              {algorithmOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
 
       {/* 气泡框 4: SED 密码 (条件显示) */}
       {encryption && encryptionType === 'sed' && (
@@ -218,7 +216,7 @@ export function GeneralStep({ errors }: GeneralStepProps) {
               onChange={(e) => setSedPassword(e.target.value || null)}
               placeholder="至少8个字符"
               style={{
-                ...styles.iOSInput,
+                ...styles.modernInput,
                 ...(errors.sedPassword ? styles.inputError : {}),
               }}
             />
@@ -355,18 +353,67 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 16,
   },
 
-  // iOS 风格输入框
-  iOSInput: {
+  // 表单布局
+  formBody: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  formRow: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 16,
+    padding: '12px 16px',
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  formLabel: {
+    fontSize: 15,
+    fontWeight: 500,
+    color: colors.text,
+    flexShrink: 0,
+    minWidth: 80,
+    paddingTop: 12,
+  },
+  formInput: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  requiredStar: {
+    color: colors.danger,
+    marginLeft: 2,
+  },
+
+  // 现代风格输入框
+  modernInput: {
     width: '100%',
     padding: '14px 16px',
     fontSize: 16,
     border: `1px solid ${colors.border}`,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: colors.background,
     color: colors.text,
     outline: 'none',
     boxSizing: 'border-box',
-    transition: 'border-color 0.15s',
+    transition: 'all 0.2s ease',
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.04)',
+  },
+  modernSelect: {
+    width: '100%',
+    padding: '14px 40px 14px 16px',
+    fontSize: 16,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 12,
+    backgroundColor: colors.background,
+    color: colors.text,
+    outline: 'none',
+    cursor: 'pointer',
+    boxSizing: 'border-box',
+    transition: 'all 0.2s ease',
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.04)',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238e8e93' d='M6 8L2 4h8z'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 16px center',
   },
   iOSSelect: {
     width: '100%',
@@ -385,6 +432,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   inputError: {
     borderColor: colors.danger,
+    backgroundColor: `${colors.danger}08`,
+    boxShadow: `0 0 0 3px ${colors.danger}15`,
   },
 
   // 提示和错误

@@ -83,37 +83,19 @@ export function CreatePoolPage({ onBack: _onBack, onSuccess: _onSuccess }: Creat
   return (
     <div
       style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
         backgroundColor: colors.background,
       }}
     >
-      {/* Header */}
-      {!isLoading && (
-        <div
-          style={{
-            padding: '16px 24px',
-            backgroundColor: 'transparent',
-            flexShrink: 0,
-          }}
-        >
-          <h3 style={{ margin: 0, fontSize: 14, fontWeight: 500, color: colors.textSecondary }}>
-            {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
-          </h3>
-        </div>
-      )}
-
       {/* Loading State */}
       {isLoading && (
         <div
           style={{
-            flex: 1,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: 12,
             color: colors.textSecondary,
+            padding: 40,
           }}
         >
           <Loader2 size={24} className="spin" />
@@ -124,27 +106,30 @@ export function CreatePoolPage({ onBack: _onBack, onSuccess: _onSuccess }: Creat
       {/* Wizard Content */}
       {!isLoading && (
         <>
-          {/* Step Content */}
+          {/* Header */}
           <div
             style={{
-              flex: 1,
-              overflow: 'hidden',
-              minHeight: 0,
+              padding: '16px 24px 16px 0',
+              backgroundColor: 'transparent',
             }}
           >
-            {getCurrentStepContent()}
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: colors.textSecondary, textAlign: 'left' }}>
+              {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
+            </h3>
           </div>
+
+          {getCurrentStepContent()}
 
           {/* Navigation */}
           <div
             style={{
+              marginTop: 12,
               padding: '16px 24px',
               borderTop: `1px solid ${colors.border}`,
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              backgroundColor: colors.cardBg,
-              flexShrink: 0,
+              backgroundColor: 'rgb(242, 242, 247)',
             }}
           >
             <button
