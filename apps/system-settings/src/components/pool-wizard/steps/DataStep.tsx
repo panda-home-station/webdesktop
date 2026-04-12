@@ -486,15 +486,24 @@ export function DataStep({ errors }: DataStepProps) {
 
           <div style={styles.vdevsList}>
             {vdevs.length === 0 ? (
-              <div style={styles.vdevEmptyState}>
-                <Layers size={32} color={colors.border} />
+              <button
+                type="button"
+                onClick={() => category.layout && addVdev()}
+                disabled={!category.layout}
+                style={{
+                  ...styles.vdevEmptyState,
+                  ...(category.layout ? styles.vdevEmptyStateClickable : {}),
+                  ...(!category.layout ? styles.vdevEmptyStateDisabled : {}),
+                }}
+              >
+                <Layers size={32} color={category.layout ? colors.border : colors.textSecondary} />
                 <span style={styles.vdevEmptyTitle}>
                   {!category.layout ? '请先选择布局' : '创建第一个 VDEV'}
                 </span>
                 <span style={styles.vdevEmptyHint}>
-                  {!category.layout ? '在上方选择存储布局以开始' : '点击「新建」按钮添加磁盘组'}
+                  {!category.layout ? '在上方选择存储布局以开始' : '点击此处添加磁盘组'}
                 </span>
-              </div>
+              </button>
             ) : (
               vdevs.map((vdev, vdevIndex) => (
                 <div
@@ -962,6 +971,8 @@ const styles: Record<string, React.CSSProperties> = {
   },
   vdevsList: {
     flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
     overflowY: 'auto',
     padding: 6,
     boxSizing: 'border-box',
@@ -974,6 +985,19 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
     padding: 24,
     textAlign: 'center',
+    cursor: 'default',
+    border: 'none',
+  },
+  vdevEmptyStateClickable: {
+    cursor: 'pointer',
+    backgroundColor: 'transparent',
+    transition: 'all 0.15s ease',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  vdevEmptyStateDisabled: {
+    cursor: 'not-allowed',
+    opacity: 0.6,
   },
   vdevEmptyTitle: {
     fontSize: 14,
