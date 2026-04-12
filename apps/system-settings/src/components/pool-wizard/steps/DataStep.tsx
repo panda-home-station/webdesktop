@@ -308,6 +308,10 @@ export function DataStep({ errors }: DataStepProps) {
   }
 
   const addDiskToVdev = (disk: DetailsDisk, vdevIndex: number) => {
+    // 检查硬盘是否已在目标VDEV中，避免重复添加
+    if (vdevs[vdevIndex]?.some((d) => d.devname === disk.devname)) {
+      return
+    }
     const newVdevs = [...vdevs]
     newVdevs[vdevIndex] = [...newVdevs[vdevIndex], disk]
     setVdevs(newVdevs)
