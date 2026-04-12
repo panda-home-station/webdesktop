@@ -152,12 +152,6 @@ export const LAYOUT_OPTIONS: Record<VDevType, CreateVdevLayout[]> = {
   [VDevType.Special]: [
     CreateVdevLayout.Stripe,
     CreateVdevLayout.Mirror,
-    CreateVdevLayout.Raidz1,
-    CreateVdevLayout.Raidz2,
-    CreateVdevLayout.Raidz3,
-    CreateVdevLayout.Draid1,
-    CreateVdevLayout.Draid2,
-    CreateVdevLayout.Draid3,
   ],
   [VDevType.Dedup]: [CreateVdevLayout.Mirror, CreateVdevLayout.Stripe],
 }
