@@ -5,7 +5,7 @@
 
 import React, { useEffect } from 'react'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
-import { usePoolWizardStore, WIZARD_STEPS } from './store/poolWizardStore'
+import { usePoolWizardStore } from './store/poolWizardStore'
 import { validateStep, stepHasWarnings } from './utils/validation'
 import { GeneralStep } from './steps/GeneralStep'
 import { DataStep } from './steps/DataStep'
@@ -106,18 +106,6 @@ export function CreatePoolPage({ onBack: _onBack, onSuccess: _onSuccess }: Creat
       {/* Wizard Content */}
       {!isLoading && (
         <>
-          {/* Header */}
-          <div
-            style={{
-              padding: '16px 24px 16px 0',
-              backgroundColor: 'transparent',
-            }}
-          >
-            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: colors.textSecondary, textAlign: 'left' }}>
-              {WIZARD_STEPS[currentStep].title} — Step {currentStep + 1}/{totalSteps}
-            </h3>
-          </div>
-
           {getCurrentStepContent()}
 
           {/* Navigation */}

@@ -348,9 +348,6 @@ const styles: Record<string, React.CSSProperties> = {
   bubbleHeader: {
     padding: '14px 16px',
     borderBottom: `1px solid ${colors.border}`,
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   bubbleTitleRow: {
     display: 'flex',
@@ -361,6 +358,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 600,
     color: colors.text,
+  },
+  title: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 700,
+    color: colors.text,
+  },
+  description: {
+    margin: '6px 0 0 0',
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   bubbleContent: {
     padding: 16,

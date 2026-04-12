@@ -124,6 +124,16 @@ export function GeneralStep({ errors }: GeneralStepProps) {
 
   return (
     <div style={styles.container}>
+      {/* 标题气泡框 */}
+      <div style={styles.bubbleCard}>
+        <div style={styles.bubbleHeader}>
+          <div style={styles.bubbleTitleRow}>
+            <h3 style={styles.title}>基本信息</h3>
+          </div>
+          <p style={styles.description}>设置存储池名称和加密选项</p>
+        </div>
+      </div>
+
       {/* 气泡框: 存储池设置 */}
       <div style={styles.bubbleCard}>
         <div style={styles.bubbleHeader}>
@@ -340,6 +350,17 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 600,
     color: colors.text,
+  },
+  title: {
+    margin: 0,
+    fontSize: 18,
+    fontWeight: 700,
+    color: colors.text,
+  },
+  description: {
+    margin: '6px 0 0 0',
+    fontSize: 14,
+    color: colors.textSecondary,
   },
   requiredBadge: {
     fontSize: 11,
