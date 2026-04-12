@@ -4,7 +4,7 @@
  * Redesigned with compact, efficient layout
  */
 
-import React, { useState, useMemo, useEffect } from 'react'
+import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { Plus, Trash2, Search, X, HardDrive, Layers, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { VDevType, CreateVdevLayout } from '@truenas/types/vdev-enum-types'
 import { DetailsDisk, getDiskTypeLabel, getDiskBusLabel } from '@truenas/types/disk-types'
@@ -264,18 +264,31 @@ export function DataStep({ errors }: DataStepProps) {
     return category.vdevs.length > 0 ? category.vdevs : []
   })
 
+  // 使用 ref 保存上一次的 category.vdevs 值，用于检测 category.vdevs 的真实变化
+  const prevCategoryVdevsRef = useRef<string>(JSON.stringify(category.vdevs))
+
   // 同步 category.vdevs 到本地 vdevs 状态
-  // 解决布局切换或步骤返回时，category.vdevs 被清空但本地 vdevs 未同步的问题
+  // 解决步骤返回时 store 与本地不同步的问题，以及布局切换时 category.vdevs 被清空的问题
   useEffect(() => {
-    // 如果 category.vdevs 被重置为空，但本地 vdevs 还有数据，说明是布局切换导致的不一致
+    const currentCategoryVdevsStr = JSON.stringify(category.vdevs)
+    const prevCategoryVdevsStr = prevCategoryVdevsRef.current
+
+    // 只有当 category.vdevs 实际发生变化时才处理
+    if (currentCategoryVdevsStr === prevCategoryVdevsStr) {
+      return
+    }
+
+    // 更新保存的值
+    prevCategoryVdevsRef.current = currentCategoryVdevsStr
+
+    // 如果 category.vdevs 被重置为空（布局切换），清空本地 vdevs
     if (category.vdevs.length === 0 && vdevs.length > 0) {
       setVdevs([])
     }
     // 如果 category.vdevs 有数据且与本地 vdevs 不同步（步骤返回场景），以 store 为准
     else if (category.vdevs.length > 0) {
-      const storeVdevsStr = JSON.stringify(category.vdevs)
       const localVdevsStr = JSON.stringify(vdevs)
-      if (storeVdevsStr !== localVdevsStr) {
+      if (currentCategoryVdevsStr !== localVdevsStr) {
         setVdevs(category.vdevs)
       }
     }
