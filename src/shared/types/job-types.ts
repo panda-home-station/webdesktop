@@ -6,7 +6,7 @@
 /**
  * Job state
  */
-export type JobState = 'WAITING' | 'Running' | 'Finished' | 'Failed' | 'Aborted';
+export type JobState = 'WAITING' | 'RUNNING' | 'SUCCESS' | 'FAILED' | 'ABORTED';
 
 /**
  * Core job interface

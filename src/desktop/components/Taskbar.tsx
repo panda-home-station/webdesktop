@@ -4,9 +4,11 @@ import { listApps } from '../../framework/registry'
 import { openApp, showDesktop, lockScreen } from '../../shared/sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
-import { Monitor, LayoutGrid, User, Lock, LogOut, Bell } from 'lucide-react'
+import { Monitor, LayoutGrid, User, Lock, LogOut, Bell, Repeat } from 'lucide-react'
 import { useAuthStore } from '@truenas/stores/auth'
 import useAlertStore from '@truenas/stores/alert'
+import { useJobStore } from '@truenas/stores/job'
+import { Badge } from './Badge'
 
 type WinItem = {
   id: string
@@ -113,6 +115,7 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
   const apps = listApps()
   const { user, logout } = useAuthStore()
   const unreadAlertCount = useAlertStore(state => state.getImportantUnreadAlertsCount())
+  const jobCounts = useJobStore(state => state.counts)
 
   const byApp = useMemo(() => {
     const map: Record<string, WinItem[]> = {}
@@ -331,28 +334,21 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
           onMouseLeave={hideTip}
         >
           <Bell size={22} color={unreadAlertCount > 0 ? '#ef4444' : '#3b82f6'} />
-          {unreadAlertCount > 0 && (
-            <span
-              style={{
-                position: 'absolute',
-                top: -2,
-                right: -2,
-                width: '14px',
-                height: '14px',
-                borderRadius: '8px',
-                background: '#ef4444',
-                color: '#fff',
-                fontSize: '10px',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                border: '2px solid rgba(255,255,255,0.9)',
-              }}
-            >
-              {unreadAlertCount > 99 ? '99+' : unreadAlertCount}
-            </span>
-          )}
+          {unreadAlertCount > 0 && <Badge count={unreadAlertCount} />}
+        </button>
+        <button
+          className="dock-item"
+          title="任务"
+          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer', position: 'relative' }}
+          onClick={() => {
+            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
+            focusOrOpen('jobs')
+          }}
+          onMouseEnter={(e) => showTip('任务', e.currentTarget)}
+          onMouseLeave={hideTip}
+        >
+          <Repeat size={22} color={jobCounts.running > 0 ? '#ef4444' : '#3b82f6'} />
+          {jobCounts.running > 0 && <Badge count={jobCounts.running} />}
         </button>
         <button
           className="dock-item"

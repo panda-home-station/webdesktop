@@ -10,6 +10,7 @@ import AuthGuard from './desktop/components/AuthGuard'
 import DesktopShell from './desktop/components/DesktopShell'
 import { useWebSocketInit } from './shared/hooks/useWebSocketInit'
 import { useAlertInit } from './shared/hooks/useAlertInit'
+import { useJobInit } from './shared/hooks/useJobInit'
 import SmoothWallpaper from './desktop/components/SmoothWallpaper'
 import { useWallpaper } from './shared/hooks/useWallpaper'
 import AppLoading from './desktop/components/AppLoading'
@@ -18,6 +19,7 @@ export default function App() {
   // Initialize services
   const wsInitialized = useWebSocketInit()
   useAlertInit()
+  useJobInit()
 
   const wallpaper = useWallpaper()
 
