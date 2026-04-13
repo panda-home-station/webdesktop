@@ -122,7 +122,7 @@ export function VDevsCard({ topology, onDiskClick, onViewDetails }: VDevsCardPro
       <div style={styles.header}>
         <div style={styles.titleRow}>
           <HardDrive size={18} color={colors.primary} />
-          <span style={styles.title}>存储设备</span>
+          <span style={styles.title}>VDEVs</span>
           <span style={styles.titleBadge}>{groups.length} 个</span>
         </div>
         <div style={styles.headerActions}>

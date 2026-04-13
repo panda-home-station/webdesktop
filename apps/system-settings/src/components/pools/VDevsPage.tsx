@@ -72,7 +72,7 @@ export function VDevsPage({ pool, onBack }: VDevsPageProps) {
         </button>
         <div style={styles.titleBlock}>
           <span style={styles.breadcrumb}>{pool.name}</span>
-          <h1 style={styles.pageTitle}>存储设备详情</h1>
+          <h1 style={styles.pageTitle}>VDEVs</h1>
         </div>
       </div>
 
