@@ -5,18 +5,13 @@
 
 import React from 'react'
 import { Pool } from '@truenas/types/pool'
-import { Dataset } from '@truenas/types/dataset-types'
-import { VDevType } from '@truenas/types/vdev-enum-types'
-import { VDevItem } from '@truenas/types/storage-types'
 import { GaugeChart } from '../ui/GaugeChart'
 import { StorageHealthCard } from './StorageHealthCard'
 import { formatBytes, getPoolHealthColor, getPoolUsedPercentage } from '@truenas/utils/storage.utils'
-import { ScrubTask } from '@truenas/types/pool-scrub-types'
 import { colors } from '../../styles/theme'
 import {
   Database,
   Shield,
-  HardDrive,
   AlertTriangle,
   CheckCircle,
   Activity,
@@ -180,37 +175,6 @@ export function PoolDashboard({
           onEditAutotrim={handleEditAutotrim}
         />
       </div>
-
-      {/* Topology Section */}
-      <div style={styles.topologySection}>
-        <h3 style={styles.sectionTitle}>存储池拓扑</h3>
-        <div style={styles.topologyGrid}>
-          {Object.entries(pool.topology)
-            .filter(([key]) => key !== 'spare')
-            .map(([type, vdevs]) => {
-              if (!vdevs || vdevs.length === 0) return null
-              return (
-                <div key={type} style={styles.topologyCard}>
-                  <div style={styles.topologyHeader}>
-                    <span style={styles.topologyType}>{getVdevTypeLabel(type as VDevType)}</span>
-                    <span style={styles.topologyCount}>{vdevs.length} {vdevs.length === 1 ? '个vdev' : '个vdev'}</span>
-                  </div>
-                  <div style={styles.topologyDisks}>
-                    {vdevs.slice(0, 6).map((vdev: VDevItem, idx: number) => (
-                      <div key={idx} style={styles.diskItem}>
-                        <HardDrive size={14} color={colors.textTertiary} />
-                        <span style={styles.diskName}>{vdev.type || type}</span>
-                      </div>
-                    ))}
-                    {vdevs.length > 6 && (
-                      <div style={styles.moreDisks}>+{vdevs.length - 6} 更多</div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-        </div>
-      </div>
     </div>
   )
 }
@@ -230,18 +194,6 @@ function DetailItem({ label, value, mono }: DetailItemProps) {
       </span>
     </div>
   )
-}
-
-function getVdevTypeLabel(type: VDevType): string {
-  const labels: Record<VDevType, string> = {
-    [VDevType.Data]: '数据',
-    [VDevType.Log]: '日志',
-    [VDevType.Special]: '元数据',
-    [VDevType.Spare]: '热备',
-    [VDevType.Dedup]: '重删',
-    [VDevType.Cache]: '缓存',
-  }
-  return labels[type] || type
 }
 
 const styles: Record<string, React.CSSProperties> = {
@@ -413,64 +365,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 15,
     fontWeight: 600,
     color: colors.text,
-  },
-  topologySection: {
-    marginBottom: 28,
-  },
-  sectionTitle: {
-    margin: '0 0 16px 0',
-    fontSize: 16,
-    fontWeight: 600,
-    color: colors.text,
-  },
-  topologyGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-    gap: 12,
-  },
-  topologyCard: {
-    padding: 16,
-    backgroundColor: colors.cardBg,
-    borderRadius: 12,
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-  },
-  topologyHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  topologyType: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: colors.text,
-  },
-  topologyCount: {
-    fontSize: 12,
-    color: colors.textTertiary,
-  },
-  topologyDisks: {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: 8,
-  },
-  diskItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 4,
-    padding: '4px 8px',
-    backgroundColor: colors.background,
-    borderRadius: 6,
-  },
-  diskName: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  moreDisks: {
-    padding: '4px 8px',
-    fontSize: 11,
-    color: colors.primary,
-    fontWeight: 500,
   },
   detailsCard: {
     backgroundColor: colors.cardBg,
