@@ -1,6 +1,6 @@
 /**
  * Storage Overview Component
- * Main storage tab showing pool overview and datasets
+ * Main storage tab showing pool overview
  */
 
 import { useState, useCallback } from 'react'
@@ -8,9 +8,8 @@ import { Plus } from 'lucide-react'
 import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
 import { poolService } from '@truenas/services/pool'
-import { PoolList, PoolDetails } from './pools'
+import { PoolList, PoolDashboard } from './pools'
 import { CreatePoolPage } from './pool-wizard'
-import { DatasetTree } from './datasets'
 import { colors } from '../styles/theme'
 
 interface StorageOverviewProps {
@@ -56,7 +55,7 @@ export function StorageOverview({ view, onViewChange, pools, datasets, onPoolCli
   if (view === 'pool-details' && selectedPool) {
     const poolDatasets = datasets.filter(d => d.pool === selectedPool.name)
     return (
-      <PoolDetails
+      <PoolDashboard
         pool={selectedPool}
         datasets={poolDatasets}
         onBack={() => {
@@ -111,19 +110,6 @@ export function StorageOverview({ view, onViewChange, pools, datasets, onPoolCli
         />
       </div>
 
-      {/* Dataset Tree */}
-      {datasets.length > 0 && (
-        <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Datasets</h3>
-          {/* Only show top-level datasets (those that belong to a pool) */}
-          <DatasetTree
-            datasets={datasets.filter(d => !d.name.includes('/'))}
-            onDatasetClick={() => {
-              // Could navigate to dataset details
-            }}
-          />
-        </div>
-      )}
     </div>
   )
 }

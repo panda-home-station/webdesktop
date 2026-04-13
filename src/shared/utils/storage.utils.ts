@@ -69,12 +69,14 @@ export function getTotalPoolUsed(pools: { size?: { used?: number } }[]): number 
 }
 
 // Get pool used percentage
-export function getPoolUsedPercentage(pool: { allocated?: number; free?: number }): number {
-  // When is_upgraded is true, pool.allocated and pool.free are available
-  const allocated = pool.allocated || 0;
+export function getPoolUsedPercentage(pool: { allocated?: number; free?: number; size?: number }): number {
+  // pool.size = total size, pool.free = free space
+  // used = size - free
+  const total = pool.size || 0;
   const free = pool.free || 0;
-  const used = allocated - free;
-  return calculatePercentage(used, allocated);
+  if (total === 0) return 0;
+  const used = total - free;
+  return Math.round((used / total) * 100);
 }
 
 // Get disk type label
