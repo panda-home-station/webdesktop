@@ -280,7 +280,7 @@ const styles = {
   },
   tabButtonActive: {
     color: colors.primary,
-    borderBottomColor: colors.primary,
+    borderBottom: `2px solid ${colors.primary}`,
   },
   sectionContent: {
     marginBottom: 24,
