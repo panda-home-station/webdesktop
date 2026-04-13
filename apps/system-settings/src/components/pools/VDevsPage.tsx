@@ -307,10 +307,8 @@ function VDevDetailPanel({ item, disk }: { item: VDevItem; disk: Disk | null }) 
         </div>
       </div>
 
-      <div style={styles.sectionDivider} />
-
       {/* ZFS 统计 */}
-      <div style={styles.sectionWrap}>
+      <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
         <div style={styles.sectionHeader}>
           <span style={styles.sectionLabel}>ZFS 统计</span>
           <div style={styles.actionBtnsRow}>
@@ -332,11 +330,9 @@ function VDevDetailPanel({ item, disk }: { item: VDevItem; disk: Disk | null }) 
         </div>
       </div>
 
-      <div style={styles.sectionDivider} />
-
       {/* 磁盘信息 */}
       {isDisk && disk && (
-        <div style={styles.sectionWrap}>
+        <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
           <div style={styles.sectionHeader}>
             <span style={styles.sectionLabel}>磁盘信息</span>
             <div style={styles.actionBtnsRow}>
