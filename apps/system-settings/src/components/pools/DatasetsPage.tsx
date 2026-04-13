@@ -50,8 +50,7 @@ export function DatasetsPage({ poolName, datasets, onBack }: DatasetsPageProps) 
           返回
         </button>
         <div style={styles.titleBlock}>
-          <span style={styles.breadcrumb}>{poolName}</span>
-          <h1 style={styles.pageTitle}>数据集详情</h1>
+          <h1 style={styles.title}>{poolName}</h1>
         </div>
       </div>
 
@@ -407,18 +406,12 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column' as const,
     gap: 2,
   },
-  breadcrumb: {
-    fontSize: 12,
-    color: colors.textTertiary,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    fontWeight: 500,
-  },
-  pageTitle: {
+  title: {
     margin: 0,
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: 700,
     color: colors.text,
+    flex: 1,
   },
   masterDetail: {
     display: 'flex',

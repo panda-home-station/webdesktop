@@ -33,9 +33,11 @@ const TABS = [
 
 // Storage tab has sub-views with different titles
 const STORAGE_TITLES: Record<string, string> = {
-  'overview': '存储池',
+  'overview': '存储空间',
   'create-pool': '创建存储池',
   'pool-details': '存储池',
+  'vdevs-details': 'VDEVs详情',
+  'datasets-details': '数据集详情',
 }
 
 export default function SystemSettings() {
