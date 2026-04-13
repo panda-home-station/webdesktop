@@ -210,22 +210,22 @@ const JobBubble = memo(({ job }: {
   const getStateConfig = (state: JobState) => {
     switch (state) {
       case 'RUNNING':
-        return { bg: '#F0F7FF', icon: '#007AFF', color: '#007AFF', label: '进行中', showProgress: true }
+        return { bg: '#F0F7FF', icon: '#007AFF' }
       case 'WAITING':
-        return { bg: '#F5F5F5', icon: '#8E8E93', color: '#8E8E93', label: '等待中', showProgress: false }
+        return { bg: '#F5F5F5', icon: '#8E8E93' }
       case 'SUCCESS':
-        return { bg: '#E8F9ED', icon: '#34C759', color: '#34C759', label: '已完成', showProgress: false }
+        return { bg: '#E8F9ED', icon: '#34C759' }
       case 'FAILED':
-        return { bg: '#FFEEEE', icon: '#FF3B30', color: '#FF3B30', label: '失败', showProgress: false }
+        return { bg: '#FFEEEE', icon: '#FF3B30' }
       case 'ABORTED':
-        return { bg: '#F5F5F5', icon: '#8E8E93', color: '#8E8E93', label: '已取消', showProgress: false }
+        return { bg: '#F5F5F5', icon: '#8E8E93' }
       default:
-        return { bg: '#F5F5F5', icon: '#8E8E93', color: '#8E8E93', label: '未知', showProgress: false }
+        return { bg: '#F5F5F5', icon: '#8E8E93' }
     }
   }
 
   const stateConfig = getStateConfig(job.state)
-  const isActive = stateConfig.showProgress
+  const isRunning = job.state === 'RUNNING'
 
   return (
     <div style={{
@@ -239,7 +239,6 @@ const JobBubble = memo(({ job }: {
       cursor: 'pointer',
       border: 'none',
       outline: 'none',
-      borderLeft: `4px solid ${stateConfig.color}`,
     }}>
       {/* Icon Container */}
       <div style={{
@@ -253,7 +252,7 @@ const JobBubble = memo(({ job }: {
         flexShrink: 0,
         boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
       }}>
-        {job.state === 'RUNNING' ? (
+        {isRunning ? (
           <Loader2 size={20} color={stateConfig.icon} style={{ animation: 'spin 1s linear infinite' }} />
         ) : job.state === 'SUCCESS' ? (
           <CheckCircle2 size={20} color={stateConfig.icon} />
@@ -271,7 +270,7 @@ const JobBubble = memo(({ job }: {
           fontWeight: '600',
           color: colors.text,
           lineHeight: 1.4,
-          marginBottom: isActive ? 10 : 4,
+          marginBottom: isRunning ? 10 : 4,
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
@@ -281,7 +280,7 @@ const JobBubble = memo(({ job }: {
         </div>
 
         {/* Progress Bar for Running Jobs */}
-        {isActive && (
+        {isRunning && (
           <div style={{
             marginBottom: 8,
             height: 4,
@@ -292,7 +291,7 @@ const JobBubble = memo(({ job }: {
             <div style={{
               width: `${progress}%`,
               height: '100%',
-              background: stateConfig.color,
+              background: stateConfig.icon,
               borderRadius: 2,
               transition: 'width 0.3s ease',
             }} />
@@ -308,7 +307,7 @@ const JobBubble = memo(({ job }: {
         }}>
           <Clock size={12} />
           <span>{timestamp}</span>
-          {isActive && job.progress?.details && (
+          {isRunning && job.progress?.details && (
             <span style={{
               background: 'rgba(0,122,255,0.1)',
               color: '#007AFF',
@@ -321,19 +320,6 @@ const JobBubble = memo(({ job }: {
             </span>
           )}
         </div>
-      </div>
-
-      {/* Status Badge */}
-      <div style={{
-        padding: '6px 12px',
-        borderRadius: 20,
-        fontSize: 12,
-        fontWeight: '600',
-        flexShrink: 0,
-        background: stateConfig.color,
-        color: '#fff',
-      }}>
-        {stateConfig.label}
       </div>
     </div>
   )
