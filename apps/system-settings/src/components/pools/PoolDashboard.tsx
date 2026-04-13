@@ -297,7 +297,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   mainGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr 1fr',
+    gridTemplateColumns: '2fr 1fr 1fr',
     gap: 20,
     marginBottom: 28,
   },
@@ -479,14 +479,17 @@ const styles: Record<string, React.CSSProperties> = {
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   detailsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-    gap: 16,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 12,
+    marginTop: 16,
   },
   detailItem: {
     display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 4,
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
   },
   detailLabel: {
     fontSize: 12,
