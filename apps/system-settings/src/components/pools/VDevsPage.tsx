@@ -282,154 +282,117 @@ function VDevDetailPanel({ item, disk }: { item: VDevItem; disk: Disk | null }) 
   const allOk = item.status === TopologyItemStatus.Online && !hasErrors
 
   return (
-    <div style={styles.detailPanel}>
-      {/* Detail Header */}
-      <div style={styles.detailHeader}>
-        <div style={styles.detailIconWrap}>
+    <div style={styles.outerCard}>
+      {/* Header */}
+      <div style={styles.headerSection}>
+        <div style={styles.diskIconWrap}>
           <HardDrive size={28} color={colors.primary} />
         </div>
-        <div style={styles.detailHeaderInfo}>
-          <h2 style={styles.detailTitle}>{isDisk ? item.disk : item.name}</h2>
-          <div style={styles.detailBadges}>
+        <div style={styles.headerText}>
+          <div style={styles.diskIdentifier}>{isDisk ? item.disk : item.name}</div>
+          <div style={styles.diskMeta}>
             {!isDisk && (
               <span style={styles.typeBadge}>{getVdevTypeLabel(item.type)}</span>
             )}
-            <span style={{ ...styles.statusBadge, backgroundColor: statusColor }}>
+            <span style={{ ...styles.statusPill, backgroundColor: statusColor }}>
               {statusLabel}
             </span>
             {allOk && (
-              <span style={styles.okBadge}>
-                <CheckCircle size={12} />
-                无错误
+              <span style={styles.okPill}>
+                <CheckCircle size={11} />
+                正常
               </span>
             )}
           </div>
         </div>
-        <div style={styles.headerActions}>
-          <button style={styles.editButton}>编辑</button>
-        </div>
       </div>
 
-      {/* 磁盘信息 (仅对磁盘显示) */}
-      {isDisk && disk && (
-        <div style={styles.detailCard}>
-          <div style={styles.detailCardTitle}>磁盘信息</div>
-          {disk.size > 0 && (
-            <InfoRow label="磁盘大小" value={formatBytes(disk.size)} />
-          )}
-          <InfoRow label="传输模式" value={disk.transfermode} />
-          <InfoRow label="序列号" value={disk.serial} mono />
-          <InfoRow label="型号" value={disk.model || '不可用'} />
-          <InfoRow
-            label="转速"
-            value={disk.rotationrate ? `${disk.rotationrate} RPM` : '不可用'}
-          />
-          <InfoRow label="类型" value={disk.type} />
-          <InfoRow label="HDD 休眠" value={disk.hddstandby} />
-          <InfoRow label="描述" value={disk.description || '不可用'} />
-        </div>
-      )}
+      <div style={styles.sectionDivider} />
 
       {/* ZFS 统计 */}
-      <div style={styles.detailCard}>
-        <div style={styles.detailCardTitle}>ZFS 统计</div>
-        <div style={styles.statsGrid}>
-          <StatBox
-            label="读错误"
-            value={item.stats.read_errors}
-            error={item.stats.read_errors > 0}
-          />
-          <StatBox
-            label="写错误"
-            value={item.stats.write_errors}
-            error={item.stats.write_errors > 0}
-          />
-          <StatBox
-            label="校验错误"
-            value={item.stats.checksum_errors}
-            error={item.stats.checksum_errors > 0}
-          />
-        </div>
-        {hasErrors && (
-          <div style={styles.errorBanner}>
-            <AlertTriangle size={14} />
-            此设备存在错误，建议检查磁盘健康状态
+      <div style={styles.sectionWrap}>
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionLabel}>ZFS 统计</span>
+          <div style={styles.actionBtnsRow}>
+            <button style={styles.actionBtn}>扩展</button>
+            <button style={styles.actionBtn}>删除</button>
+            <button style={styles.actionBtn}>离线</button>
           </div>
-        )}
+        </div>
+        <div style={styles.glassCard}>
+          <InfoRow label="读错误" value={item.stats.read_errors} />
+          <InfoRow label="写错误" value={item.stats.write_errors} />
+          <InfoRow label="校验错误" value={item.stats.checksum_errors} />
+          {hasErrors && (
+            <div style={styles.errorBanner}>
+              <AlertTriangle size={13} />
+              <span>检测到错误，建议检查磁盘健康状态</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* 设备信息 */}
-      <div style={styles.detailCard}>
-        <div style={styles.detailCardTitle}>设备信息</div>
-        <InfoRow label="GUID" value={item.guid} mono />
-        {item.path && <InfoRow label="设备路径" value={item.path} mono />}
-        <InfoRow label="类型" value={isDisk ? '磁盘' : getVdevTypeLabel(item.type)} />
-        {item.stats.size > 0 && (
-          <InfoRow label="容量" value={formatBytes(item.stats.size)} />
-        )}
-        {!isDisk && item.stats.allocated > 0 && (
-          <InfoRow label="已分配" value={formatBytes(item.stats.allocated)} />
-        )}
-        {!isDisk && item.stats.size > 0 && item.stats.allocated > 0 && (
-          <InfoRow
-            label="可用"
-            value={formatBytes(item.stats.size - item.stats.allocated)}
-          />
-        )}
-      </div>
+      <div style={styles.sectionDivider} />
+
+      {/* 磁盘信息 */}
+      {isDisk && disk && (
+        <div style={styles.sectionWrap}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.sectionLabel}>磁盘信息</span>
+            <div style={styles.actionBtnsRow}>
+              <button style={styles.actionBtn}>编辑</button>
+              <button style={styles.actionBtnPrimary}>更换</button>
+            </div>
+          </div>
+          <div style={styles.glassCard}>
+            <InfoRow label="容量" value={disk.size > 0 ? formatBytes(disk.size) : '-'} />
+            <InfoRow label="传输模式" value={disk.transfermode || '-'} />
+            <InfoRow label="型号" value={disk.model || '-'} />
+            <InfoRow label="转速" value={disk.rotationrate ? `${disk.rotationrate} RPM` : '-'} />
+            <InfoRow label="类型" value={disk.type || '-'} />
+            <InfoRow label="HDD 休眠" value={disk.hddstandby || '-'} />
+            {disk.serial && <InfoRow label="序列号" value={disk.serial} mono />}
+            {disk.description && <InfoRow label="描述" value={disk.description} />}
+          </div>
+        </div>
+      )}
 
       {/* Children count (for vdevs) */}
       {!isDisk && (item.children?.length ?? 0) > 0 && (
-        <div style={styles.detailCard}>
-          <div style={styles.detailCardTitle}>子设备</div>
-          {item.children.map(child => (
-            <div key={child.guid} style={styles.childRow}>
-              <HardDrive size={14} color={colors.textSecondary} />
-              <span style={styles.childName}>{child.disk}</span>
-              <span style={{
-                ...styles.childStatus,
-                color: getTopologyStatusColor(child.status),
-              }}>
-                {getTopologyStatusLabel(child.status)}
-              </span>
-              {child.stats.size > 0 && (
-                <span style={styles.childSize}>{formatBytes(child.stats.size)}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Actions */}
-      {isDisk && (
-        <div style={styles.actionsBar}>
-          <button style={styles.replaceButton}>更换</button>
+        <div style={styles.sectionWrap}>
+          <div style={styles.sectionLabel}>子设备</div>
+          <div style={styles.glassCard}>
+            {item.children.map(child => (
+              <div key={child.guid} style={styles.childItem}>
+                <HardDrive size={14} color={colors.textSecondary} />
+                <span style={styles.childItemName}>{child.disk}</span>
+                <span style={{
+                  ...styles.childItemStatus,
+                  color: getTopologyStatusColor(child.status),
+                }}>
+                  {getTopologyStatusLabel(child.status)}
+                </span>
+                {child.stats.size > 0 && (
+                  <span style={styles.childItemSize}>{formatBytes(child.stats.size)}</span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   )
 }
 
-function StatBox({ label, value, error }: { label: string; value: number; error?: boolean }) {
-  return (
-    <div style={{
-      ...styles.statBox,
-      borderColor: error ? colors.danger + '50' : colors.border,
-      backgroundColor: error ? colors.danger + '08' : colors.background,
-    }}>
-      <span style={{ ...styles.statBoxValue, color: error ? colors.danger : colors.text }}>
-        {value}
-      </span>
-      <span style={styles.statBoxLabel}>{label}</span>
-    </div>
-  )
-}
-
-function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function InfoRow({ label, value, mono, error }: { label: string; value: string | number; mono?: boolean; error?: boolean }) {
   return (
     <div style={styles.infoRow}>
       <span style={styles.infoLabel}>{label}</span>
-      <span style={{ ...styles.infoValue, fontFamily: mono ? 'monospace' : 'inherit' }}>
+      <span style={{
+        ...styles.infoValue,
+        fontFamily: mono ? 'monospace' : 'inherit',
+        color: error ? colors.danger : 'inherit',
+      }}>
         {value}
       </span>
     </div>
@@ -723,167 +686,171 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.textTertiary,
     margin: 0,
   },
-  detailPanel: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 16,
+
+  // Apple-style outer card
+  outerCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    overflow: 'hidden',
+    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
   },
-  detailHeader: {
+
+  // Header section
+  headerSection: {
     display: 'flex',
     alignItems: 'center',
     gap: 16,
-    backgroundColor: colors.cardBg,
-    borderRadius: 12,
     padding: '20px 24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-  },
-  headerActions: {
-    marginLeft: 'auto',
-    display: 'flex',
-    gap: 8,
-  },
-  editButton: {
-    padding: '8px 16px',
     backgroundColor: colors.cardBg,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 500,
-    color: colors.primary,
-    cursor: 'pointer',
   },
-  actionsBar: {
-    display: 'flex',
-    gap: 8,
-    padding: '16px 24px',
-    backgroundColor: colors.cardBg,
-    borderRadius: 12,
-  },
-  replaceButton: {
-    padding: '8px 16px',
-    backgroundColor: colors.cardBg,
-    border: `1px solid ${colors.border}`,
-    borderRadius: 8,
-    fontSize: 14,
-    fontWeight: 500,
-    color: colors.text,
-    cursor: 'pointer',
-  },
-  detailIconWrap: {
+  diskIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 13,
+    backgroundColor: colors.primary + '14',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: 56,
-    height: 56,
-    backgroundColor: colors.primary + '12',
-    borderRadius: 14,
     flexShrink: 0,
   },
-  detailHeaderInfo: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 8,
+  headerText: {
+    flex: 1,
+    minWidth: 0,
   },
-  detailTitle: {
-    margin: 0,
-    fontSize: 22,
+  diskIdentifier: {
+    fontSize: 20,
     fontWeight: 700,
     color: colors.text,
+    letterSpacing: '-0.3px',
+    fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif',
   },
-  detailBadges: {
+  diskMeta: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
+    marginTop: 6,
     flexWrap: 'wrap' as const,
   },
   typeBadge: {
-    padding: '3px 10px',
+    padding: '3px 9px',
     backgroundColor: colors.primary + '15',
     color: colors.primary,
-    borderRadius: 6,
-    fontSize: 12,
+    borderRadius: 5,
+    fontSize: 11,
     fontWeight: 600,
+    letterSpacing: '0.2px',
   },
-  statusBadge: {
-    padding: '3px 10px',
+  statusPill: {
+    padding: '3px 9px',
     color: 'white',
-    borderRadius: 6,
-    fontSize: 12,
+    borderRadius: 5,
+    fontSize: 11,
     fontWeight: 600,
   },
-  okBadge: {
+  okPill: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 4,
-    padding: '3px 10px',
+    padding: '3px 9px',
     backgroundColor: colors.success + '15',
     color: colors.success,
-    borderRadius: 6,
+    borderRadius: 5,
+    fontSize: 11,
+    fontWeight: 600,
+  },
+
+  // Section wrapper
+  sectionWrap: {
+    padding: '0 24px 20px',
+  },
+  sectionDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    margin: '0',
+  },
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 0',
+    marginBottom: 10,
+  },
+  sectionLabel: {
     fontSize: 12,
-    fontWeight: 500,
-  },
-  detailCard: {
-    backgroundColor: colors.cardBg,
-    borderRadius: 12,
-    padding: '20px 24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-  },
-  detailCardTitle: {
-    fontSize: 13,
     fontWeight: 600,
     color: colors.textSecondary,
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    marginBottom: 16,
+    letterSpacing: '0.6px',
   },
-  statsGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, 1fr)',
-    gap: 12,
+
+  // Glass card
+  glassCard: {
+    backgroundColor: colors.background,
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: 14,
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
+    border: `1px solid ${colors.border}`,
+    borderTop: 'none',
+    overflow: 'hidden',
   },
-  statBox: {
+
+  // Action buttons row
+  actionBtnsRow: {
     display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    gap: 4,
-    padding: '14px 10px',
-    borderRadius: 10,
-    border: '1px solid',
+    gap: 8,
   },
-  statBoxValue: {
-    fontSize: 28,
-    fontWeight: 700,
-    fontVariantNumeric: 'tabular-nums',
-  },
-  statBoxLabel: {
-    fontSize: 11,
-    color: colors.textTertiary,
+  actionBtn: {
+    padding: '8px 16px',
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    fontSize: 13,
     fontWeight: 500,
+    color: colors.text,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
+  actionBtnPrimary: {
+    padding: '8px 16px',
+    backgroundColor: colors.primary,
+    border: `1px solid ${colors.primary}`,
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    color: 'white',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+
+  // Error banner
   errorBanner: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    marginTop: 14,
-    padding: '10px 14px',
-    backgroundColor: colors.warning + '12',
-    border: `1px solid ${colors.warning}30`,
-    borderRadius: 8,
+    margin: 0,
+    padding: '12px 16px',
+    backgroundColor: 'rgba(255, 69, 58, 0.08)',
+    borderTop: `1px solid rgba(255, 69, 58, 0.15)`,
     fontSize: 13,
-    color: colors.warning,
+    color: colors.danger,
     fontWeight: 500,
   },
+
+  // Info row (simple label: value format)
   infoRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 16,
-    padding: '9px 0',
+    padding: '10px 16px',
     borderBottom: `1px solid ${colors.border}`,
   },
   infoLabel: {
     fontSize: 13,
     color: colors.textSecondary,
+    fontWeight: 500,
     flexShrink: 0,
   },
   infoValue: {
@@ -893,26 +860,30 @@ const styles: Record<string, React.CSSProperties> = {
     textAlign: 'right' as const,
     wordBreak: 'break-all' as const,
   },
-  childRow: {
+
+  // Child items (for vdev children)
+  childItem: {
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '9px 0',
+    padding: '12px 16px',
     borderBottom: `1px solid ${colors.border}`,
+    backgroundColor: colors.background,
   },
-  childName: {
+  childItemName: {
     flex: 1,
     fontSize: 13,
     color: colors.text,
     fontWeight: 500,
+    fontFamily: 'SF Mono, Menlo, Monaco, monospace',
   },
-  childStatus: {
-    fontSize: 12,
+  childItemStatus: {
+    fontSize: 11,
     fontWeight: 600,
   },
-  childSize: {
+  childItemSize: {
     fontSize: 12,
     color: colors.textSecondary,
-    fontFamily: 'monospace',
+    fontFamily: 'SF Mono, Menlo, Monaco, monospace',
   },
 }
