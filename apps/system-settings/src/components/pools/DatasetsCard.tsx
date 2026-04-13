@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Folder,
   FolderOpen,
+  Folders,
 } from 'lucide-react'
 
 interface DatasetsCardProps {
@@ -38,19 +39,7 @@ export function DatasetsCard({
       <div style={styles.header}>
         <div style={styles.titleRow}>
           <div style={styles.headerIcon}>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={colors.primary}
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />
-            </svg>
+            <Folders size={18} color={colors.primary} />
           </div>
           <span style={styles.title}>数据集</span>
           <span style={styles.badge}>{poolDatasets.length} 个</span>
