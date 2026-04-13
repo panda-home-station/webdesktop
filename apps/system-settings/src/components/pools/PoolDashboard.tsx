@@ -8,12 +8,13 @@ import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
 import { VDevType } from '@truenas/types/vdev-enum-types'
 import { GaugeChart } from '../ui/GaugeChart'
+import { StorageHealthCard } from './StorageHealthCard'
 import { formatBytes, getPoolHealthColor, getPoolUsedPercentage } from '@truenas/utils/storage.utils'
+import { ScrubTask } from '@truenas/types/pool-scrub-types'
 import { colors } from '../../styles/theme'
 import {
   Database,
   Shield,
-  RefreshCw,
   HardDrive,
   AlertTriangle,
   CheckCircle,
@@ -36,6 +37,17 @@ export function PoolDashboard({
   const healthColor = getPoolHealthColor(pool.status)
   const isHealthy = pool.healthy
   const isLowCapacity = usedPercent >= 80
+
+  function handleConfigureScrub(poolId: number, existingScrub: ScrubTask | null) {
+    // TODO: Open scrub configuration dialog/slide-in
+    alert(`配置校验任务 (poolId: ${poolId})\n当前设置: ${existingScrub ? '已配置' : '未设置'}`)
+  }
+
+  function handleEditAutotrim(pool: Pool) {
+    // TODO: Open autotrim dialog
+    const currentValue = pool.autotrim?.value === 'on' ? '开' : '关'
+    alert(`编辑自动 TRIM\n池: ${pool.name}\n当前值: ${currentValue}`)
+  }
 
   return (
     <div style={styles.container}>
@@ -144,6 +156,15 @@ export function PoolDashboard({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Storage Health Card */}
+      <div style={styles.healthCardSection}>
+        <StorageHealthCard
+          pool={pool}
+          onConfigureScrub={handleConfigureScrub}
+          onEditAutotrim={handleEditAutotrim}
+        />
       </div>
 
       {/* Topology Section */}
@@ -269,6 +290,9 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 20,
     fontSize: 13,
     fontWeight: 600,
+  },
+  healthCardSection: {
+    marginBottom: 24,
   },
   mainGrid: {
     display: 'grid',
