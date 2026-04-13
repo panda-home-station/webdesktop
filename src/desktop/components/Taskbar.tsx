@@ -4,11 +4,12 @@ import { listApps } from '../../framework/registry'
 import { openApp, showDesktop, lockScreen } from '../../shared/sdk/desktop'
 import Icon from '@mdi/react'
 import { mdiCogOutline, mdiRobot } from '@mdi/js'
-import { Monitor, LayoutGrid, User, Lock, LogOut, Bell, Repeat } from 'lucide-react'
+import { Monitor, LayoutGrid, User, Lock, LogOut, Bell } from 'lucide-react'
 import { useAuthStore } from '@truenas/stores/auth'
 import useAlertStore from '@truenas/stores/alert'
 import { useJobStore } from '@truenas/stores/job'
 import { Badge } from './Badge'
+import { NotificationCenter } from './NotificationCenter'
 
 type WinItem = {
   id: string
@@ -161,6 +162,13 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
 
   const [menu, setMenu] = useState<{ x: number; y: number; items: { label: string; onClick?: () => void }[] } | null>(null)
   const [accountMenu, setAccountMenu] = useState<{ x: number; y: number } | null>(null)
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState(false)
+  const [notificationCenterAnchor, setNotificationCenterAnchor] = useState<{ x: number; y: number } | null>(null)
+
+  // Calculate total notification count
+  const totalNotificationCount = useMemo(() => {
+    return unreadAlertCount + jobCounts.running + jobCounts.failed
+  }, [unreadAlertCount, jobCounts])
   
   const focusOrOpen = (appId: string) => {
     const appWins = byApp[appId] || []
@@ -324,31 +332,19 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
         </button>
         <button
           className="dock-item"
-          title="通知"
+          title="通知中心"
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer', position: 'relative' }}
-          onClick={() => {
+          onClick={(e) => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            focusOrOpen('notifications')
+            const r = e.currentTarget.getBoundingClientRect()
+            setNotificationCenterAnchor({ x: r.right + 12, y: r.top })
+            setIsNotificationCenterOpen(true)
           }}
-          onMouseEnter={(e) => showTip('通知', e.currentTarget)}
+          onMouseEnter={(e) => showTip('通知中心', e.currentTarget)}
           onMouseLeave={hideTip}
         >
-          <Bell size={22} color={unreadAlertCount > 0 ? '#ef4444' : '#3b82f6'} />
-          {unreadAlertCount > 0 && <Badge count={unreadAlertCount} />}
-        </button>
-        <button
-          className="dock-item"
-          title="任务"
-          style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer', position: 'relative' }}
-          onClick={() => {
-            if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            focusOrOpen('jobs')
-          }}
-          onMouseEnter={(e) => showTip('任务', e.currentTarget)}
-          onMouseLeave={hideTip}
-        >
-          <Repeat size={22} color={jobCounts.running > 0 ? '#ef4444' : '#3b82f6'} />
-          {jobCounts.running > 0 && <Badge count={jobCounts.running} />}
+          <Bell size={22} color={totalNotificationCount > 0 ? '#ef4444' : '#3b82f6'} />
+          {totalNotificationCount > 0 && <Badge count={totalNotificationCount} />}
         </button>
         <button
           className="dock-item"
@@ -523,6 +519,13 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
         </div>,
         document.body
       )}
+
+      {/* Notification Center */}
+      <NotificationCenter
+        open={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+        anchorEl={notificationCenterAnchor}
+      />
     </div>
   )
 }
