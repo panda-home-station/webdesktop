@@ -472,6 +472,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.primary,
     fontWeight: 500,
   },
+  detailsCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    padding: 24,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  },
   detailsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
