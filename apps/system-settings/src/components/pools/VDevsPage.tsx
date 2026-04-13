@@ -785,10 +785,7 @@ const styles: Record<string, React.CSSProperties> = {
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
     borderRadius: 14,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
     border: `1px solid ${colors.border}`,
-    borderTop: 'none',
     overflow: 'hidden',
   },
 

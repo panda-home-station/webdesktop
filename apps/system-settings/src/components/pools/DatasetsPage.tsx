@@ -1,10 +1,15 @@
 /**
  * Datasets Detail Page
  * Master-detail view of pool datasets
+ * Styled after VDEVsPage with bubble layout and glassCard sections
  */
 
 import { useState } from 'react'
-import { Dataset, isVolume } from '@truenas/types/dataset-types'
+import { Dataset, isVolume, isFilesystem, isDatasetEncrypted } from '@truenas/types/dataset-types'
+import { DatasetCaseSensitivity } from '@truenas/types/dataset-enum-types'
+import { DeduplicationSetting } from '@truenas/types/dedup-enum-types'
+import { OnOff } from '@truenas/types/on-off-enum-types'
+import { ZfsPropertySource } from '@truenas/types/zfs-property-types'
 import { formatBytes } from '@truenas/utils/storage.utils'
 import { colors } from '../../styles/theme'
 import {
@@ -14,20 +19,43 @@ import {
   ChevronRight,
   ChevronDown,
   Lock,
+  Copy,
+  Trash2,
+  RefreshCw,
+  ShieldCheck,
 } from 'lucide-react'
 
 interface DatasetsPageProps {
   poolName: string
   datasets: Dataset[]
   onBack: () => void
+  onEditDataset?: (dataset: Dataset) => void
+  onDeleteDataset?: (dataset: Dataset) => void
+  onPromoteDataset?: (dataset: Dataset) => void
 }
 
-export function DatasetsPage({ poolName, datasets, onBack }: DatasetsPageProps) {
+export function DatasetsPage({
+  poolName,
+  datasets,
+  onBack,
+  onEditDataset,
+  onDeleteDataset,
+  onPromoteDataset,
+}: DatasetsPageProps) {
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
 
   // Root datasets for this pool
   const rootDatasets = datasets.filter(d => d.pool === d.name)
+
+  // Compute all expandable IDs once
+  const allExpandedIds = new Set<string>()
+  function collectIds(d: Dataset) {
+    allExpandedIds.add(d.id)
+    d.children?.forEach(collectIds)
+  }
+  rootDatasets.forEach(collectIds)
+
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(allExpandedIds)
 
   function toggleExpand(id: string, e: React.MouseEvent) {
     e.stopPropagation()
@@ -54,11 +82,21 @@ export function DatasetsPage({ poolName, datasets, onBack }: DatasetsPageProps) 
         </div>
       </div>
 
-      {/* Master-Detail */}
-      <div style={styles.masterDetail}>
-        {/* Left: Dataset Tree */}
-        <div style={styles.master}>
-          <div style={styles.masterInner}>
+      {/* Master-Detail Bubble Layout */}
+      <div style={styles.bubbleLayout}>
+        {/* Left Bubble: Dataset Tree */}
+        <div style={styles.leftBubble}>
+          {/* Tree Header */}
+          <div style={styles.treeHeader}>
+            <div style={styles.treeHeaderLeft}>
+              <Folder size={16} color={colors.primary} />
+              <span style={styles.treeHeaderTitle}>数据集列表</span>
+              <span style={styles.treeHeaderBadge}>{rootDatasets.length} 个</span>
+            </div>
+          </div>
+
+          {/* Tree Content */}
+          <div style={styles.treeContent}>
             {rootDatasets.length === 0 ? (
               <div style={styles.emptyTree}>未找到数据集</div>
             ) : (
@@ -77,17 +115,17 @@ export function DatasetsPage({ poolName, datasets, onBack }: DatasetsPageProps) 
           </div>
         </div>
 
-        {/* Right: Detail Panel */}
-        <div style={styles.detail}>
-          {selectedDataset ? (
-            <DatasetDetailPanel dataset={selectedDataset} />
-          ) : (
-            <div style={styles.emptyDetail}>
-              <Folder size={48} color={colors.border} />
-              <p style={styles.emptyDetailText}>选择左侧数据集查看详情</p>
-            </div>
-          )}
-        </div>
+        {/* Right Bubble: Detail Panel - only show when dataset is selected */}
+        {selectedDataset && (
+          <div style={styles.rightBubble}>
+            <DatasetDetailPanel
+              dataset={selectedDataset}
+              onEdit={onEditDataset}
+              onDelete={onDeleteDataset}
+              onPromote={onPromoteDataset}
+            />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -114,6 +152,7 @@ function DatasetTreeNode({
   const isExpanded = expandedIds.has(dataset.id)
   const isSelected = selected?.id === dataset.id
   const isVol = isVolume(dataset)
+  const isEncrypted = isDatasetEncrypted(dataset)
 
   const used = (dataset.used?.parsed as number) ?? 0
   const available = (dataset.available?.parsed as number) ?? 0
@@ -127,10 +166,7 @@ function DatasetTreeNode({
         style={{
           ...styles.treeRow,
           paddingLeft: 12 + level * 20,
-          backgroundColor: isSelected ? colors.primary + '14' : 'transparent',
-          borderLeft: isSelected
-            ? `3px solid ${colors.primary}`
-            : '3px solid transparent',
+          backgroundColor: isSelected ? colors.primary + '0a' : 'transparent',
         }}
         onClick={() => onSelect(dataset)}
       >
@@ -168,7 +204,7 @@ function DatasetTreeNode({
             {shortName}
           </span>
           {isVol && <span style={styles.zvolBadge}>Zvol</span>}
-          {dataset.encrypted && <Lock size={11} color={colors.textTertiary} />}
+          {isEncrypted && <Lock size={11} color={colors.warning} />}
         </div>
 
         {/* Usage bar */}
@@ -206,28 +242,78 @@ function DatasetTreeNode({
   )
 }
 
-function DatasetDetailPanel({ dataset }: { dataset: Dataset }) {
+function DatasetDetailPanel({
+  dataset,
+  onEdit,
+  onDelete,
+  onPromote,
+}: {
+  dataset: Dataset
+  onEdit?: (d: Dataset) => void
+  onDelete?: (d: Dataset) => void
+  onPromote?: (d: Dataset) => void
+}) {
   const isVol = isVolume(dataset)
+  const isFilesys = isFilesystem(dataset)
+  const isEncrypted = isDatasetEncrypted(dataset)
+  const isRootDataset = dataset.name === dataset.pool
+  const canPromote = !!dataset.origin?.value
+
   const used = (dataset.used?.parsed as number) ?? 0
   const available = (dataset.available?.parsed as number) ?? 0
   const total = used + available
   const usagePercent = total > 0 ? (used / total) * 100 : 0
-  const quota = dataset.quota?.value ?? 0
-  const refquota = dataset.refquota?.value ?? 0
+
+  const usedByChildren = (dataset.usedbychildren?.parsed as number) ?? 0
+  const usedBySnapshots = (dataset.usedbysnapshots?.parsed as number) ?? 0
+  const usedByDataset = (dataset.usedbydataset?.parsed as number) ?? 0
+
+  const quota = (dataset.quota?.parsed as number) ?? 0
+  const refquota = (dataset.refquota?.parsed as number) ?? 0
+  const reservation = (dataset.reservation?.parsed as number) ?? 0
+  const refreservation = (dataset.refreservation?.parsed as number) ?? 0
+
+  // Comments from user_properties
+  const comments = dataset.user_properties?.['org.freenas:comment']?.value as string | undefined
+  const hasComments = comments && comments.length > 0
+
+  // Compression ratio
+  const compressratio = dataset.compressratio?.value as string | undefined
+  const compressionValue = dataset.compression?.value as string | undefined
+
+  // Sync handling
+  const syncValue = dataset.sync?.value as string | undefined
+  const syncSource = dataset.sync?.source
+
+  // Atime
+  const atimeValue = dataset.atime?.value as OnOff | undefined
+
+  // Deduplication
+  const dedupValue = dataset.deduplication?.value as DeduplicationSetting | undefined
+
+  // Case sensitivity
+  const caseValue = dataset.casesensitivity?.value as DatasetCaseSensitivity | undefined
+
+  // Origin (for clones)
+  const originValue = dataset.origin?.value as string | undefined
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text)
+  }
 
   return (
-    <div style={styles.detailPanel}>
-      {/* Detail Header */}
-      <div style={styles.detailHeader}>
+    <div style={styles.outerCard}>
+      {/* Detail Header - Apple-style card */}
+      <div style={styles.headerSection}>
         <div style={styles.detailIconWrap}>
           {isVol
             ? <HardDrive size={28} color={colors.warning} />
             : <Folder size={28} color={colors.primary} />
           }
         </div>
-        <div style={styles.detailHeaderInfo}>
-          <h2 style={styles.detailTitle}>{dataset.name.split('/').pop()}</h2>
-          <div style={styles.detailBadges}>
+        <div style={styles.headerText}>
+          <div style={styles.detailTitle}>{dataset.name.split('/').pop()}</div>
+          <div style={styles.detailMeta}>
             <span style={{
               ...styles.typeBadge,
               backgroundColor: isVol ? colors.warning + '15' : colors.primary + '15',
@@ -235,95 +321,287 @@ function DatasetDetailPanel({ dataset }: { dataset: Dataset }) {
             }}>
               {isVol ? 'Zvol' : 'Filesystem'}
             </span>
-            {dataset.encrypted && (
+            {isEncrypted && (
               <span style={styles.encryptedBadge}>
                 <Lock size={11} />
                 已加密
+              </span>
+            )}
+            {!isRootDataset && (
+              <span style={styles.pathBadge}>
+                {dataset.name}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* 基本信息 */}
-      <div style={styles.detailCard}>
-        <div style={styles.detailCardTitle}>基本信息</div>
-        <InfoRow label="完整路径" value={dataset.name} mono />
-        <InfoRow label="类型" value={isVol ? 'Zvol (卷)' : 'Filesystem (文件系统)'} />
-        {dataset.sync && <InfoRow label="同步" value={syncLabel(dataset.sync.value as string)} />}
-        {dataset.compression && (
-          <InfoRow label="压缩" value={dataset.compression.value as string} />
-        )}
-        {dataset.atime && (
-          <InfoRow label="访问时间 (atime)" value={atimeLabel(dataset.atime.value as string)} />
-        )}
-        {dataset.deduplication && (
-          <InfoRow label="重复消除" value={dedupLabel(dataset.deduplication.value as string)} />
-        )}
-      </div>
+      {/* Actions */}
+      {!isRootDataset && (
+        <div style={styles.actionBar}>
+          {canPromote && onPromote && (
+            <button
+              style={styles.actionBtn}
+              onClick={() => onPromote(dataset)}
+            >
+              <RefreshCw size={14} />
+              提升
+            </button>
+          )}
+          {onEdit && (
+            <button
+              style={styles.actionBtnPrimary}
+              onClick={() => onEdit(dataset)}
+            >
+              编辑
+            </button>
+          )}
+          {onDelete && (
+            <button
+              style={styles.actionBtnDanger}
+              onClick={() => onDelete(dataset)}
+            >
+              <Trash2 size={14} />
+              删除
+            </button>
+          )}
+        </div>
+      )}
 
-      {/* 空间使用 */}
-      <div style={styles.detailCard}>
-        <div style={styles.detailCardTitle}>空间使用</div>
-
-        {/* Progress bar */}
-        <div style={styles.usageBarWrap}>
-          <div style={styles.usageBarBgLarge}>
-            <div style={{
-              ...styles.usageBarFillLarge,
-              width: `${Math.min(usagePercent, 100)}%`,
-              backgroundColor: usagePercent > 90
-                ? colors.danger
-                : usagePercent > 70
-                ? colors.warning
-                : colors.primary,
-            }} />
+      {/* Space Usage Section */}
+      <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionLabel}>空间使用</span>
+        </div>
+        <div style={styles.glassCard}>
+          {/* Main usage bar */}
+          <div style={styles.usageBarSection}>
+            <div style={styles.usageBarBgLarge}>
+              <div style={{
+                ...styles.usageBarFillLarge,
+                width: `${Math.min(usagePercent, 100)}%`,
+                backgroundColor: usagePercent > 90
+                  ? colors.danger
+                  : usagePercent > 70
+                  ? colors.warning
+                  : colors.primary,
+              }} />
+            </div>
+            <div style={styles.usageBarPctLabel}>
+              {usagePercent.toFixed(1)}% 已用 ({formatBytes(used)} / {formatBytes(total)})
+            </div>
           </div>
-          <div style={styles.usageBarLabel}>
-            <span style={styles.usageBarPct}>
-              {usagePercent.toFixed(1)}% 已用
-            </span>
+
+          {/* Stats grid */}
+          <div style={styles.spaceStatsGrid}>
+            <SpaceStat label="已用" value={formatBytes(used)} color={colors.primary} />
+            <SpaceStat label="可用" value={formatBytes(available)} color={colors.success} />
+            <SpaceStat label="总计" value={formatBytes(total)} color={colors.text} />
+          </div>
+
+          {/* Breakdown */}
+          <div style={styles.breakdownSection}>
+            <InfoRow label="数据集本身" value={formatBytes(usedByDataset)} />
+            <InfoRow label="子数据集" value={formatBytes(usedByChildren)} />
+            <InfoRow label="快照" value={formatBytes(usedBySnapshots)} />
           </div>
         </div>
-
-        {/* Stats */}
-        <div style={styles.spaceStatsGrid}>
-          <SpaceStat label="已用" value={formatBytes(used)} color={colors.primary} />
-          <SpaceStat label="可用" value={formatBytes(available)} color={colors.success} />
-          <SpaceStat label="总计" value={formatBytes(total)} color={colors.text} />
-        </div>
-
-        {/* Quotas */}
-        {quota > 0 && <InfoRow label="配额 (Quota)" value={formatBytes(quota)} />}
-        {refquota > 0 && <InfoRow label="引用配额 (Refquota)" value={formatBytes(refquota)} />}
-        {dataset.usedbychildren && (
-          <InfoRow
-            label="子集使用"
-            value={formatBytes((dataset.usedbychildren.parsed as number) ?? 0)}
-          />
-        )}
-        {dataset.usedbysnapshots && (
-          <InfoRow
-            label="快照使用"
-            value={formatBytes((dataset.usedbysnapshots.parsed as number) ?? 0)}
-          />
-        )}
       </div>
 
-      {/* 加密信息 */}
-      {dataset.encrypted && (
-        <div style={styles.detailCard}>
-          <div style={styles.detailCardTitle}>加密</div>
-          <InfoRow label="加密状态" value="已加密" />
-          {dataset.encryption_algorithm?.value && (
-            <InfoRow label="加密算法" value={dataset.encryption_algorithm.value as string} />
+      {/* Quotas Section */}
+      {(quota > 0 || refquota > 0 || reservation > 0 || refreservation > 0) && (
+        <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.sectionLabel}>配额与预留</span>
+          </div>
+          <div style={styles.glassCard}>
+            {quota > 0 && <InfoRow label="配额 (Quota)" value={formatBytes(quota)} />}
+            {refquota > 0 && <InfoRow label="引用配额 (Refquota)" value={formatBytes(refquota)} />}
+            {reservation > 0 && <InfoRow label="预留 (Reservation)" value={formatBytes(reservation)} />}
+            {refreservation > 0 && <InfoRow label="引用预留 (Refreservation)" value={formatBytes(refreservation)} />}
+          </div>
+        </div>
+      )}
+
+      {/* ZFS Properties Section */}
+      <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionLabel}>ZFS 属性</span>
+        </div>
+        <div style={styles.glassCard}>
+          {/* Sync */}
+          {syncValue && (
+            <InfoRow
+              label="同步 (Sync)"
+              value={syncSource === ZfsPropertySource.Inherited
+                ? `继承 (${syncLabel(syncValue)})`
+                : syncLabel(syncValue)
+              }
+            />
           )}
-          {dataset.encryption_root && dataset.encryption_root !== dataset.name && (
-            <InfoRow label="加密根" value={dataset.encryption_root} mono />
+
+          {/* Compression */}
+          {compressionValue && (
+            <InfoRow
+              label="压缩"
+              value={compressratio
+                ? `${compressionValue} (${compressratio})`
+                : compressionValue
+              }
+            />
           )}
-          {dataset.keystatus?.value && (
-            <InfoRow label="密钥状态" value={dataset.keystatus.value as string} />
+
+          {/* Atime - only for filesystems */}
+          {isFilesys && atimeValue !== undefined && (
+            <InfoRow label="访问时间 (Atime)" value={atimeLabel(atimeValue)} />
           )}
+
+          {/* Deduplication */}
+          {dedupValue && (
+            <InfoRow label="重复消除 (Deduplication)" value={dedupLabel(dedupValue)} />
+          )}
+
+          {/* Case Sensitivity - only for filesystems */}
+          {isFilesys && caseValue && (
+            <InfoRow
+              label="大小写敏感"
+              value={caseValue === DatasetCaseSensitivity.Sensitive ? '是' : '否'}
+            />
+          )}
+
+          {/* Checksum */}
+          {dataset.checksum?.value && (
+            <InfoRow label="校验" value={dataset.checksum.value as string} />
+          )}
+
+          {/* Readonly */}
+          {dataset.readonly?.value !== undefined && (
+            <InfoRow
+              label="只读"
+              value={dataset.readonly.value === OnOff.On ? '是' : '否'}
+            />
+          )}
+
+          {/* Exec */}
+          {dataset.exec?.value !== undefined && (
+            <InfoRow
+              label="执行权限"
+              value={dataset.exec.value === OnOff.On ? '允许' : '禁止'}
+            />
+          )}
+
+          {/* Recordsize */}
+          {dataset.recordsize?.value && (
+            <InfoRow label="记录大小" value={dataset.recordsize.value as string} />
+          )}
+
+          {/* Snapdir - only for filesystems */}
+          {isFilesys && dataset.snapdir?.value && (
+            <InfoRow
+              label="快照目录"
+              value={dataset.snapdir.value === 'VISIBLE' ? '可见' : '隐藏'}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Path Section */}
+      <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
+        <div style={styles.sectionHeader}>
+          <span style={styles.sectionLabel}>路径信息</span>
+        </div>
+        <div style={styles.glassCard}>
+          <div style={styles.pathRow}>
+            <span style={styles.pathLabel}>完整路径</span>
+            <div style={styles.pathValueWrap}>
+              <span style={styles.pathValue}>{dataset.name}</span>
+              <button
+                style={styles.copyBtn}
+                onClick={() => handleCopy(dataset.name)}
+                title="复制"
+              >
+                <Copy size={13} />
+              </button>
+            </div>
+          </div>
+          {dataset.mountpoint && (
+            <div style={styles.pathRow}>
+              <span style={styles.pathLabel}>挂载点</span>
+              <div style={styles.pathValueWrap}>
+                <span style={styles.pathValue}>{dataset.mountpoint}</span>
+                <button
+                  style={styles.copyBtn}
+                  onClick={() => handleCopy(dataset.mountpoint)}
+                  title="复制"
+                >
+                  <Copy size={13} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Comments Section */}
+      {hasComments && (
+        <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.sectionLabel}>备注</span>
+          </div>
+          <div style={styles.glassCard}>
+            <div style={styles.commentsWrap}>
+              {comments}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Origin Section (for clones) */}
+      {originValue && (
+        <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.sectionLabel}>来源</span>
+          </div>
+          <div style={styles.glassCard}>
+            <div style={styles.pathRow}>
+              <span style={styles.pathLabel}>源数据集</span>
+              <div style={styles.pathValueWrap}>
+                <span style={styles.pathValue}>{originValue}</span>
+                <button
+                  style={styles.copyBtn}
+                  onClick={() => handleCopy(originValue)}
+                  title="复制"
+                >
+                  <Copy size={13} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Encryption Section */}
+      {isEncrypted && (
+        <div style={{ ...styles.sectionWrap, borderTop: `1px solid ${colors.border}` }}>
+          <div style={styles.sectionHeader}>
+            <span style={styles.sectionLabel}>加密信息</span>
+            <ShieldCheck size={16} color={colors.success} />
+          </div>
+          <div style={styles.glassCard}>
+            <InfoRow label="加密状态" value="已加密" />
+            {dataset.encryption_algorithm?.value && (
+              <InfoRow label="加密算法" value={dataset.encryption_algorithm.value as string} />
+            )}
+            {dataset.encryption_root && dataset.encryption_root !== dataset.name && (
+              <InfoRow label="加密根" value={dataset.encryption_root} mono />
+            )}
+            {dataset.key_format?.value && (
+              <InfoRow label="密钥格式" value={dataset.key_format.value as string} />
+            )}
+            {dataset.key_loaded !== undefined && (
+              <InfoRow label="密钥已加载" value={dataset.key_loaded ? '是' : '否'} />
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -413,23 +691,53 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.text,
     flex: 1,
   },
-  masterDetail: {
+  // Bubble Layout
+  bubbleLayout: {
     display: 'flex',
+    flexDirection: 'column' as const,
     gap: 20,
-    alignItems: 'flex-start',
-    minHeight: 500,
   },
-  master: {
-    width: 300,
-    flexShrink: 0,
+  leftBubble: {
     backgroundColor: colors.cardBg,
     borderRadius: 12,
     overflow: 'hidden',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
-  masterInner: {
+  rightBubble: {
+    minHeight: 400,
+  },
+
+  // Tree Header
+  treeHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '14px 16px',
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  treeHeaderLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+  },
+  treeHeaderTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: colors.text,
+  },
+  treeHeaderBadge: {
+    padding: '3px 8px',
+    backgroundColor: colors.primary + '15',
+    color: colors.primary,
+    borderRadius: 10,
+    fontSize: 11,
+    fontWeight: 500,
+  },
+
+  // Tree Content
+  treeContent: {
+    maxHeight: 'calc(50vh - 100px)',
     overflowY: 'auto' as const,
-    maxHeight: 'calc(100vh - 280px)',
   },
   emptyTree: {
     padding: '32px 16px',
@@ -445,6 +753,7 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     transition: 'background-color 0.12s ease',
     userSelect: 'none' as const,
+    borderBottom: `1px solid ${colors.border}`,
   },
   expandBtn: {
     display: 'flex',
@@ -511,125 +820,187 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.textTertiary,
     fontFamily: 'monospace',
   },
-  detail: {
+
+  // Apple-style outer card
+  outerCard: {
+    backgroundColor: colors.cardBg,
+    borderRadius: 16,
+    overflow: 'hidden',
+    boxShadow: '0 2px 12px rgba(0, 0, 0, 0.06)',
+  },
+
+  // Header section
+  headerSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    padding: '20px 24px',
+    backgroundColor: colors.cardBg,
+  },
+  detailIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 13,
+    backgroundColor: colors.primary + '14',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  headerText: {
     flex: 1,
     minWidth: 0,
   },
-  emptyDetail: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: 300,
-    backgroundColor: colors.cardBg,
-    borderRadius: 12,
-    gap: 12,
-  },
-  emptyDetailText: {
-    fontSize: 14,
-    color: colors.textTertiary,
-    margin: 0,
-  },
-  detailPanel: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 16,
-  },
-  detailHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 16,
-    backgroundColor: colors.cardBg,
-    borderRadius: 12,
-    padding: '20px 24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-  },
-  detailIconWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 56,
-    height: 56,
-    backgroundColor: colors.primary + '12',
-    borderRadius: 14,
-    flexShrink: 0,
-  },
-  detailHeaderInfo: {
-    display: 'flex',
-    flexDirection: 'column' as const,
-    gap: 8,
-  },
   detailTitle: {
-    margin: 0,
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 700,
     color: colors.text,
+    letterSpacing: '-0.3px',
+    fontFamily: 'SF Pro Display, -apple-system, BlinkMacSystemFont, sans-serif',
   },
-  detailBadges: {
+  detailMeta: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
+    marginTop: 6,
     flexWrap: 'wrap' as const,
   },
   typeBadge: {
-    padding: '3px 10px',
-    borderRadius: 6,
-    fontSize: 12,
+    padding: '3px 9px',
+    borderRadius: 5,
+    fontSize: 11,
     fontWeight: 600,
   },
   encryptedBadge: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 4,
-    padding: '3px 10px',
+    padding: '3px 9px',
     backgroundColor: colors.warning + '15',
     color: colors.warning,
-    borderRadius: 6,
-    fontSize: 12,
+    borderRadius: 5,
+    fontSize: 11,
+    fontWeight: 600,
+  },
+  pathBadge: {
+    padding: '3px 9px',
+    backgroundColor: colors.background,
+    color: colors.textSecondary,
+    borderRadius: 5,
+    fontSize: 11,
     fontWeight: 500,
+    fontFamily: 'monospace',
   },
-  detailCard: {
+
+  // Action bar
+  actionBar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 24px',
+    borderTop: `1px solid ${colors.border}`,
+    backgroundColor: colors.background,
+  },
+  actionBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
     backgroundColor: colors.cardBg,
-    borderRadius: 12,
-    padding: '20px 24px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-  },
-  detailCardTitle: {
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
     fontSize: 13,
+    fontWeight: 500,
+    color: colors.text,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  actionBtnPrimary: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
+    backgroundColor: colors.primary,
+    border: `1px solid ${colors.primary}`,
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    color: 'white',
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+  actionBtnDanger: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '8px 14px',
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.danger}`,
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 500,
+    color: colors.danger,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
+  },
+
+  // Section wrapper (VDEVs style)
+  sectionWrap: {
+    padding: '0 24px 20px',
+  },
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '12px 0',
+    marginBottom: 10,
+  },
+  sectionLabel: {
+    fontSize: 12,
     fontWeight: 600,
     color: colors.textSecondary,
     textTransform: 'uppercase' as const,
-    letterSpacing: '0.5px',
-    marginBottom: 16,
+    letterSpacing: '0.6px',
   },
-  usageBarWrap: {
-    marginBottom: 16,
+
+  // Glass card (all corners rounded)
+  glassCard: {
+    backgroundColor: colors.background,
+    backdropFilter: 'blur(20px)',
+    WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: 14,
+    border: `1px solid ${colors.border}`,
+    overflow: 'hidden',
+  },
+
+  // Space usage
+  usageBarSection: {
+    padding: '16px 16px 12px',
   },
   usageBarBgLarge: {
     height: 10,
     backgroundColor: colors.border,
     borderRadius: 5,
     overflow: 'hidden',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   usageBarFillLarge: {
     height: '100%',
     borderRadius: 5,
     transition: 'width 0.3s ease',
   },
-  usageBarLabel: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-  },
-  usageBarPct: {
+  usageBarPctLabel: {
     fontSize: 12,
     color: colors.textSecondary,
+    textAlign: 'right' as const,
   },
+
+  // Stats grid
   spaceStatsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(3, 1fr)',
     gap: 12,
-    marginBottom: 16,
+    padding: '0 16px 16px',
   },
   spaceStat: {
     display: 'flex',
@@ -651,17 +1022,26 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.textTertiary,
     fontWeight: 500,
   },
+
+  // Breakdown section
+  breakdownSection: {
+    borderTop: `1px solid ${colors.border}`,
+    padding: '0 16px',
+  },
+
+  // Info row
   infoRow: {
     display: 'flex',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 16,
-    padding: '9px 0',
+    padding: '10px 16px',
     borderBottom: `1px solid ${colors.border}`,
   },
   infoLabel: {
     fontSize: 13,
     color: colors.textSecondary,
+    fontWeight: 500,
     flexShrink: 0,
   },
   infoValue: {
@@ -670,5 +1050,57 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
     textAlign: 'right' as const,
     wordBreak: 'break-all' as const,
+  },
+
+  // Path section
+  pathRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
+    padding: '10px 16px',
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  pathLabel: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: 500,
+    flexShrink: 0,
+  },
+  pathValueWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  pathValue: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: 500,
+    fontFamily: 'monospace',
+    wordBreak: 'break-all' as const,
+  },
+  copyBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    backgroundColor: colors.background,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 6,
+    cursor: 'pointer',
+    color: colors.textSecondary,
+    flexShrink: 0,
+    padding: 0,
+  },
+
+  // Comments
+  commentsWrap: {
+    padding: '12px 16px',
+    fontSize: 13,
+    color: colors.text,
+    lineHeight: 1.5,
   },
 }
