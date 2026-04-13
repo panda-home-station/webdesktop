@@ -55,19 +55,26 @@ export function DatasetsCard({
           <span style={styles.title}>数据集</span>
           <span style={styles.badge}>{poolDatasets.length} 个</span>
         </div>
-        <button
-          style={styles.expandButton}
-          onClick={() => setIsExpanded(!isExpanded)}
-          title={isExpanded ? '折叠' : '展开'}
-        >
-          <ChevronDown
-            size={18}
-            style={{
-              transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
-              transition: 'transform 0.2s ease',
-            }}
-          />
-        </button>
+        <div style={styles.headerActions}>
+          {onViewDetails && (
+            <button style={styles.actionButton} onClick={onViewDetails}>
+              查看数据集详情
+            </button>
+          )}
+          <button
+            style={styles.expandButton}
+            onClick={() => setIsExpanded(!isExpanded)}
+            title={isExpanded ? '折叠' : '展开'}
+          >
+            <ChevronDown
+              size={18}
+              style={{
+                transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                transition: 'transform 0.2s ease',
+              }}
+            />
+          </button>
+        </div>
       </div>
 
       {/* Content */}
@@ -96,13 +103,6 @@ export function DatasetsCard({
             </div>
           )}
           </div>
-          {onViewDetails && (
-            <div style={styles.footer}>
-              <button style={styles.viewDetailsButton} onClick={onViewDetails}>
-                查看数据集详情 →
-              </button>
-            </div>
-          )}
         </>
       )}
     </div>
@@ -404,24 +404,23 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column' as const,
   },
-  footer: {
+  headerActions: {
     display: 'flex',
-    justifyContent: 'flex-end',
-    padding: '12px 20px',
-    borderTop: `1px solid ${colors.border}`,
+    alignItems: 'center',
+    gap: 8,
   },
-  viewDetailsButton: {
-    display: 'inline-flex',
+  actionButton: {
+    display: 'flex',
     alignItems: 'center',
     gap: 6,
-    padding: '7px 14px',
-    backgroundColor: 'transparent',
-    color: colors.primary,
-    border: `1px solid ${colors.primary}`,
+    padding: '8px 14px',
+    backgroundColor: colors.primary,
+    color: 'white',
+    border: 'none',
     borderRadius: 8,
     fontSize: 13,
     fontWeight: 500,
     cursor: 'pointer',
-    transition: 'all 0.15s ease',
+    transition: 'all 0.2s ease',
   },
 }
