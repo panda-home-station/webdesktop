@@ -23,6 +23,7 @@ import {
 interface VDevsCardProps {
   topology: PoolTopology
   onDiskClick?: (diskName: string) => void
+  onViewDetails?: () => void
 }
 
 // Get redundancy level for a vdev (0 = no redundancy)
@@ -45,7 +46,7 @@ function getRedundancyLevel(vdev: VDevItem): number {
   }
 }
 
-export function VDevsCard({ topology, onDiskClick }: VDevsCardProps) {
+export function VDevsCard({ topology, onDiskClick, onViewDetails }: VDevsCardProps) {
   const [isExpanded, setIsExpanded] = useState(true)
 
   // Build list of vdev groups with their vdevs
@@ -165,6 +166,13 @@ export function VDevsCard({ topology, onDiskClick }: VDevsCardProps) {
                   onDiskClick={onDiskClick}
                 />
               ))}
+            </div>
+          )}
+          {onViewDetails && (
+            <div style={styles.footer}>
+              <button style={styles.viewDetailsButton} onClick={onViewDetails}>
+                查看 VDEVs 详情 →
+              </button>
             </div>
           )}
         </div>
@@ -462,5 +470,25 @@ const styles: Record<string, React.CSSProperties> = {
   diskLabel: {
     fontSize: 12,
     color: colors.textSecondary,
+  },
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    padding: '12px 20px',
+    borderTop: `1px solid ${colors.border}`,
+  },
+  viewDetailsButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 14px',
+    backgroundColor: 'transparent',
+    color: colors.primary,
+    border: `1px solid ${colors.primary}`,
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
 }

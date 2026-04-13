@@ -101,6 +101,7 @@ export function PoolDetails({
           <VDevsCard
             topology={pool.topology}
             onDiskClick={onDiskClick}
+            onViewDetails={() => window.open(`${window.location.origin}/storage/${pool.id}/vdevs`, '_blank')}
           />
         </div>
         <div style={styles.cardColumn}>
@@ -108,6 +109,7 @@ export function PoolDetails({
             datasets={datasets}
             onDatasetClick={onDatasetClick}
             onAddDataset={onAddDataset}
+            onViewDetails={() => window.open(`${window.location.origin}/datasets/${pool.name}`, '_blank')}
           />
         </div>
       </div>

@@ -18,12 +18,14 @@ interface DatasetsCardProps {
   datasets: Dataset[]
   onDatasetClick?: (dataset: Dataset) => void
   onAddDataset?: () => void
+  onViewDetails?: () => void
 }
 
 export function DatasetsCard({
   datasets,
   onDatasetClick,
   onAddDataset,
+  onViewDetails,
 }: DatasetsCardProps) {
   const [isExpanded, setIsExpanded] = useState(true)
 
@@ -70,29 +72,38 @@ export function DatasetsCard({
 
       {/* Content */}
       {isExpanded && (
-        <div style={styles.content}>
-          {poolDatasets.length === 0 ? (
-            <div style={styles.emptyState}>
-              <p>未找到数据集</p>
-            {onAddDataset && (
-              <button style={styles.addButton} onClick={onAddDataset}>
-                + 创建数据集
+        <>
+          <div style={styles.content}>
+            {poolDatasets.length === 0 ? (
+              <div style={styles.emptyState}>
+                <p>未找到数据集</p>
+              {onAddDataset && (
+                <button style={styles.addButton} onClick={onAddDataset}>
+                  + 创建数据集
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={styles.datasetTree}>
+              {poolDatasets.map((dataset) => (
+                <DatasetTreeItem
+                  key={dataset.id}
+                  dataset={dataset}
+                  level={0}
+                  onDatasetClick={onDatasetClick}
+                />
+              ))}
+            </div>
+          )}
+          </div>
+          {onViewDetails && (
+            <div style={styles.footer}>
+              <button style={styles.viewDetailsButton} onClick={onViewDetails}>
+                查看数据集详情 →
               </button>
-            )}
-          </div>
-        ) : (
-          <div style={styles.datasetTree}>
-            {poolDatasets.map((dataset) => (
-              <DatasetTreeItem
-                key={dataset.id}
-                dataset={dataset}
-                level={0}
-                onDatasetClick={onDatasetClick}
-              />
-            ))}
-          </div>
-        )}
-        </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
@@ -392,5 +403,25 @@ const styles: Record<string, React.CSSProperties> = {
   childrenContainer: {
     display: 'flex',
     flexDirection: 'column' as const,
+  },
+  footer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    padding: '12px 20px',
+    borderTop: `1px solid ${colors.border}`,
+  },
+  viewDetailsButton: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 14px',
+    backgroundColor: 'transparent',
+    color: colors.primary,
+    border: `1px solid ${colors.primary}`,
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 500,
+    cursor: 'pointer',
+    transition: 'all 0.15s ease',
   },
 }

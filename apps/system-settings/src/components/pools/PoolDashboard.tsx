@@ -188,6 +188,7 @@ export function PoolDashboard({
           onDiskClick={() => {
             // Could navigate to disk details
           }}
+          onViewDetails={() => window.open(`${window.location.origin}/storage/${pool.id}/vdevs`, '_blank')}
         />
       </div>
 
@@ -198,6 +199,7 @@ export function PoolDashboard({
           onDatasetClick={() => {
             // Could navigate to dataset details
           }}
+          onViewDetails={() => window.open(`${window.location.origin}/datasets/${pool.name}`, '_blank')}
         />
       </div>
     </div>
