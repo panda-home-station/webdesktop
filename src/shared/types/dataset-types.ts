@@ -311,5 +311,5 @@ export function datasetHasShares(dataset: DatasetDetails): boolean {
  * Check if dataset is encrypted
  */
 export function isDatasetEncrypted(dataset: Dataset | DatasetDetails): boolean {
-  return dataset.encrypted || dataset.encryption_root !== '';
+  return dataset.encrypted;
 }

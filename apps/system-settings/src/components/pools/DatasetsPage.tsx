@@ -314,6 +314,11 @@ function DatasetDetailPanel({
         <div style={styles.headerText}>
           <div style={styles.detailTitle}>{dataset.name.split('/').pop()}</div>
           <div style={styles.detailMeta}>
+            {isRootDataset && (
+              <span style={styles.rootDatasetBadge}>
+                根数据集
+              </span>
+            )}
             <span style={{
               ...styles.typeBadge,
               backgroundColor: isVol ? colors.warning + '15' : colors.primary + '15',
@@ -321,10 +326,18 @@ function DatasetDetailPanel({
             }}>
               {isVol ? 'Zvol' : 'Filesystem'}
             </span>
-            {isEncrypted && (
+            {isEncrypted ? (
               <span style={styles.encryptedBadge}>
                 <Lock size={11} />
                 已加密
+              </span>
+            ) : (
+              <span style={styles.unencryptedBadge}>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+                </svg>
+                未加密
               </span>
             )}
             {!isRootDataset && (
@@ -876,8 +889,19 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     gap: 4,
     padding: '3px 9px',
-    backgroundColor: colors.warning + '15',
-    color: colors.warning,
+    backgroundColor: colors.primary + '15',
+    color: colors.primary,
+    borderRadius: 5,
+    fontSize: 11,
+    fontWeight: 600,
+  },
+  unencryptedBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '3px 9px',
+    backgroundColor: colors.primary + '15',
+    color: colors.primary,
     borderRadius: 5,
     fontSize: 11,
     fontWeight: 600,
@@ -890,6 +914,14 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontWeight: 500,
     fontFamily: 'monospace',
+  },
+  rootDatasetBadge: {
+    padding: '3px 9px',
+    backgroundColor: colors.primary + '15',
+    color: colors.primary,
+    borderRadius: 5,
+    fontSize: 11,
+    fontWeight: 600,
   },
 
   // Action bar
