@@ -487,7 +487,7 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
   }
 
   const handleJobClick = (_job: Job) => {
-    openApp('storage')
+    openApp('jobs')
     onClose()
   }
 

@@ -1,0 +1,12 @@
+{
+  "name": "jobs",
+  "title": "任务",
+  "version": "0.1.0",
+  "capabilities": [],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 500
+}
