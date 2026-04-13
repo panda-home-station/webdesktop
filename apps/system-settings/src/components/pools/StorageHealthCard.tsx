@@ -67,7 +67,7 @@ export function StorageHealthCard({
   const [showScrubConfirm, setShowScrubConfirm] = useState(false)
   const [showAutotrimDialog, setShowAutotrimDialog] = useState(false)
   const [showScrubConfigDialog, setShowScrubConfigDialog] = useState(false)
-  const [isExpanded, setIsExpanded] = useState(true)
+  const [isExpanded, setIsExpanded] = useState(false)
 
   const loadScrubTask = useCallback(async () => {
     try {
