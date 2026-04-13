@@ -6,6 +6,7 @@ import { Drawer } from './Drawer'
 import { Alert } from '@truenas/types/alert.interface'
 import { AlertLevel } from '@truenas/types/alert.enum'
 import { Job, JobState } from '@truenas/types/job-types'
+import { openApp } from '@shared/sdk/desktop'
 
 // ==================== Types ====================
 
@@ -73,9 +74,10 @@ const colors = {
 
 // ==================== Alert Bubble ====================
 
-const AlertBubble = memo(({ alert, onDismiss }: {
+const AlertBubble = memo(({ alert, onDismiss, onClick }: {
   alert: Alert
   onDismiss: (id: string) => void
+  onClick: (alert: Alert) => void
 }) => {
   const timestamp = formatTimestamp(getAlertTimestamp(alert))
 
@@ -99,18 +101,20 @@ const AlertBubble = memo(({ alert, onDismiss }: {
   const severity = getSeverityColor(alert.level)
 
   return (
-    <div style={{
-      background: severity.bg,
-      borderRadius: 16,
-      padding: '14px 16px',
-      display: 'flex',
-      gap: 12,
-      alignItems: 'flex-start',
-      transition: 'all 0.2s ease',
-      cursor: 'pointer',
-      border: 'none',
-      outline: 'none',
-    }}>
+    <div
+      onClick={() => onClick(alert)}
+      style={{
+        background: severity.bg,
+        borderRadius: 16,
+        padding: '14px 16px',
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        border: 'none',
+        outline: 'none',
+      }}>
       {/* Icon Container */}
       <div style={{
         width: 44,
@@ -200,8 +204,9 @@ AlertBubble.displayName = 'AlertBubble'
 
 // ==================== Job Bubble ====================
 
-const JobBubble = memo(({ job }: {
+const JobBubble = memo(({ job, onClick }: {
   job: Job
+  onClick: (job: Job) => void
 }) => {
   const timestamp = formatTimestamp(getJobTimestamp(job))
   const progress = getJobProgress(job)
@@ -228,18 +233,20 @@ const JobBubble = memo(({ job }: {
   const isRunning = job.state === 'RUNNING'
 
   return (
-    <div style={{
-      background: stateConfig.bg,
-      borderRadius: 16,
-      padding: '14px 16px',
-      display: 'flex',
-      gap: 12,
-      alignItems: 'flex-start',
-      transition: 'all 0.2s ease',
-      cursor: 'pointer',
-      border: 'none',
-      outline: 'none',
-    }}>
+    <div
+      onClick={() => onClick(job)}
+      style={{
+        background: stateConfig.bg,
+        borderRadius: 16,
+        padding: '14px 16px',
+        display: 'flex',
+        gap: 12,
+        alignItems: 'flex-start',
+        transition: 'all 0.2s ease',
+        cursor: 'pointer',
+        border: 'none',
+        outline: 'none',
+      }}>
       {/* Icon Container */}
       <div style={{
         width: 44,
@@ -474,6 +481,16 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
     dismissAlert(alertId)
   }
 
+  const handleAlertClick = (_alert: Alert) => {
+    openApp('notifications')
+    onClose()
+  }
+
+  const handleJobClick = (_job: Job) => {
+    openApp('storage')
+    onClose()
+  }
+
   const handleClearAll = () => {
     const alertIds = notifications.filter(n => n.type === 'alert').map(n => (n.data as Alert).id)
     useAlertStore.getState().dismissAllAlerts(alertIds)
@@ -560,11 +577,13 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
                     key={item.id}
                     alert={item.data as Alert}
                     onDismiss={handleDismissAlert}
+                    onClick={handleAlertClick}
                   />
                 ) : (
                   <JobBubble
                     key={item.id}
                     job={item.data as Job}
+                    onClick={handleJobClick}
                   />
                 )
               ))}
