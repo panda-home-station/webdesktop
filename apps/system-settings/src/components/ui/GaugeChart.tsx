@@ -3,8 +3,6 @@
  * A circular ring chart for displaying usage percentage
  */
 
-import React from 'react'
-
 interface GaugeChartProps {
   value: number // 0-100
   size?: number
@@ -37,7 +35,6 @@ export function GaugeChart({
   // Calculate stroke dash offset
   // For a ring, we fill clockwise from top (270° in standard coords)
   const filledLength = (clampedValue / 100) * circumference
-  const offset = circumference - filledLength
 
   const displayColor = showWarning ? '#ff3b30' : colorFill
 

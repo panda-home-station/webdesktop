@@ -11,11 +11,8 @@ import { PoolStatus } from './pool-status-enum-types';
 import { CreateVdevLayout, VDevType } from './vdev-enum-types';
 import { VDevItem } from './storage-types';
 import { ZfsProperty } from './zfs-property-types';
-
-/**
- * API timestamp
- */
-export type ApiTimestamp = string | null;
+// ApiTimestamp is defined in system-types.ts as { $date: number }
+export { ApiTimestamp } from './system-types';
 
 /**
  * Pool scan/update progress

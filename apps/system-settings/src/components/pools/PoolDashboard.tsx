@@ -7,6 +7,7 @@ import React from 'react'
 import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
 import { VDevType } from '@truenas/types/vdev-enum-types'
+import { VDevItem } from '@truenas/types/storage-types'
 import { GaugeChart } from '../ui/GaugeChart'
 import { StorageHealthCard } from './StorageHealthCard'
 import { formatBytes, getPoolHealthColor, getPoolUsedPercentage } from '@truenas/utils/storage.utils'
@@ -182,7 +183,7 @@ export function PoolDashboard({
                     <span style={styles.topologyCount}>{vdevs.length} {vdevs.length === 1 ? '个vdev' : '个vdev'}</span>
                   </div>
                   <div style={styles.topologyDisks}>
-                    {vdevs.slice(0, 6).map((vdev: any, idx: number) => (
+                    {vdevs.slice(0, 6).map((vdev: VDevItem, idx: number) => (
                       <div key={idx} style={styles.diskItem}>
                         <HardDrive size={14} color={colors.textTertiary} />
                         <span style={styles.diskName}>{vdev.type || type}</span>

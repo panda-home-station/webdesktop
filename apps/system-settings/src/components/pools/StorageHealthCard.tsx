@@ -9,6 +9,7 @@ import { Pool } from '@truenas/types/pool'
 import { ScrubTask, Schedule } from '@truenas/types/pool-scrub-types'
 import { PoolScanFunction, PoolScanState } from '@truenas/types/pool-scan-enum-types'
 import { PoolScrubAction } from '@truenas/types/pool-scrub-action-enum-types'
+import { ApiTimestamp } from '@truenas/types/system-types'
 import { poolService } from '@truenas/services/pool'
 import { truenasApi } from '@truenas/api'
 import { poolStatusLabels } from '@truenas/utils/pool-status.utils'
@@ -36,12 +37,12 @@ interface PoolScanInfo {
   bytes_issued: number
   bytes_processed: number
   bytes_to_process: number
-  end_time: string | null
+  end_time: ApiTimestamp
   errors: number
   function: PoolScanFunction
-  pause: string | null
+  pause: ApiTimestamp | null
   percentage: number
-  start_time: string
+  start_time: ApiTimestamp
   state: PoolScanState
   total_secs_left: number | null
 }
@@ -223,8 +224,8 @@ export function StorageHealthCard({
 
   function getScanDuration(): string {
     if (!scan?.end_time || !scan?.start_time) return ''
-    const start = new Date(scan.start_time).getTime()
-    const end = new Date(scan.end_time).getTime()
+    const start = new Date(scan.start_time.$date).getTime()
+    const end = new Date(scan.end_time.$date).getTime()
     const seconds = Math.round((end - start) / 1000)
     return formatDuration(seconds)
   }
@@ -380,7 +381,7 @@ export function StorageHealthCard({
               </div>
               <div style={styles.infoValue}>
                 {scan.end_time
-                  ? `${new Date(scan.end_time).toLocaleString()} ${getScanStateLabel()}`
+                  ? `${new Date(scan.end_time.$date).toLocaleString()} ${getScanStateLabel()}`
                   : '从未'}
               </div>
             </div>
