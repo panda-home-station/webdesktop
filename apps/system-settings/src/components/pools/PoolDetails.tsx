@@ -3,13 +3,13 @@
  * Display detailed information about a single pool
  */
 
-import React, { useState } from 'react'
 import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
-import { VDevTree } from './VDevTree'
-import { DatasetTree } from '../datasets/DatasetTree'
+import { VDevsCard } from './VDevsCard'
+import { DatasetsCard } from './DatasetsCard'
 import { formatBytes, getPoolHealthColor, getPoolUsedPercentage } from '@truenas/utils/storage.utils'
 import { colors } from '../../styles/theme'
+import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react'
 
 interface PoolDetailsProps {
   pool: Pool
@@ -17,6 +17,7 @@ interface PoolDetailsProps {
   onBack: () => void
   onDiskClick?: (diskName: string) => void
   onDatasetClick?: (dataset: Dataset) => void
+  onAddDataset?: () => void
 }
 
 export function PoolDetails({
@@ -25,11 +26,20 @@ export function PoolDetails({
   onBack,
   onDiskClick,
   onDatasetClick,
+  onAddDataset,
 }: PoolDetailsProps) {
-  const [activeSection, setActiveSection] = useState<'topology' | 'datasets'>('topology')
-
   const usedPercent = getPoolUsedPercentage(pool)
   const healthColor = getPoolHealthColor(pool.status)
+
+  function getHealthIcon() {
+    if (pool.status === 'ONLINE' && pool.healthy) {
+      return <CheckCircle size={16} color="white" />
+    }
+    if (pool.status === 'DEGRADED') {
+      return <AlertTriangle size={16} color="white" />
+    }
+    return <XCircle size={16} color="white" />
+  }
 
   return (
     <div style={styles.container}>
@@ -40,7 +50,10 @@ export function PoolDetails({
         </button>
         <h2 style={styles.title}>{pool.name}</h2>
         <span style={{ ...styles.badge, backgroundColor: healthColor }}>
-          {pool.healthy ? 'Healthy' : pool.status_detail || pool.status}
+          {getHealthIcon()}
+          <span style={styles.badgeText}>
+            {pool.healthy ? 'Healthy' : pool.status_detail || pool.status}
+          </span>
         </span>
       </div>
 
@@ -82,36 +95,21 @@ export function PoolDetails({
         </div>
       </div>
 
-      {/* Section Tabs */}
-      <div style={styles.tabs}>
-        <TabButton
-          active={activeSection === 'topology'}
-          onClick={() => setActiveSection('topology')}
-        >
-          Topology
-        </TabButton>
-        <TabButton
-          active={activeSection === 'datasets'}
-          onClick={() => setActiveSection('datasets')}
-        >
-          Datasets
-        </TabButton>
-      </div>
-
-      {/* Section Content */}
-      <div style={styles.sectionContent}>
-        {activeSection === 'topology' && (
-          <VDevTree
+      {/* Two Bubble Cards Layout */}
+      <div style={styles.cardsContainer}>
+        <div style={styles.cardColumn}>
+          <VDevsCard
             topology={pool.topology}
             onDiskClick={onDiskClick}
           />
-        )}
-        {activeSection === 'datasets' && (
-          <DatasetTree
-            datasets={datasets.filter(d => d.pool === pool.name)}
+        </div>
+        <div style={styles.cardColumn}>
+          <DatasetsCard
+            datasets={datasets}
             onDatasetClick={onDatasetClick}
+            onAddDataset={onAddDataset}
           />
-        )}
+        </div>
       </div>
 
       {/* Additional Info */}
@@ -141,26 +139,6 @@ function StatCard({ label, value, subValue }: StatCardProps) {
       <span style={styles.statValue}>{value}</span>
       {subValue && <span style={styles.statSubValue}>{subValue}</span>}
     </div>
-  )
-}
-
-interface TabButtonProps {
-  active: boolean
-  onClick: () => void
-  children: React.ReactNode
-}
-
-function TabButton({ active, onClick, children }: TabButtonProps) {
-  return (
-    <button
-      style={{
-        ...styles.tabButton,
-        ...(active ? styles.tabButtonActive : {}),
-      }}
-      onClick={onClick}
-    >
-      {children}
-    </button>
   )
 }
 
@@ -205,11 +183,17 @@ const styles = {
     flex: 1,
   },
   badge: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
     padding: '6px 14px',
     color: 'white',
     borderRadius: 8,
     fontSize: 13,
     fontWeight: 600,
+  },
+  badgeText: {
+    fontSize: 13,
   },
   statsGrid: {
     display: 'grid',
@@ -260,30 +244,14 @@ const styles = {
     fontSize: 12,
     color: colors.textSecondary,
   },
-  tabs: {
-    display: 'flex',
-    gap: 8,
-    marginBottom: 16,
-    borderBottom: `1px solid ${colors.border}`,
-    paddingBottom: 0,
-  },
-  tabButton: {
-    padding: '10px 20px',
-    backgroundColor: 'transparent',
-    border: 'none',
-    borderBottom: `2px solid transparent`,
-    cursor: 'pointer',
-    fontSize: 14,
-    fontWeight: 500,
-    color: colors.textSecondary,
-    transition: 'all 0.2s ease',
-  },
-  tabButtonActive: {
-    color: colors.primary,
-    borderBottom: `2px solid ${colors.primary}`,
-  },
-  sectionContent: {
+  cardsContainer: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 20,
     marginBottom: 24,
+  },
+  cardColumn: {
+    minWidth: 0,
   },
   additionalInfo: {
     backgroundColor: colors.cardBg,

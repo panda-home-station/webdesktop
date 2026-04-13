@@ -5,8 +5,12 @@
 
 import React from 'react'
 import { Pool } from '@truenas/types/pool'
+import { Dataset } from '@truenas/types/dataset-types'
+import { ScrubTask } from '@truenas/types/pool-scrub-types'
 import { GaugeChart } from '../ui/GaugeChart'
 import { StorageHealthCard } from './StorageHealthCard'
+import { VDevsCard } from './VDevsCard'
+import { DatasetsCard } from './DatasetsCard'
 import { formatBytes, getPoolHealthColor, getPoolUsedPercentage } from '@truenas/utils/storage.utils'
 import { colors } from '../../styles/theme'
 import {
@@ -27,6 +31,7 @@ interface PoolDashboardProps {
 
 export function PoolDashboard({
   pool,
+  datasets,
   onBack,
 }: PoolDashboardProps) {
   const usedPercent = getPoolUsedPercentage(pool)
@@ -175,6 +180,26 @@ export function PoolDashboard({
           onEditAutotrim={handleEditAutotrim}
         />
       </div>
+
+      {/* VDEVs Bubble Card */}
+      <div style={styles.bubbleCardRow}>
+        <VDevsCard
+          topology={pool.topology}
+          onDiskClick={() => {
+            // Could navigate to disk details
+          }}
+        />
+      </div>
+
+      {/* Datasets Bubble Card */}
+      <div style={styles.bubbleCardRow}>
+        <DatasetsCard
+          datasets={datasets}
+          onDatasetClick={() => {
+            // Could navigate to dataset details
+          }}
+        />
+      </div>
     </div>
   )
 }
@@ -246,6 +271,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   healthCardSection: {
     marginBottom: 24,
+  },
+  bubbleCardsSection: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: 20,
+    marginBottom: 24,
+  },
+  bubbleCardRow: {
+    marginBottom: 20,
   },
   mainGrid: {
     display: 'grid',
