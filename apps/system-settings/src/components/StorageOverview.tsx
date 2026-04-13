@@ -9,6 +9,7 @@ import { Pool } from '@truenas/types/pool'
 import { Dataset } from '@truenas/types/dataset-types'
 import { poolService } from '@truenas/services/pool'
 import { PoolList, PoolDashboard } from './pools'
+import { VDevsPage, DatasetsPage } from './pools'
 import { CreatePoolPage } from './pool-wizard'
 import { colors } from '../styles/theme'
 
@@ -62,12 +63,30 @@ export function StorageOverview({ view, onViewChange, pools, datasets, onPoolCli
           onViewChange('overview')
           setSelectedPool(null)
         }}
-        onDiskClick={() => {
-          // Could navigate to disk details
-        }}
-        onDatasetClick={() => {
-          // Could navigate to dataset details
-        }}
+        onViewVDevs={() => onViewChange('vdevs-details')}
+        onViewDatasets={() => onViewChange('datasets-details')}
+      />
+    )
+  }
+
+  // VDEVs detail page
+  if (view === 'vdevs-details' && selectedPool) {
+    return (
+      <VDevsPage
+        pool={selectedPool}
+        onBack={() => onViewChange('pool-details')}
+      />
+    )
+  }
+
+  // Datasets detail page
+  if (view === 'datasets-details' && selectedPool) {
+    const poolDatasets = datasets.filter(d => d.pool === selectedPool.name)
+    return (
+      <DatasetsPage
+        poolName={selectedPool.name}
+        datasets={poolDatasets}
+        onBack={() => onViewChange('pool-details')}
       />
     )
   }

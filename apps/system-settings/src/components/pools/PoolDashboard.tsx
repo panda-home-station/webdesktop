@@ -27,12 +27,16 @@ interface PoolDashboardProps {
   onBack: () => void
   onDiskClick?: (diskName: string) => void
   onDatasetClick?: (dataset: Dataset) => void
+  onViewVDevs?: () => void
+  onViewDatasets?: () => void
 }
 
 export function PoolDashboard({
   pool,
   datasets,
   onBack,
+  onViewVDevs,
+  onViewDatasets,
 }: PoolDashboardProps) {
   const usedPercent = getPoolUsedPercentage(pool)
   const healthColor = getPoolHealthColor(pool.status)
@@ -185,10 +189,7 @@ export function PoolDashboard({
       <div style={styles.bubbleCardRow}>
         <VDevsCard
           topology={pool.topology}
-          onDiskClick={() => {
-            // Could navigate to disk details
-          }}
-          onViewDetails={() => window.open(`${window.location.origin}/storage/${pool.id}/vdevs`, '_blank')}
+          onViewDetails={onViewVDevs}
         />
       </div>
 
@@ -196,10 +197,7 @@ export function PoolDashboard({
       <div style={styles.bubbleCardRow}>
         <DatasetsCard
           datasets={datasets}
-          onDatasetClick={() => {
-            // Could navigate to dataset details
-          }}
-          onViewDetails={() => window.open(`${window.location.origin}/datasets/${pool.name}`, '_blank')}
+          onViewDetails={onViewDatasets}
         />
       </div>
     </div>
