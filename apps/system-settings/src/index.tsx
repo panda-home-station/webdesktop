@@ -33,7 +33,7 @@ const TABS = [
 
 // Storage tab has sub-views with different titles
 const STORAGE_TITLES: Record<string, string> = {
-  'overview': '存储空间',
+  'overview': '存储池',
   'create-pool': '创建存储池',
   'pool-details': '存储池',
 }
