@@ -124,8 +124,8 @@ export function PoolDashboard({
         </div>
 
         {/* Quick Stats */}
-        <div style={styles.statsColumn}>
-          <div style={styles.statCard}>
+        <div style={styles.statsCard}>
+          <div style={styles.statRow}>
             <div style={styles.statIcon}>
               <Database size={20} color={colors.primary} />
             </div>
@@ -135,7 +135,7 @@ export function PoolDashboard({
             </div>
           </div>
 
-          <div style={styles.statCard}>
+          <div style={styles.statRow}>
             <div style={styles.statIcon}>
               <Shield size={20} color={pool.encrypt ? colors.success : colors.textTertiary} />
             </div>
@@ -147,7 +147,7 @@ export function PoolDashboard({
             </div>
           </div>
 
-          <div style={styles.statCard}>
+          <div style={styles.statRowLast}>
             <div style={styles.statIcon}>
               <Activity size={20} color={colors.primary} />
             </div>
@@ -155,6 +155,19 @@ export function PoolDashboard({
               <span style={styles.statLabel}>自动整理</span>
               <span style={styles.statValue}>{pool.autotrim?.value === 'on' ? '已启用' : '已禁用'}</span>
             </div>
+          </div>
+        </div>
+
+        {/* Details Section */}
+        <div style={styles.detailsCard}>
+          <h3 style={styles.cardTitle}>存储池详情</h3>
+          <div style={styles.detailsGrid}>
+            <DetailItem label="GUID" value={pool.guid} mono />
+            <DetailItem label="状态" value={pool.status} />
+            <DetailItem label="重复删除" value={pool.dedup_table_quota || '关闭'} />
+            {pool.fragmentation !== undefined && (
+              <DetailItem label="碎片化" value={`${pool.fragmentation}%`} />
+            )}
           </div>
         </div>
       </div>
@@ -196,19 +209,6 @@ export function PoolDashboard({
                 </div>
               )
             })}
-        </div>
-      </div>
-
-      {/* Details Section */}
-      <div style={styles.detailsSection}>
-        <h3 style={styles.sectionTitle}>存储池详情</h3>
-        <div style={styles.detailsGrid}>
-          <DetailItem label="GUID" value={pool.guid} mono />
-          <DetailItem label="状态" value={pool.status} />
-          <DetailItem label="重复删除" value={pool.dedup_table_quota || '关闭'} />
-          {pool.fragmentation !== undefined && (
-            <DetailItem label="碎片化" value={`${pool.fragmentation}%`} />
-          )}
         </div>
       </div>
     </div>
@@ -297,7 +297,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   mainGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 280px',
+    gridTemplateColumns: '1fr 1fr 1fr',
     gap: 20,
     marginBottom: 28,
   },
@@ -369,19 +369,27 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 13,
     fontWeight: 500,
   },
-  statsColumn: {
+  statsCard: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 12,
-  },
-  statCard: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 14,
-    padding: 18,
+    gap: 0,
     backgroundColor: colors.cardBg,
     borderRadius: 12,
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+    padding: 18,
+  },
+  statRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    padding: '12px 0',
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  statRowLast: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 14,
+    padding: '12px 0',
   },
   statIcon: {
     width: 40,
@@ -463,11 +471,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 11,
     color: colors.primary,
     fontWeight: 500,
-  },
-  detailsSection: {
-    backgroundColor: colors.cardBg,
-    borderRadius: 16,
-    padding: 24,
   },
   detailsGrid: {
     display: 'grid',

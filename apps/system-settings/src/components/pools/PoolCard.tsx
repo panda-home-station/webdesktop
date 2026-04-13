@@ -9,7 +9,7 @@ import { VDevType } from '@truenas/types/vdev-enum-types'
 import { formatBytes, getPoolHealthColor, getPoolUsedPercentage } from '@truenas/utils/storage.utils'
 import { GaugeChart } from '../ui/GaugeChart'
 import { colors } from '../../styles/theme'
-import { Shield, Lock, CheckCircle, AlertTriangle } from 'lucide-react'
+import { Shield, Lock, Activity, CheckCircle, AlertTriangle } from 'lucide-react'
 
 interface PoolCardProps {
   pool: Pool
@@ -86,13 +86,18 @@ export function PoolCard({ pool, onClick }: PoolCardProps) {
       <div style={styles.stats}>
         <div style={styles.statItem}>
           <Lock size={14} color={colors.textTertiary} />
+          <span style={styles.statLabel}>已分配</span>
+          <span style={styles.statValue}>{formatBytes(pool.allocated || 0)}</span>
+        </div>
+        <div style={styles.statItem}>
+          <Shield size={14} color={colors.textTertiary} />
           <span style={styles.statLabel}>加密</span>
           <span style={{ ...styles.statValue, color: pool.encrypt ? colors.success : colors.textTertiary }}>
             {pool.encrypt ? '已启用' : '已禁用'}
           </span>
         </div>
         <div style={styles.statItem}>
-          <Shield size={14} color={colors.textTertiary} />
+          <Activity size={14} color={colors.textTertiary} />
           <span style={styles.statLabel}>自动整理</span>
           <span style={styles.statValue}>{pool.autotrim?.value === 'on' ? '已启用' : '已禁用'}</span>
         </div>
@@ -205,7 +210,8 @@ const styles = {
   } as React.CSSProperties,
   stats: {
     display: 'flex',
-    gap: 16,
+    flexDirection: 'column' as const,
+    gap: 12,
   } as React.CSSProperties,
   statItem: {
     display: 'flex',
