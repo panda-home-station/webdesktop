@@ -3,12 +3,14 @@
  * Master-detail view of pool topology
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Pool } from '@truenas/types/pool'
 import { VDevItem, isTopologyDisk } from '@truenas/types/storage-types'
 import { TopologyItemType } from '@truenas/types/vdev-enum-types'
 import { TopologyItemStatus, getTopologyStatusColor, getTopologyStatusLabel } from '@truenas/types/vdev-status-enum'
 import { formatBytes } from '@truenas/utils/storage.utils'
+import { diskService } from '@truenas/services/disk'
+import { Disk } from '@truenas/types/disk-types'
 import { colors } from '../../styles/theme'
 import {
   HardDrive,
@@ -40,6 +42,25 @@ export function VDevsPage({ pool, onBack }: VDevsPageProps) {
     // Auto-expand all vdevs with children
     collectExpandableGuids(pool.topology)
   ))
+  const [disks, setDisks] = useState<Record<string, Disk>>({})
+
+  // Load all disks on mount
+  useEffect(() => {
+    async function loadDisks() {
+      const allDisks = await diskService.query()
+      const diskDict: Record<string, Disk> = {}
+      allDisks.forEach(disk => {
+        diskDict[disk.name] = disk
+      })
+      setDisks(diskDict)
+    }
+    loadDisks()
+  }, [])
+
+  // Get the full Disk info for a selected TopologyDisk
+  const selectedDisk = selectedItem && isTopologyDisk(selectedItem)
+    ? disks[selectedItem.disk]
+    : null
 
   const groups: VDevGroup[] = [
     { key: 'data', label: '数据', icon: <Database size={14} />, vdevs: pool.topology.data || [] },
@@ -245,7 +266,7 @@ export function VDevsPage({ pool, onBack }: VDevsPageProps) {
         {/* Bottom Bubble: Detail Panel */}
         {selectedItem && (
           <div style={styles.bottomBubble}>
-            <VDevDetailPanel item={selectedItem} />
+            <VDevDetailPanel item={selectedItem} disk={selectedDisk} />
           </div>
         )}
       </div>
@@ -253,7 +274,7 @@ export function VDevsPage({ pool, onBack }: VDevsPageProps) {
   )
 }
 
-function VDevDetailPanel({ item }: { item: VDevItem }) {
+function VDevDetailPanel({ item, disk }: { item: VDevItem; disk: Disk | null }) {
   const isDisk = isTopologyDisk(item)
   const statusColor = getTopologyStatusColor(item.status)
   const statusLabel = getTopologyStatusLabel(item.status)
@@ -284,7 +305,30 @@ function VDevDetailPanel({ item }: { item: VDevItem }) {
             )}
           </div>
         </div>
+        <div style={styles.headerActions}>
+          <button style={styles.editButton}>编辑</button>
+        </div>
       </div>
+
+      {/* 磁盘信息 (仅对磁盘显示) */}
+      {isDisk && disk && (
+        <div style={styles.detailCard}>
+          <div style={styles.detailCardTitle}>磁盘信息</div>
+          {disk.size > 0 && (
+            <InfoRow label="磁盘大小" value={formatBytes(disk.size)} />
+          )}
+          <InfoRow label="传输模式" value={disk.transfermode} />
+          <InfoRow label="序列号" value={disk.serial} mono />
+          <InfoRow label="型号" value={disk.model || '不可用'} />
+          <InfoRow
+            label="转速"
+            value={disk.rotationrate ? `${disk.rotationrate} RPM` : '不可用'}
+          />
+          <InfoRow label="类型" value={disk.type} />
+          <InfoRow label="HDD 休眠" value={disk.hddstandby} />
+          <InfoRow label="描述" value={disk.description || '不可用'} />
+        </div>
+      )}
 
       {/* ZFS 统计 */}
       <div style={styles.detailCard}>
@@ -341,7 +385,7 @@ function VDevDetailPanel({ item }: { item: VDevItem }) {
           {item.children.map(child => (
             <div key={child.guid} style={styles.childRow}>
               <HardDrive size={14} color={colors.textSecondary} />
-              <span style={styles.childName}>{child.name}</span>
+              <span style={styles.childName}>{child.disk}</span>
               <span style={{
                 ...styles.childStatus,
                 color: getTopologyStatusColor(child.status),
@@ -353,6 +397,13 @@ function VDevDetailPanel({ item }: { item: VDevItem }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Actions */}
+      {isDisk && (
+        <div style={styles.actionsBar}>
+          <button style={styles.replaceButton}>更换</button>
         </div>
       )}
     </div>
@@ -685,6 +736,38 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: 12,
     padding: '20px 24px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+  },
+  headerActions: {
+    marginLeft: 'auto',
+    display: 'flex',
+    gap: 8,
+  },
+  editButton: {
+    padding: '8px 16px',
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 500,
+    color: colors.primary,
+    cursor: 'pointer',
+  },
+  actionsBar: {
+    display: 'flex',
+    gap: 8,
+    padding: '16px 24px',
+    backgroundColor: colors.cardBg,
+    borderRadius: 12,
+  },
+  replaceButton: {
+    padding: '8px 16px',
+    backgroundColor: colors.cardBg,
+    border: `1px solid ${colors.border}`,
+    borderRadius: 8,
+    fontSize: 14,
+    fontWeight: 500,
+    color: colors.text,
+    cursor: 'pointer',
   },
   detailIconWrap: {
     display: 'flex',
