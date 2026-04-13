@@ -25,6 +25,8 @@ import {
   Pause,
   Play,
   Square,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 
 interface StorageHealthCardProps {
@@ -65,6 +67,7 @@ export function StorageHealthCard({
   const [showScrubConfirm, setShowScrubConfirm] = useState(false)
   const [showAutotrimDialog, setShowAutotrimDialog] = useState(false)
   const [showScrubConfigDialog, setShowScrubConfigDialog] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(true)
 
   const loadScrubTask = useCallback(async () => {
     try {
@@ -233,67 +236,74 @@ export function StorageHealthCard({
   return (
     <div style={styles.card}>
       <div style={styles.header}>
-        <h3 style={styles.title}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            存储健康
-            <span style={{ color: iconData.color }}>
-              {iconData.icon}
+        <div style={styles.titleRow}>
+          <h3 style={styles.title}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              存储健康
+              <span style={{ color: iconData.color }}>
+                {iconData.icon}
+              </span>
             </span>
-          </span>
-        </h3>
-        {isStarting && (
-          <button
-            style={{
-              ...styles.scrubButton,
-              opacity: 0.8,
-              cursor: 'wait',
-            }}
-            disabled
-          >
-            <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
-            扫描中...
-          </button>
-        )}
-        {!wasScanInitiated && !isStarting && (
-          <button
-            style={styles.scrubButton}
-            onClick={() => setShowScrubConfirm(true)}
-          >
-            <RefreshCw size={14} />
-            立即校验
-          </button>
-        )}
-        {wasScanInitiated && isScrub && (
-          <div style={styles.scanControls}>
-            <button
-              style={styles.scanControlButton}
-              onClick={isPaused ? handleResumeScrub : handlePauseScrub}
-              title={isPaused ? '继续' : '暂停'}
-            >
-              {isPaused ? <Play size={14} /> : <Pause size={14} />}
-            </button>
-            <button
-              style={{ ...styles.scanControlButton, ...styles.stopButton }}
-              onClick={handleStopScrub}
-              title="停止"
-            >
-              <Square size={14} />
-            </button>
+          </h3>
+          {/* Status Badge */}
+          <div style={{ ...styles.statusBadge, backgroundColor: iconData.color }}>
+            {iconData.icon}
+            <span style={styles.statusText}>{getErrorText(pool, errorCount)}</span>
           </div>
-        )}
+        </div>
+        <div style={styles.headerActions}>
+          {isStarting && (
+            <button
+              style={{
+                ...styles.scrubButton,
+                opacity: 0.8,
+                cursor: 'wait',
+              }}
+              disabled
+            >
+              <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} />
+              扫描中...
+            </button>
+          )}
+          {!wasScanInitiated && !isStarting && (
+            <button
+              style={styles.scrubButton}
+              onClick={() => setShowScrubConfirm(true)}
+            >
+              <RefreshCw size={14} />
+              立即校验
+            </button>
+          )}
+          {wasScanInitiated && isScrub && (
+            <div style={styles.scanControls}>
+              <button
+                style={styles.scanControlButton}
+                onClick={isPaused ? handleResumeScrub : handlePauseScrub}
+                title={isPaused ? '继续' : '暂停'}
+              >
+                {isPaused ? <Play size={14} /> : <Pause size={14} />}
+              </button>
+              <button
+                style={{ ...styles.scanControlButton, ...styles.stopButton }}
+                onClick={handleStopScrub}
+                title="停止"
+              >
+                <Square size={14} />
+              </button>
+            </div>
+          )}
+          <button
+            style={styles.expandButton}
+            onClick={() => setIsExpanded(!isExpanded)}
+            title={isExpanded ? '折叠' : '展开'}
+          >
+            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </button>
+        </div>
       </div>
 
+      {isExpanded && (
       <div style={styles.content}>
-        {/* Status */}
-        <div style={styles.statusRow}>
-          <span style={{ ...styles.statusBadge, backgroundColor: iconData.color }}>
-            {iconData.icon}
-          </span>
-          <span style={styles.statusText}>
-            {getErrorText(pool, errorCount)}
-          </span>
-        </div>
-
         {/* Scheduled Scrub */}
         <div style={styles.infoRow}>
           <div style={styles.infoLabel}>
@@ -404,6 +414,7 @@ export function StorageHealthCard({
           </>
         )}
       </div>
+      )}
 
       <style>{`
         @keyframes spin {
@@ -621,7 +632,12 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 0,
+  },
+  titleRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
   },
   title: {
     margin: 0,
@@ -631,6 +647,24 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
+  },
+  headerActions: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  expandButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 32,
+    height: 32,
+    backgroundColor: colors.background,
+    color: colors.textSecondary,
+    border: 'none',
+    borderRadius: 6,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
   },
   scrubButton: {
     display: 'flex',
@@ -676,6 +710,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 12,
+    marginTop: 16,
   },
   statusRow: {
     display: 'flex',
@@ -688,14 +723,16 @@ const styles: Record<string, React.CSSProperties> = {
   statusBadge: {
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: 28,
-    height: 28,
-    borderRadius: '50%',
+    gap: 6,
+    padding: '6px 12px',
+    borderRadius: 20,
+    color: 'white',
+    fontSize: 13,
+    fontWeight: 500,
   },
   statusText: {
-    fontSize: 14,
-    color: colors.text,
+    fontSize: 13,
+    color: 'white',
     fontWeight: 500,
   },
   infoRow: {
