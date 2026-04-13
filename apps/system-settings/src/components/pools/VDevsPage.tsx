@@ -75,67 +75,90 @@ export function VDevsPage({ pool, onBack }: VDevsPageProps) {
         </div>
       </div>
 
-      {/* Master-Detail */}
-      <div style={styles.masterDetail}>
-        {/* Left: VDEV Tree */}
-        <div style={styles.master}>
-          <div style={styles.masterInner}>
+      {/* Top-Bottom Bubble Layout */}
+      <div style={styles.bubbleLayout}>
+        {/* Top Bubble: VDEV Tree Table */}
+        <div style={styles.topBubble}>
+          {/* Search Bar */}
+          <div style={styles.searchBar}>
+            <div style={styles.searchInputWrap}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors.textTertiary} strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input
+                style={styles.searchInput}
+                placeholder="搜索"
+                onChange={() => {}}
+              />
+            </div>
+          </div>
+
+          {/* Table Header */}
+          <div style={styles.tableHeader}>
+            <div style={styles.colName}>VDEV名称</div>
+            <div style={styles.colStatus}>状态</div>
+            <div style={styles.colCapacity}>容量</div>
+            <div style={styles.colErrors}>ZFS 错误</div>
+          </div>
+
+          {/* Table Body */}
+          <div style={styles.tableBody}>
             {groups.map(group => (
-              <div key={group.key} style={styles.groupSection}>
-                {/* Group Header */}
-                <div style={styles.groupHeader}>
-                  <span style={styles.groupIcon}>{group.icon}</span>
-                  <span style={styles.groupLabel}>{group.label}</span>
-                  <span style={styles.groupCount}>{group.vdevs.length}</span>
+              <div key={group.key}>
+                {/* Group Header Row */}
+                <div style={styles.groupRow}>
+                  <div style={styles.colName}>
+                    <span style={styles.groupIcon}>{group.icon}</span>
+                    <span style={styles.groupLabel}>{group.label}</span>
+                    <button
+                      style={styles.groupToggle}
+                      onClick={() => {
+                        // Toggle all vdevs in this group
+                      }}
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
                 </div>
 
-                {/* VDevs in this group */}
+                {/* VDev Rows */}
                 {group.vdevs.map(vdev => {
                   const isDisk = isTopologyDisk(vdev)
                   const hasChildren = !isDisk && (vdev.children?.length ?? 0) > 0
                   const isExpanded = expandedVdevs.has(vdev.guid)
                   const isSelected = selectedItem?.guid === vdev.guid
                   const statusColor = getTopologyStatusColor(vdev.status)
+                  const statusLabel = getTopologyStatusLabel(vdev.status)
                   const hasErrors = hasVdevErrors(vdev)
 
                   return (
                     <div key={vdev.guid}>
-                      {/* VDev Row */}
+                      {/* Main VDev Row */}
                       <div
                         style={{
-                          ...styles.vdevRow,
-                          backgroundColor: isSelected ? colors.primary + '14' : 'transparent',
-                          borderLeft: isSelected
-                            ? `3px solid ${colors.primary}`
-                            : '3px solid transparent',
+                          ...styles.tableRow,
+                          backgroundColor: isSelected ? colors.primary + '0a' : 'transparent',
                         }}
                         onClick={() => setSelectedItem(vdev)}
                       >
-                        {/* Expand button */}
-                        {hasChildren ? (
-                          <button
-                            style={styles.expandBtn}
-                            onClick={e => toggleVdev(vdev.guid, e)}
-                          >
-                            {isExpanded
-                              ? <ChevronDown size={13} />
-                              : <ChevronRight size={13} />
-                            }
-                          </button>
-                        ) : (
-                          <span style={styles.expandSpacer} />
-                        )}
-
-                        {/* Icon */}
-                        <HardDrive size={15} color={isSelected ? colors.primary : colors.textSecondary} />
-
-                        {/* Name & type */}
-                        <div style={styles.vdevNameCol}>
+                        <div style={styles.colName}>
+                          {hasChildren ? (
+                            <button
+                              style={styles.expandBtn}
+                              onClick={e => toggleVdev(vdev.guid, e)}
+                            >
+                              {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
+                            </button>
+                          ) : (
+                            <span style={styles.expandSpacer} />
+                          )}
+                          <HardDrive size={15} color={isSelected ? colors.primary : colors.textSecondary} />
                           <span style={{
                             ...styles.vdevName,
                             color: isSelected ? colors.primary : colors.text,
                           }}>
-                            {vdev.name}
+                            {isDisk ? vdev.disk : vdev.name}
                           </span>
                           {!isDisk && (
                             <span style={styles.vdevTypeBadge}>
@@ -143,44 +166,69 @@ export function VDevsPage({ pool, onBack }: VDevsPageProps) {
                             </span>
                           )}
                         </div>
-
-                        {/* Status + errors */}
-                        <div style={styles.vdevRowRight}>
+                        <div style={styles.colStatus}>
                           <span style={{ ...styles.statusDot, backgroundColor: statusColor }} />
-                          {hasErrors && <AlertTriangle size={12} color={colors.warning} />}
+                          <span style={styles.statusText}>{statusLabel}</span>
+                        </div>
+                        <div style={styles.colCapacity}>
+                          {vdev.stats.size > 0 ? formatBytes(vdev.stats.size) : '-'}
+                        </div>
+                        <div style={styles.colErrors}>
+                          {hasErrors ? (
+                            <span style={styles.errorText}>
+                              <AlertTriangle size={12} color={colors.danger} />
+                              {item.stats.read_errors + item.stats.write_errors + item.stats.checksum_errors}
+                            </span>
+                          ) : (
+                            <span style={styles.noErrorText}>没有错误</span>
+                          )}
                         </div>
                       </div>
 
-                      {/* Children disks */}
+                      {/* Children Rows */}
                       {hasChildren && isExpanded && !isDisk && (
                         vdev.children.map(child => {
                           const isChildSelected = selectedItem?.guid === child.guid
                           const childStatusColor = getTopologyStatusColor(child.status)
+                          const childStatusLabel = getTopologyStatusLabel(child.status)
                           const childHasErrors = hasVdevErrors(child)
 
                           return (
                             <div
                               key={child.guid}
                               style={{
-                                ...styles.diskRow,
-                                backgroundColor: isChildSelected ? colors.primary + '14' : 'transparent',
-                                borderLeft: isChildSelected
-                                  ? `3px solid ${colors.primary}`
-                                  : '3px solid transparent',
+                                ...styles.tableRow,
+                                ...styles.childRow,
+                                backgroundColor: isChildSelected ? colors.primary + '0a' : 'transparent',
                               }}
                               onClick={() => setSelectedItem(child)}
                             >
-                              <span style={styles.diskIndent} />
-                              <HardDrive size={13} color={isChildSelected ? colors.primary : colors.textTertiary} />
-                              <span style={{
-                                ...styles.diskName,
-                                color: isChildSelected ? colors.primary : colors.text,
-                              }}>
-                                {child.name}
-                              </span>
-                              <div style={styles.vdevRowRight}>
+                              <div style={styles.colName}>
+                                <span style={styles.childIndent} />
+                                <HardDrive size={13} color={isChildSelected ? colors.primary : colors.textTertiary} />
+                                <span style={{
+                                  ...styles.diskName,
+                                  color: isChildSelected ? colors.primary : colors.text,
+                                }}>
+                                  {child.disk}
+                                </span>
+                              </div>
+                              <div style={styles.colStatus}>
                                 <span style={{ ...styles.statusDot, backgroundColor: childStatusColor }} />
-                                {childHasErrors && <AlertTriangle size={11} color={colors.warning} />}
+                                <span style={styles.statusText}>{childStatusLabel}</span>
+                              </div>
+                              <div style={styles.colCapacity}>
+                                {child.stats.size > 0 ? formatBytes(child.stats.size) : '-'}
+                              </div>
+                              <div style={styles.colErrors}>
+                                {childHasErrors ? (
+                                  <span style={styles.errorText}>
+                                    <AlertTriangle size={12} color={colors.danger} />
+                                    {child.stats.read_errors + child.stats.write_errors + child.stats.checksum_errors}
+                                  </span>
+                                ) : (
+                                  <span style={styles.noErrorText}>没有错误</span>
+                                )}
                               </div>
                             </div>
                           )
@@ -194,17 +242,12 @@ export function VDevsPage({ pool, onBack }: VDevsPageProps) {
           </div>
         </div>
 
-        {/* Right: Detail Panel */}
-        <div style={styles.detail}>
-          {selectedItem ? (
+        {/* Bottom Bubble: Detail Panel */}
+        {selectedItem && (
+          <div style={styles.bottomBubble}>
             <VDevDetailPanel item={selectedItem} />
-          ) : (
-            <div style={styles.emptyDetail}>
-              <HardDrive size={48} color={colors.border} />
-              <p style={styles.emptyDetailText}>选择左侧设备查看详情</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -225,7 +268,7 @@ function VDevDetailPanel({ item }: { item: VDevItem }) {
           <HardDrive size={28} color={colors.primary} />
         </div>
         <div style={styles.detailHeaderInfo}>
-          <h2 style={styles.detailTitle}>{item.name}</h2>
+          <h2 style={styles.detailTitle}>{isDisk ? item.disk : item.name}</h2>
           <div style={styles.detailBadges}>
             {!isDisk && (
               <span style={styles.typeBadge}>{getVdevTypeLabel(item.type)}</span>
@@ -421,63 +464,122 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors.text,
     flex: 1,
   },
-  masterDetail: {
+  bubbleLayout: {
     display: 'flex',
+    flexDirection: 'column' as const,
     gap: 20,
-    alignItems: 'flex-start',
-    minHeight: 500,
   },
-  master: {
-    width: 280,
-    flexShrink: 0,
+  topBubble: {
     backgroundColor: colors.cardBg,
     borderRadius: 12,
     overflow: 'hidden',
     boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
-  masterInner: {
-    overflowY: 'auto' as const,
-    maxHeight: 'calc(100vh - 280px)',
-  },
-  groupSection: {
+  searchBar: {
+    padding: '12px 16px',
+    backgroundColor: colors.cardBg,
     borderBottom: `1px solid ${colors.border}`,
   },
-  groupHeader: {
+  searchInputWrap: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
-    padding: '10px 16px',
+    gap: 10,
+    padding: '8px 12px',
     backgroundColor: colors.background,
+    borderRadius: 8,
+    border: `1px solid ${colors.border}`,
   },
-  groupIcon: {
-    color: colors.primary,
+  searchInput: {
+    flex: 1,
+    border: 'none',
+    backgroundColor: 'transparent',
+    fontSize: 14,
+    color: colors.text,
+    outline: 'none',
+  },
+  tableHeader: {
     display: 'flex',
     alignItems: 'center',
-  },
-  groupLabel: {
+    padding: '10px 16px',
+    backgroundColor: colors.cardBg,
+    borderBottom: `1px solid ${colors.border}`,
     fontSize: 12,
     fontWeight: 600,
     color: colors.textSecondary,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px',
-    flex: 1,
   },
-  groupCount: {
-    fontSize: 11,
-    padding: '2px 6px',
-    backgroundColor: colors.primary + '15',
-    color: colors.primary,
-    borderRadius: 8,
-    fontWeight: 500,
+  tableBody: {
+    maxHeight: 'calc(50vh - 120px)',
+    overflowY: 'auto' as const,
   },
-  vdevRow: {
+  groupRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
-    padding: '9px 12px 9px 12px',
+    padding: '8px 16px',
+    backgroundColor: colors.cardBg,
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  groupIcon: {
+    color: colors.primary,
+    display: 'flex',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  groupLabel: {
+    fontSize: 13,
+    fontWeight: 600,
+    color: colors.text,
+  },
+  groupToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 20,
+    height: 20,
+    backgroundColor: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    color: colors.textSecondary,
+    padding: 0,
+    marginLeft: 4,
+  },
+  tableRow: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '10px 16px',
     cursor: 'pointer',
     transition: 'background-color 0.12s ease',
     userSelect: 'none' as const,
+    borderBottom: `1px solid ${colors.border}`,
+  },
+  childRow: {
+    backgroundColor: colors.background + '50',
+  },
+  colName: {
+    flex: 2,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    minWidth: 0,
+  },
+  colStatus: {
+    flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+  },
+  colCapacity: {
+    flex: 1,
+    textAlign: 'right' as const,
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontFamily: 'monospace',
+  },
+  colErrors: {
+    flex: 1,
+    textAlign: 'right' as const,
+    fontSize: 13,
   },
   expandBtn: {
     display: 'flex',
@@ -496,13 +598,6 @@ const styles: Record<string, React.CSSProperties> = {
     width: 18,
     flexShrink: 0,
   },
-  vdevNameCol: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 6,
-    flex: 1,
-    minWidth: 0,
-  },
   vdevName: {
     fontSize: 13,
     fontWeight: 500,
@@ -520,37 +615,43 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
     textTransform: 'uppercase' as const,
   },
-  vdevRowRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 5,
-    flexShrink: 0,
-  },
   statusDot: {
     width: 7,
     height: 7,
     borderRadius: '50%',
     flexShrink: 0,
   },
-  diskRow: {
+  statusText: {
+    fontSize: 12,
+    fontWeight: 500,
+  },
+  errorText: {
     display: 'flex',
     alignItems: 'center',
-    gap: 7,
-    padding: '7px 12px 7px 12px',
-    cursor: 'pointer',
-    transition: 'background-color 0.12s ease',
-    userSelect: 'none' as const,
+    gap: 4,
+    color: colors.danger,
+    fontWeight: 500,
   },
-  diskIndent: {
+  noErrorText: {
+    color: colors.success,
+    fontSize: 12,
+  },
+  childIndent: {
     width: 26,
     flexShrink: 0,
   },
   diskName: {
     fontSize: 12,
-    flex: 1,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap' as const,
+  },
+  bottomBubble: {
+    minHeight: 300,
+    backgroundColor: colors.cardBg,
+    borderRadius: 12,
+    overflow: 'hidden',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
   },
   detail: {
     flex: 1,
