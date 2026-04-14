@@ -1,0 +1,12 @@
+{
+  "name": "files",
+  "title": "文件管理器",
+  "version": "1.0.0",
+  "capabilities": ["core"],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 900,
+  "minHeight": 600
+}
