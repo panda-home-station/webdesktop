@@ -15,6 +15,7 @@ export interface AlertsState {
   isLoading: boolean
   isPanelOpen: boolean
   error: string | null
+  unsubscribe: (() => void) | null
 
   // Actions
   setAlerts: (alerts: Alert[]) => void
@@ -29,6 +30,8 @@ export interface AlertsState {
   setIsLoading: (loading: boolean) => void
   setError: (error: string | null) => void
   fetchAlerts: () => Promise<void>
+  subscribeToAlerts: () => void
+  unsubscribeFromAlerts: () => void
 
   // Computed
   getUnreadAlerts: () => Alert[]
@@ -64,6 +67,7 @@ const useAlertStore = create<AlertsState>((set, get) => ({
   isLoading: false,
   isPanelOpen: false,
   error: null,
+  unsubscribe: null,
 
   setAlerts: (alerts: Alert[]) => {
     // Preserve dismissed state for alerts that were dismissed locally
@@ -207,6 +211,54 @@ const useAlertStore = create<AlertsState>((set, get) => ({
       get().setError(error instanceof Error ? error.message : 'Failed to fetch alerts')
     } finally {
       set({ isLoading: false })
+    }
+  },
+
+  subscribeToAlerts: () => {
+    const { unsubscribe } = get()
+    if (unsubscribe) {
+      unsubscribe()
+    }
+
+    const newUnsubscribe = truenasApi.subscribe('alert.list', (data) => {
+      const event = data as {
+        id: number
+        msg: 'added' | 'changed' | 'removed'
+        fields?: Alert
+      }
+
+      set((state) => {
+        let alerts = [...state.alerts]
+
+        if (event.msg === 'added' && event.fields) {
+          // Check if alert already exists
+          const existingIndex = alerts.findIndex(a => a.id === event.fields!.id)
+          if (existingIndex === -1) {
+            alerts.push(event.fields)
+          } else {
+            alerts[existingIndex] = event.fields
+          }
+        } else if (event.msg === 'changed' && event.fields) {
+          const index = alerts.findIndex(a => a.id === event.fields!.id)
+          if (index !== -1) {
+            alerts[index] = event.fields
+          }
+        } else if (event.msg === 'removed' && event.fields) {
+          alerts = alerts.filter(a => a.id !== event.fields!.id)
+        }
+
+        return { alerts: alerts.sort(sortAlerts) }
+      })
+    })
+
+    set({ unsubscribe: newUnsubscribe })
+  },
+
+  unsubscribeFromAlerts: () => {
+    const { unsubscribe } = get()
+    if (unsubscribe) {
+      unsubscribe()
+      set({ unsubscribe: null })
     }
   },
 }))

@@ -122,7 +122,6 @@ export default function NotificationsApp() {
         alertCounts={alertCounts}
         severityFilter={severityFilter}
         showDismissed={showDismissed}
-        onRefresh={fetchAlerts}
         onFilterChange={handleFilterChange}
         onShowDismissedChange={handleShowDismissedChange}
       />

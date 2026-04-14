@@ -1,5 +1,4 @@
 import { memo } from 'react'
-import { RefreshCw } from 'lucide-react'
 import type { SeverityFilter } from '../types'
 import { severityLabels } from '../types'
 
@@ -7,7 +6,6 @@ interface NotificationsHeaderProps {
   alertCounts: Record<SeverityFilter, number>
   severityFilter: SeverityFilter
   showDismissed: boolean
-  onRefresh: () => void
   onFilterChange: (filter: SeverityFilter) => void
   onShowDismissedChange: (show: boolean) => void
 }
@@ -16,7 +14,6 @@ const NotificationsHeader = memo(({
   alertCounts,
   severityFilter,
   showDismissed,
-  onRefresh,
   onFilterChange,
   onShowDismissedChange,
 }: NotificationsHeaderProps) => (
@@ -27,31 +24,10 @@ const NotificationsHeader = memo(({
       background: '#fff',
     }}
   >
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
       <h2 style={{ fontSize: '16px', fontWeight: 600, margin: 0, color: '#1e293b' }}>
         通知中心
       </h2>
-      <button
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          padding: '6px 10px',
-          borderRadius: '6px',
-          background: '#f1f5f9',
-          color: '#475569',
-          border: 'none',
-          fontSize: '12px',
-          cursor: 'pointer',
-          transition: 'all 0.2s ease',
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.background = '#e2e8f0'}
-        onMouseLeave={(e) => e.currentTarget.style.background = '#f1f5f9'}
-        onClick={onRefresh}
-      >
-        <RefreshCw size={14} />
-        刷新
-      </button>
     </div>
 
     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
