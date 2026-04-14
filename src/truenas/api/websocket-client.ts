@@ -6,9 +6,9 @@
  *
  * Features:
  * - JSON-RPC 2.0 protocol
- * - Exponential backoff reconnection
+ * - Exponential backoff reconnection with jitter
  * - Heartbeat/keepalive mechanism
- * - Event subscription system
+ * - Centralized subscription registry with deduplication and reconnect recovery
  *
  * Spec: https://www.jsonrpc.org/specification
  */
@@ -78,6 +78,8 @@ interface WebSocketClientConfig {
   maxReconnectDelay: number
   /** Exponential backoff factor (default: 2) */
   backoffFactor: number
+  /** Maximum jitter to add to reconnect delay in milliseconds (default: 500ms) */
+  maxReconnectJitter: number
   /** Heartbeat interval in milliseconds (default: 30000ms) */
   heartbeatInterval: number
   /** Connection timeout in milliseconds (default: 10000ms) */
@@ -92,11 +94,154 @@ const DEFAULT_CONFIG: WebSocketClientConfig = {
   initialReconnectDelay: 1000,
   maxReconnectDelay: 30000,
   backoffFactor: 2,
+  maxReconnectJitter: 500,
   heartbeatInterval: 30000,
   connectionTimeout: 10000,
   maxRetries: Infinity,
   debug: import.meta.env.DEV,
 };
+
+// =============================================================================
+// Subscription Registry
+// Manages subscriptions with deduplication and reconnect recovery
+// =============================================================================
+
+interface SubscriptionEntry {
+  callbacks: Set<(data: unknown) => void>
+  /** Backend subscription ID returned by core.subscribe */
+  backendId: string | null
+  /** Whether core.subscribe has been sent and confirmed */
+  isEstablished: boolean
+  /** Pending subscribe call ID (for dedup on reconnect) */
+  pendingCallId: string | null
+}
+
+class SubscriptionRegistry {
+  private subscriptions = new Map<string, SubscriptionEntry>()
+  private pendingSubscriptions = new Map<string, string>() // callId → eventName
+  private wsClient: TrueNASWebSocketClient
+
+  constructor(wsClient: TrueNASWebSocketClient) {
+    this.wsClient = wsClient
+  }
+
+  /**
+   * Subscribe to an event. Multiple calls with the same event will share
+   * a single backend subscription (deduplication).
+   */
+  subscribe(event: string, callback: (data: unknown) => void): () => void {
+    if (!this.subscriptions.has(event)) {
+      this.subscriptions.set(event, {
+        callbacks: new Set(),
+        backendId: null,
+        isEstablished: false,
+        pendingCallId: null,
+      })
+    }
+
+    const entry = this.subscriptions.get(event)!
+    entry.callbacks.add(callback)
+
+    // Send subscribe to backend if this is the first callback for this event
+    if (entry.callbacks.size === 1) {
+      this.sendSubscribe(event, entry)
+    }
+
+    // Return unsubscribe function
+    return () => this.unsubscribe(event, callback)
+  }
+
+  private async sendSubscribe(event: string, entry: SubscriptionEntry): Promise<void> {
+    // Generate a unique call ID for tracking this subscription
+    const callId = `sub_${event}_${Date.now()}`
+    entry.pendingCallId = callId
+    this.pendingSubscriptions.set(callId, event)
+
+    // Send core.subscribe via websocket
+    const method = 'core.subscribe'
+    await this.wsClient.sendRaw(method, [event], callId)
+  }
+
+  /**
+   * Called by WebSocket client when a subscription confirmation is received
+   */
+  onSubscribed(callId: string, backendId: string): void {
+    const event = this.pendingSubscriptions.get(callId)
+    if (!event) return
+
+    this.pendingSubscriptions.delete(callId)
+    const entry = this.subscriptions.get(event)
+    if (!entry) return
+
+    entry.backendId = backendId
+    entry.isEstablished = true
+    entry.pendingCallId = null
+  }
+
+  private unsubscribe(event: string, callback: (data: unknown) => void): void {
+    const entry = this.subscriptions.get(event)
+    if (!entry) return
+
+    entry.callbacks.delete(callback)
+
+    // If no more callbacks, send unsubscribe to backend
+    if (entry.callbacks.size === 0) {
+      this.subscriptions.delete(event)
+      if (entry.isEstablished && entry.backendId) {
+        this.sendUnsubscribe(event, entry.backendId)
+      }
+    }
+  }
+
+  private async sendUnsubscribe(event: string, backendId: string): Promise<void> {
+    try {
+      const callId = `unsub_${event}_${Date.now()}`
+      await this.wsClient.sendRaw('core.unsubscribe', [backendId], callId)
+    } catch {
+      // Silently ignore unsubscribe errors
+    }
+  }
+
+  /**
+   * Resubscribe to all events after reconnection
+   * Called by WebSocket client when connection is re-established
+   */
+  async resubscribeAll(): Promise<void> {
+    // Reset all subscription states
+    for (const [event, entry] of this.subscriptions) {
+      entry.isEstablished = false
+      entry.backendId = null
+
+      // Re-send subscribe for events that still have callbacks
+      if (entry.callbacks.size > 0) {
+        await this.sendSubscribe(event, entry)
+      }
+    }
+  }
+
+  /**
+   * Dispatch an event to all registered callbacks
+   */
+  dispatch(event: string, data: unknown): void {
+    const entry = this.subscriptions.get(event)
+    if (!entry) return
+
+    entry.callbacks.forEach(callback => {
+      try {
+        callback(data)
+      } catch {
+        // Silently ignore callback errors
+      }
+    })
+  }
+
+  /**
+   * Get all active subscription events
+   */
+  getActiveSubscriptions(): string[] {
+    return Array.from(this.subscriptions.keys())
+  }
+}
 
 export class TrueNASWebSocketClient {
   private ws: WebSocket | null = null
@@ -105,7 +250,6 @@ export class TrueNASWebSocketClient {
     resolve: (value: unknown) => void
     reject: (error: Error) => void
   }>()
-  private eventListeners = new Map<string, Set<(data: unknown) => void>>()
 
   // Connection state
   private connectionState = ConnectionState.Disconnected
@@ -131,8 +275,12 @@ export class TrueNASWebSocketClient {
   private config: WebSocketClientConfig
   private pendingCalls: Array<{ method: string; params: unknown[] }> = []
 
+  // Centralized subscription registry with deduplication and reconnect recovery
+  readonly subscriptions: SubscriptionRegistry
+
   constructor(config?: Partial<WebSocketClientConfig>) {
     this.config = { ...DEFAULT_CONFIG, ...config }
+    this.subscriptions = new SubscriptionRegistry(this)
     this.connect()
   }
 
@@ -213,14 +361,18 @@ export class TrueNASWebSocketClient {
     this.call('core.set_options', [{ legacy_jobs: false }]).catch(() => {
       // Silently ignore
     })
+
+    // Restore all subscriptions after reconnection
+    // resubscribeAll() is safe to call even if there are no subscriptions
+    this.subscriptions.resubscribeAll()
   }
 
   /**
    * Handle WebSocket message event
    */
-  private handleMessage(event: MessageEvent): void {
+  private handleMessage(messageEvent: MessageEvent): void {
     try {
-      const text = event.data
+      const text = messageEvent.data
       const message = JSON.parse(text) as IncomingMessage
 
       // Update last message time for heartbeat
@@ -228,9 +380,9 @@ export class TrueNASWebSocketClient {
       this.heartbeatMissed = 0
 
       // Handle response to a request
-      if (message.id && this.pendingRequests.has(message.id)) {
-        const { resolve, reject } = this.pendingRequests.get(message.id)!
-        this.pendingRequests.delete(message.id)
+      if (message.id && this.pendingRequests.has(message.id as string)) {
+        const { resolve, reject } = this.pendingRequests.get(message.id as string)!
+        this.pendingRequests.delete(message.id as string)
 
         if (message.error) {
           const error = new TrueNASError(
@@ -245,6 +397,12 @@ export class TrueNASWebSocketClient {
 
           reject(error)
         } else {
+          // Check if this is a subscription confirmation
+          // Subscription confirmations have result as the backend subscription ID (a string)
+          const callId = message.id as string
+          if (typeof message.result === 'string' && callId.startsWith('sub_')) {
+            this.subscriptions.onSubscribed(callId, message.result)
+          }
           resolve(message.result)
         }
         return
@@ -273,32 +431,14 @@ export class TrueNASWebSocketClient {
       const eventName = message.method
       const eventData = message.params
 
-      // Dispatch to event listeners registered for this event name
-      const listeners = this.eventListeners.get(eventName)
-      if (listeners) {
-        listeners.forEach((callback) => {
-          try {
-            callback(eventData)
-          } catch {
-            // Silently ignore listener errors
-          }
-        })
-      }
+      // Dispatch via subscription registry (handles deduplication)
+      this.subscriptions.dispatch(eventName, eventData)
 
       // For collection_update events, also dispatch to listeners for the specific collection
       if (eventName === 'collection_update' && typeof eventData === 'object' && eventData !== null) {
         const collectionEvent = eventData as { collection?: string }
         if (collectionEvent.collection) {
-          const collectionListeners = this.eventListeners.get(collectionEvent.collection)
-          if (collectionListeners) {
-            collectionListeners.forEach((callback) => {
-              try {
-                callback(eventData)
-              } catch {
-                // Silently ignore listener errors
-              }
-            })
-          }
+          this.subscriptions.dispatch(collectionEvent.collection, eventData)
         }
       }
 
@@ -306,16 +446,7 @@ export class TrueNASWebSocketClient {
       if (typeof eventData === 'object' && eventData !== null) {
         const data = eventData as { msg?: string; job?: unknown }
         if (data.msg && data.job) {
-          const listeners = this.eventListeners.get(eventName)
-          if (listeners) {
-            listeners.forEach((callback) => {
-              try {
-                callback(eventData)
-              } catch {
-                // Silently ignore listener errors
-              }
-            })
-          }
+          this.subscriptions.dispatch(eventName, eventData)
         }
       }
       return
@@ -331,17 +462,8 @@ export class TrueNASWebSocketClient {
       const eventName = message.id as string
       const eventData = message.result
 
-      // Dispatch to event listeners
-      const listeners = this.eventListeners.get(eventName)
-      if (listeners) {
-        listeners.forEach((callback) => {
-          try {
-            callback(eventData)
-          } catch {
-            // Silently ignore listener errors
-          }
-        })
-      }
+      // Dispatch via subscription registry
+      this.subscriptions.dispatch(eventName, eventData)
     }
   }
 
@@ -385,7 +507,8 @@ export class TrueNASWebSocketClient {
   }
 
   /**
-   * Schedule reconnection with exponential backoff
+   * Schedule reconnection with exponential backoff and jitter
+   * Jitter helps prevent "thundering herd" when multiple clients reconnect simultaneously
    */
   private scheduleReconnect(): void {
     if (this.reconnectAttempts >= this.config.maxRetries) {
@@ -400,12 +523,14 @@ export class TrueNASWebSocketClient {
     this.setConnectionState(ConnectionState.Reconnecting)
     this.reconnectAttempts++
 
-    const delay = this.currentReconnectDelay
+    // Calculate delay with jitter: base_delay + random(0, max_jitter)
+    const jitter = Math.random() * this.config.maxReconnectJitter
+    const delay = this.currentReconnectDelay + jitter
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null
 
-      // Increase delay for next attempt
+      // Increase delay for next attempt (exponential backoff)
       this.currentReconnectDelay = Math.min(
         this.currentReconnectDelay * this.config.backoffFactor,
         this.config.maxReconnectDelay
@@ -737,39 +862,27 @@ export class TrueNASWebSocketClient {
    * This registers a local callback AND tells TrueNAS backend to send events for this channel
    */
   subscribe(event: string, callback: (data: unknown) => void): () => void {
-    // Register callback locally
-    if (!this.eventListeners.has(event)) {
-      this.eventListeners.set(event, new Set())
-    }
-    this.eventListeners.get(event)!.add(callback)
-
-    // Tell TrueNAS backend to subscribe to this event channel
-    // Only send subscribe if we don't already have listeners for this event
-    if (this.eventListeners.get(event)!.size === 1) {
-      this.sendSubscription(event, true).catch(() => {
-        // Silently ignore subscription errors
-      })
-    }
-
-    // Return unsubscribe function
-    return () => {
-      this.eventListeners.get(event)?.delete(callback)
-      // Clean up empty sets and unsubscribe from backend
-      if (this.eventListeners.get(event)?.size === 0) {
-        this.eventListeners.delete(event)
-        this.sendSubscription(event, false).catch(() => {
-          // Silently ignore unsubscription errors
-        })
-      }
-    }
+    return this.subscriptions.subscribe(event, callback)
   }
 
   /**
-   * Send subscription/unsubscription request to TrueNAS backend
+   * Send a raw message without waiting for response.
+   * Used internally by SubscriptionRegistry for subscribe/unsubscribe.
    */
-  private async sendSubscription(event: string, subscribe: boolean): Promise<void> {
-    const method = subscribe ? 'core.subscribe' : 'core.unsubscribe'
-    await this.call(method, [event])
+  async sendRaw(method: string, params: unknown[], callId: string): Promise<void> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      this.pendingCalls.push({ method, params })
+      return
+    }
+
+    const message: WebSocketMessage = {
+      jsonrpc: '2.0',
+      id: callId,
+      method,
+      params,
+    }
+
+    this.ws.send(JSON.stringify(message))
   }
 
   /**

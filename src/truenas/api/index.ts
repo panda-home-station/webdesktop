@@ -14,6 +14,7 @@ export function initTrueNASClient(config?: {
   initialReconnectDelay?: number
   maxReconnectDelay?: number
   backoffFactor?: number
+  maxReconnectJitter?: number
   heartbeatInterval?: number
   connectionTimeout?: number
   maxRetries?: number
@@ -115,6 +116,14 @@ export const truenasApi = {
   getReconnectStats() {
     const client = getTrueNASClient()
     return client.getReconnectStats()
+  },
+
+  /**
+   * Get list of active subscription events
+   */
+  getActiveSubscriptions(): string[] {
+    const client = getTrueNASClient()
+    return client.subscriptions.getActiveSubscriptions()
   },
 }
 

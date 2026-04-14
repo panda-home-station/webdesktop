@@ -82,6 +82,8 @@ webdesktop/
 - **禁止**服务层直接操作 UI 组件
 - 类型定义放在 `shared/types/`，不在此目录重复定义
 
+**WebSocket 架构**：见 [docs/websocket-architecture.md](docs/websocket-architecture.md)
+
 ### shared/ — 共享模块
 
 **职责**：被多个模块共享的工具、hooks、状态和类型。

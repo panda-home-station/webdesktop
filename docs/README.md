@@ -1,3 +1,13 @@
+# 文档索引
+
+## 架构文档
+
+| 文档 | 说明 |
+|------|------|
+| [websocket-architecture.md](websocket-architecture.md) | WebSocket 通信架构（订阅管理、重连机制、事件分发） |
+
+---
+
 # 功能索引
 
 将特性名称映射到对应的实现文件，方便快速定位代码。
