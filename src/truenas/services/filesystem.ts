@@ -36,10 +36,10 @@ export class FilesystemService {
    * Create a directory
    */
   async mkdir(path: string, mode: string = '755'): Promise<FileStat> {
-    return truenasApi.call('filesystem.mkdir', {
+    return truenasApi.job<FileStat>('filesystem.mkdir', [{
       path,
       options: { mode, raise_chmod_error: false }
-    }) as Promise<FileStat>;
+    }]);
   }
 
   /**

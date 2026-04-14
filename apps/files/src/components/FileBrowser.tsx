@@ -30,7 +30,6 @@ export const FileBrowser: React.FC = () => {
     viewMode,
     isLoading,
     error,
-    filesystemStats,
     setSelectedPaths,
     toggleSelection,
     clearSelection,
@@ -203,6 +202,54 @@ export const FileBrowser: React.FC = () => {
     await createDirectory(name);
   }, [createDirectory]);
 
+  // Generate unique name like Windows (append number if exists)
+  const getUniqueName = useCallback((baseName: string, isDirectory: boolean) => {
+    const nameWithoutExt = isDirectory ? baseName : baseName.replace(/\.[^.]+$/, '');
+    const extMatch = baseName.match(/\.[^.]+$/);
+    const originalExt = isDirectory ? '' : (extMatch ? extMatch[0] : '');
+
+    // Check if name exists
+    const nameExists = (name: string) =>
+      entries.some((e) => e.name === name || e.name === name + originalExt);
+
+    // If base name doesn't exist, use it
+    if (!nameExists(nameWithoutExt + originalExt)) {
+      return nameWithoutExt + originalExt;
+    }
+
+    // Try appending (2), (3), etc.
+    let counter = 2;
+    while (nameExists(`${nameWithoutExt} (${counter})${originalExt}`)) {
+      counter++;
+    }
+    return `${nameWithoutExt} (${counter})${originalExt}`;
+  }, [entries]);
+
+  // Direct create folder (like Windows)
+  const directCreateFolder = useCallback(async () => {
+    const name = getUniqueName('新建文件夹', true);
+    try {
+      await createDirectory(name);
+    } catch (err) {
+      console.error('Failed to create folder:', err);
+    }
+    closeContextMenu();
+  }, [getUniqueName, createDirectory, closeContextMenu]);
+
+  // Direct create file (like Windows)
+  const directCreateFile = useCallback(async () => {
+    const name = getUniqueName('新建文本文档', false);
+    const filePath = filesystemService.joinPath(currentPath, name);
+    const emptyBlob = new Blob([''], { type: 'application/octet-stream' });
+    try {
+      await filesystemService.upload(filePath, emptyBlob);
+      refreshRef.current();
+    } catch (err) {
+      console.error('Failed to create file:', err);
+    }
+    closeContextMenu();
+  }, [getUniqueName, currentPath, closeContextMenu]);
+
   // Handle view mode change
   const handleViewModeChange = useCallback((mode: ViewMode) => {
     setViewMode(mode);
@@ -325,7 +372,6 @@ export const FileBrowser: React.FC = () => {
         <StatusBar
           totalCount={entries.length}
           selectedCount={selectedPaths.size}
-          filesystemStats={filesystemStats}
         />
       </div>
 
@@ -376,8 +422,7 @@ export const FileBrowser: React.FC = () => {
                     style={styles.contextMenuItem}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowCreateDialog(true);
-                      closeContextMenu();
+                      directCreateFolder();
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
@@ -389,8 +434,7 @@ export const FileBrowser: React.FC = () => {
                     style={styles.contextMenuItem}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setShowCreateFileDialog(true);
-                      closeContextMenu();
+                      directCreateFile();
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
@@ -596,6 +640,7 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100%',
     overflow: 'hidden',
     backgroundColor: 'var(--files-surface-3)',
+    boxShadow: 'none',
   },
   mainContent: {
     flex: 1,
@@ -603,12 +648,16 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     minWidth: 0,
     overflow: 'hidden',
+    backgroundColor: 'var(--files-surface-3)',
+    boxShadow: 'none',
   },
   content: {
     flex: 1,
     display: 'flex',
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: 'var(--files-surface-3)',
+    boxShadow: 'none',
   },
   loading: {
     position: 'absolute',

@@ -68,7 +68,7 @@ export const FileList: React.FC<FileListProps> = ({
 
   if (entries.length === 0) {
     return (
-      <div style={styles.empty} className="files-animate-in">
+      <div style={styles.empty} className="files-animate-in" onContextMenu={onBlankContextMenu}>
         <div style={styles.emptyIcon}>
           <FolderOpen size={56} strokeWidth={1} />
         </div>
@@ -177,6 +177,8 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 'var(--files-space-8)',
+    boxShadow: 'none',
+    backgroundColor: 'var(--files-surface-3)',
   },
   emptyIcon: {
     display: 'flex',

@@ -14,7 +14,6 @@ export function useFileSystem() {
     setEntries,
     setLoading,
     setError,
-    setFilesystemStats,
     addEntry,
   } = useFileBrowserStore();
 
@@ -28,18 +27,6 @@ export function useFileSystem() {
     try {
       const entries = await filesystemService.listdir(path);
       setEntries(entries);
-
-      // Also load filesystem stats for the current path
-      try {
-        const stats = await filesystemService.statfs(path);
-        setFilesystemStats({
-          total_bytes: stats.total_bytes,
-          free_bytes: stats.free_bytes,
-          avail_bytes: stats.avail_bytes,
-        });
-      } catch {
-        // statfs might fail for some paths, ignore
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载目录失败';
       setError(message);
@@ -47,7 +34,7 @@ export function useFileSystem() {
     } finally {
       setLoading(false);
     }
-  }, [currentPath, setEntries, setLoading, setError, setFilesystemStats]);
+  }, [currentPath, setEntries, setLoading, setError]);
 
   /**
    * Navigate to a directory
@@ -62,18 +49,6 @@ export function useFileSystem() {
 
       // Update path in store - use store's navigateTo which handles history and clears selection
       useFileBrowserStore.getState().navigateTo(path);
-
-      // Also load filesystem stats
-      try {
-        const stats = await filesystemService.statfs(path);
-        setFilesystemStats({
-          total_bytes: stats.total_bytes,
-          free_bytes: stats.free_bytes,
-          avail_bytes: stats.avail_bytes,
-        });
-      } catch {
-        // ignore
-      }
     } catch (error) {
       const message = error instanceof Error ? error.message : '导航失败';
       setError(message);
@@ -81,7 +56,7 @@ export function useFileSystem() {
     } finally {
       setLoading(false);
     }
-  }, [setEntries, setLoading, setError, setFilesystemStats]);
+  }, [setEntries, setLoading, setError]);
 
   /**
    * Navigate to parent directory
@@ -97,11 +72,21 @@ export function useFileSystem() {
   const createDirectory = useCallback(async (name: string): Promise<FileStat | null> => {
     try {
       const newPath = filesystemService.joinPath(currentPath, name);
-      const entry = await filesystemService.mkdir(newPath);
+      const job = await filesystemService.mkdir(newPath);
+      // mkdir returns a Job<FileStat>, extract the result
+      const entry = job.result;
       addEntry(entry);
       return entry;
     } catch (error) {
-      const message = error instanceof Error ? error.message : '创建文件夹失败';
+      let message = '创建文件夹失败';
+      if (error instanceof Error) {
+        message = error.message;
+        // TrueNASError has a 'reason' field with the actual error details
+        if ('reason' in error && error.reason) {
+          message = error.reason;
+        }
+      }
+      console.error('[FileSystem] mkdir error message:', message);
       setError(message);
       return null;
     }

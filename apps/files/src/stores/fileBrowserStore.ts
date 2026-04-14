@@ -22,12 +22,6 @@ interface FileBrowserState {
   isLoading: boolean;
   // Error message
   error: string | null;
-  // File stats for current path
-  filesystemStats: {
-    total_bytes: number;
-    free_bytes: number;
-    avail_bytes: number;
-  } | null;
   // Navigation history
   history: string[];
   historyIndex: number;
@@ -69,15 +63,12 @@ interface FileBrowserActions {
   setLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
 
-  // Stats
-  setFilesystemStats: (stats: { total_bytes: number; free_bytes: number; avail_bytes: number } | null) => void;
-
   // Reset
   reset: () => void;
 }
 
 const initialState: FileBrowserState = {
-  currentPath: '/mnt',
+  currentPath: '/mnt/',
   entries: [],
   selectedPaths: new Set(),
   sortBy: 'name',
@@ -85,7 +76,6 @@ const initialState: FileBrowserState = {
   viewMode: 'list',
   isLoading: false,
   error: null,
-  filesystemStats: null,
   history: ['/mnt'],
   historyIndex: 0,
 };
@@ -98,15 +88,17 @@ export const useFileBrowserStore = create<FileBrowserState & FileBrowserActions>
 
   navigateUp: () => {
     const { currentPath, history, historyIndex } = get();
-    if (currentPath === '/mnt' || currentPath === '/') return;
+    if (currentPath === '/mnt/' || currentPath === '/') return;
 
-    const parts = currentPath.split('/').filter(Boolean);
+    // Remove trailing slash for consistent path handling
+    const normalizedPath = currentPath.replace(/\/$/, '');
+    const parts = normalizedPath.split('/').filter(Boolean);
     if (parts.length <= 1) {
-      set({ currentPath: '/mnt' });
+      set({ currentPath: '/mnt/' });
       return;
     }
     parts.pop();
-    const newPath = '/' + parts.join('/');
+    const newPath = '/' + parts.join('/') + '/';
     // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newPath);
@@ -120,11 +112,13 @@ export const useFileBrowserStore = create<FileBrowserState & FileBrowserActions>
 
   navigateTo: (path) => {
     const { history, historyIndex } = get();
+    // Normalize path: ensure trailing slash for consistency with middleware requirements
+    const normalizedPath = path.endsWith('/') ? path : path + '/';
     // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(path);
+    newHistory.push(normalizedPath);
     set({
-      currentPath: path,
+      currentPath: normalizedPath,
       selectedPaths: new Set(),
       history: newHistory,
       historyIndex: newHistory.length - 1,
@@ -240,9 +234,6 @@ export const useFileBrowserStore = create<FileBrowserState & FileBrowserActions>
   setLoading: (isLoading) => set({ isLoading }),
 
   setError: (error) => set({ error }),
-
-  // Stats
-  setFilesystemStats: (stats) => set({ filesystemStats: stats }),
 
   // Reset
   reset: () => set(initialState),
