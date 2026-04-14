@@ -1,6 +1,6 @@
 /**
  * StatusBar component
- * Shows file count and disk space info
+ * Shows file count and disk space info - Apple Finder style
  */
 
 import React from 'react';
@@ -25,17 +25,25 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     <div style={styles.container}>
       <div style={styles.left}>
         {selectedCount > 0 ? (
-          <span>已选择 {selectedCount} 个项目</span>
+          <span style={styles.selectedText}>
+            已选择 {selectedCount} 个项目
+          </span>
         ) : (
-          <span>{totalCount} 个项目</span>
+          <span style={styles.countText}>
+            {totalCount} 个项目
+          </span>
         )}
       </div>
       <div style={styles.right}>
         {filesystemStats && (
           <>
-            <span>可用: {formatBytes(filesystemStats.avail_bytes)}</span>
-            <span style={styles.separator}>|</span>
-            <span>总计: {formatBytes(filesystemStats.total_bytes)}</span>
+            <span style={styles.spaceText}>
+              可用: {formatBytes(filesystemStats.avail_bytes)}
+            </span>
+            <span style={styles.separator}>·</span>
+            <span style={styles.spaceText}>
+              总计: {formatBytes(filesystemStats.total_bytes)}
+            </span>
           </>
         )}
       </div>
@@ -49,23 +57,32 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: '8px 16px',
-    backgroundColor: '#f5f5f5',
-    borderTop: '1px solid #e0e0e0',
-    fontSize: '12px',
-    color: '#666',
+    backgroundColor: '#f5f5f7',
+    borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+    fontSize: '11px',
+    color: '#86868b',
+    height: '28px',
   },
   left: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
   },
   right: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
   },
+  selectedText: {
+    color: '#007aff',
+  },
+  countText: {
+    color: '#86868b',
+  },
+  spaceText: {
+    color: '#86868b',
+  },
   separator: {
-    color: '#ddd',
+    color: '#c7c7cc',
   },
 };
 

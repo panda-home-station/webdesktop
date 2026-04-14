@@ -1,6 +1,7 @@
 /**
  * FileBrowser component
  * Main file browser component that orchestrates all sub-components
+ * Apple Finder-style layout with sidebar
  */
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
@@ -13,6 +14,7 @@ import { FileList } from './FileList';
 import { FileGrid } from './FileGrid';
 import { CreateFolderDialog } from './CreateFolderDialog';
 import { StatusBar } from './StatusBar';
+import { Sidebar } from './Sidebar';
 
 export const FileBrowser: React.FC = () => {
   const {
@@ -162,68 +164,79 @@ export const FileBrowser: React.FC = () => {
 
   return (
     <div style={styles.container}>
-      {/* Toolbar */}
-      <Toolbar
-        viewMode={viewMode}
-        sortBy={sortBy}
-        onViewModeChange={handleViewModeChange}
-        onSortByChange={handleSortChange}
-        onNavigateUp={handleNavigateUp}
-        onRefresh={() => refreshRef.current()}
-        onNewFolder={() => setShowCreateDialog(true)}
-        onUpload={() => {}}
-        hasSelection={selectedPaths.size > 0}
-        onDelete={() => {}}
-      />
-
-      {/* Breadcrumb */}
-      <Breadcrumb
-        path={currentPath}
+      {/* Sidebar */}
+      <Sidebar
+        currentPath={currentPath}
         onNavigate={handleNavigate}
       />
 
-      {/* Content */}
-      <div style={styles.content}>
-        {isLoading && (
-          <div style={styles.loading}>
-            <span>加载中...</span>
-          </div>
-        )}
+      {/* Main Content */}
+      <div style={styles.mainContent}>
+        {/* Toolbar */}
+        <Toolbar
+          viewMode={viewMode}
+          sortBy={sortBy}
+          onViewModeChange={handleViewModeChange}
+          onSortByChange={handleSortChange}
+          onNavigateUp={handleNavigateUp}
+          onRefresh={() => refreshRef.current()}
+          onNewFolder={() => setShowCreateDialog(true)}
+          onUpload={() => {}}
+          hasSelection={selectedPaths.size > 0}
+          onDelete={() => {}}
+        />
 
-        {error && (
-          <div style={styles.error}>
-            <span>{error}</span>
-            <button onClick={() => refreshRef.current()}>重试</button>
-          </div>
-        )}
+        {/* Breadcrumb */}
+        <Breadcrumb
+          path={currentPath}
+          onNavigate={handleNavigate}
+        />
 
-        {!isLoading && !error && (
-          viewMode === 'list' ? (
-            <FileList
-              entries={sortedEntries}
-              selectedPaths={selectedPaths}
-              onSelect={handleSelect}
-              onOpen={handleOpen}
-              onContextMenu={() => {}}
-            />
-          ) : (
-            <FileGrid
-              entries={sortedEntries}
-              selectedPaths={selectedPaths}
-              onSelect={handleSelect}
-              onOpen={handleOpen}
-              onContextMenu={() => {}}
-            />
-          )
-        )}
+        {/* Content */}
+        <div style={styles.content}>
+          {isLoading && (
+            <div style={styles.loading}>
+              <div style={styles.spinner} />
+            </div>
+          )}
+
+          {error && (
+            <div style={styles.error}>
+              <span style={styles.errorText}>{error}</span>
+              <button style={styles.retryButton} onClick={() => refreshRef.current()}>
+                重试
+              </button>
+            </div>
+          )}
+
+          {!isLoading && !error && (
+            viewMode === 'list' ? (
+              <FileList
+                entries={sortedEntries}
+                selectedPaths={selectedPaths}
+                onSelect={handleSelect}
+                onOpen={handleOpen}
+                onContextMenu={() => {}}
+              />
+            ) : (
+              <FileGrid
+                entries={sortedEntries}
+                selectedPaths={selectedPaths}
+                onSelect={handleSelect}
+                onOpen={handleOpen}
+                onContextMenu={() => {}}
+              />
+            )
+          )}
+        </div>
+
+        {/* Status Bar */}
+        <StatusBar
+          totalCount={entries.length}
+          selectedCount={selectedPaths.size}
+          filesystemStats={filesystemStats}
+        />
       </div>
-
-      {/* Status Bar */}
-      <StatusBar
-        totalCount={entries.length}
-        selectedCount={selectedPaths.size}
-        filesystemStats={filesystemStats}
-      />
 
       {/* Create Folder Dialog */}
       <CreateFolderDialog
@@ -238,15 +251,22 @@ export const FileBrowser: React.FC = () => {
 const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
-    flexDirection: 'column',
     height: '100%',
     backgroundColor: '#fff',
+    overflow: 'hidden',
+  },
+  mainContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    minWidth: 0,
   },
   content: {
     flex: 1,
     display: 'flex',
     overflow: 'hidden',
     position: 'relative',
+    backgroundColor: '#fff',
   },
   loading: {
     position: 'absolute',
@@ -257,8 +277,16 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     zIndex: 10,
+  },
+  spinner: {
+    width: '32px',
+    height: '32px',
+    border: '3px solid rgba(0, 122, 255, 0.15)',
+    borderTopColor: '#007aff',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
   },
   error: {
     position: 'absolute',
@@ -271,10 +299,31 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     justifyContent: 'center',
     gap: '12px',
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     zIndex: 10,
-    color: '#e53935',
+  },
+  errorText: {
+    color: '#ff3b30',
+    fontSize: '14px',
+  },
+  retryButton: {
+    padding: '8px 16px',
+    backgroundColor: '#007aff',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '13px',
+    cursor: 'pointer',
   },
 };
+
+// Add keyframes for spinner animation via style tag
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+`;
+document.head.appendChild(styleSheet);
 
 export default FileBrowser;

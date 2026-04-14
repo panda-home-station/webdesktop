@@ -1,6 +1,6 @@
 /**
  * FileGrid component
- * Displays files in a grid/icon view
+ * Displays files in a grid/icon view - Apple Finder style
  */
 
 import React, { useCallback, useRef } from 'react';
@@ -45,7 +45,18 @@ export const FileGrid: React.FC<FileGridProps> = ({
   if (entries.length === 0) {
     return (
       <div style={styles.empty}>
-        <p>此文件夹为空</p>
+        <svg
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          style={{ color: '#c7c7cc', marginBottom: '12px' }}
+        >
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+        <p style={styles.emptyText}>此文件夹为空</p>
       </div>
     );
   }
@@ -73,7 +84,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexWrap: 'wrap',
     alignContent: 'flex-start',
-    padding: '16px',
+    padding: '16px 20px',
     overflow: 'auto',
     gap: '4px',
     backgroundColor: '#fff',
@@ -81,10 +92,15 @@ const styles: Record<string, React.CSSProperties> = {
   empty: {
     flex: 1,
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#999',
+    color: '#c7c7cc',
     fontSize: '14px',
+  },
+  emptyText: {
+    margin: 0,
+    color: '#86868b',
   },
 };
 

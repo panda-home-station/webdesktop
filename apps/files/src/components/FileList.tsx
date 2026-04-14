@@ -1,6 +1,6 @@
 /**
  * FileList component
- * Displays files in a list/table view
+ * Displays files in a list/table view - Apple Finder style
  */
 
 import React, { useCallback, useRef } from 'react';
@@ -36,7 +36,6 @@ export const FileList: React.FC<FileListProps> = ({
         for (let i = start; i <= end; i++) {
           newSelection.add(entries[i].path);
         }
-        // For range select, we'll handle this differently
         onSelect(entry.path, true);
       }
     } else if (e.ctrlKey || e.metaKey) {
@@ -56,7 +55,18 @@ export const FileList: React.FC<FileListProps> = ({
   if (entries.length === 0) {
     return (
       <div style={styles.empty}>
-        <p>此文件夹为空</p>
+        <svg
+          width="64"
+          height="64"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1"
+          style={{ color: '#c7c7cc', marginBottom: '12px' }}
+        >
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+        </svg>
+        <p style={styles.emptyText}>此文件夹为空</p>
       </div>
     );
   }
@@ -98,18 +108,20 @@ const styles: Record<string, React.CSSProperties> = {
   header: {
     display: 'flex',
     alignItems: 'center',
-    padding: '8px 16px',
-    borderBottom: '1px solid #e0e0e0',
-    backgroundColor: '#fafafa',
+    padding: '10px 16px',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+    backgroundColor: '#f5f5f7',
     fontWeight: 500,
-    fontSize: '13px',
-    color: '#666',
+    fontSize: '12px',
+    color: '#86868b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px',
   },
   headerName: {
     flex: 1,
   },
   headerSize: {
-    width: '100px',
+    width: '80px',
     textAlign: 'right',
     paddingRight: '24px',
   },
@@ -124,9 +136,16 @@ const styles: Record<string, React.CSSProperties> = {
   empty: {
     flex: 1,
     display: 'flex',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#999',
+    color: '#c7c7cc',
     fontSize: '14px',
   },
+  emptyText: {
+    margin: 0,
+    color: '#86868b',
+  },
 };
+
+export default FileList;

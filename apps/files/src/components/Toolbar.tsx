@@ -1,10 +1,19 @@
 /**
  * Toolbar component
- * File browser toolbar with actions
+ * File browser toolbar with actions - Apple SF Symbols style
  */
 
 import React, { useRef } from 'react';
 import { ViewMode, SortBy } from '@truenas/types/filesystem-types';
+import {
+  ArrowUp,
+  Upload,
+  Trash2,
+  List,
+  Grid3X3,
+  ArrowUpDown,
+  FolderPlus,
+} from 'lucide-react';
 
 interface ToolbarProps {
   viewMode: ViewMode;
@@ -52,20 +61,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     <div style={styles.container}>
       {/* Navigation */}
       <div style={styles.group}>
-        <button
-          style={styles.button}
+        <ToolbarButton
+          icon={<ArrowUp size={18} />}
           onClick={onNavigateUp}
-          title="返回上级目录"
-        >
-          ⬆️
-        </button>
-        <button
-          style={styles.button}
+          title="返回上级目录 (Backspace)"
+        />
+        <ToolbarButton
+          icon={<ArrowUpDown size={18} />}
           onClick={onRefresh}
-          title="刷新"
-        >
-          🔄
-        </button>
+          title="刷新 (F5)"
+        />
       </div>
 
       {/* Divider */}
@@ -73,20 +78,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Create */}
       <div style={styles.group}>
-        <button
-          style={styles.button}
+        <ToolbarButton
+          icon={<FolderPlus size={18} />}
           onClick={onNewFolder}
           title="新建文件夹"
-        >
-          📁➕
-        </button>
-        <button
-          style={styles.button}
+        />
+        <ToolbarButton
+          icon={<Upload size={18} />}
           onClick={handleUploadClick}
           title="上传文件"
-        >
-          📤
-        </button>
+        />
         <input
           ref={fileInputRef}
           type="file"
@@ -101,14 +102,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Delete */}
       <div style={styles.group}>
-        <button
-          style={{ ...styles.button, opacity: hasSelection ? 1 : 0.4 }}
+        <ToolbarButton
+          icon={<Trash2 size={18} />}
           onClick={hasSelection ? onDelete : undefined}
           title="删除"
           disabled={!hasSelection}
-        >
-          🗑️
-        </button>
+        />
       </div>
 
       {/* Spacer */}
@@ -132,22 +131,51 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* View mode */}
       <div style={styles.group}>
-        <button
-          style={{ ...styles.button, opacity: viewMode === 'list' ? 1 : 0.5 }}
+        <ToolbarButton
+          icon={<List size={18} />}
           onClick={() => onViewModeChange('list')}
           title="列表视图"
-        >
-          ☰
-        </button>
-        <button
-          style={{ ...styles.button, opacity: viewMode === 'grid' ? 1 : 0.5 }}
+          isActive={viewMode === 'list'}
+        />
+        <ToolbarButton
+          icon={<Grid3X3 size={18} />}
           onClick={() => onViewModeChange('grid')}
           title="图标视图"
-        >
-          ⊞
-        </button>
+          isActive={viewMode === 'grid'}
+        />
       </div>
     </div>
+  );
+};
+
+interface ToolbarButtonProps {
+  icon: React.ReactNode;
+  onClick?: () => void;
+  title?: string;
+  disabled?: boolean;
+  isActive?: boolean;
+}
+
+const ToolbarButton: React.FC<ToolbarButtonProps> = ({
+  icon,
+  onClick,
+  title,
+  disabled,
+  isActive,
+}) => {
+  return (
+    <button
+      style={{
+        ...styles.button,
+        ...(isActive ? styles.buttonActive : {}),
+        ...(disabled ? styles.buttonDisabled : {}),
+      }}
+      onClick={onClick}
+      title={title}
+      disabled={disabled}
+    >
+      {icon}
+    </button>
   );
 };
 
@@ -156,41 +184,57 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     padding: '8px 12px',
-    backgroundColor: '#f5f5f5',
-    borderBottom: '1px solid #e0e0e0',
+    backgroundColor: '#f5f5f7',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
     gap: '4px',
+    height: '44px',
   },
   group: {
     display: 'flex',
     alignItems: 'center',
-    gap: '4px',
+    gap: '2px',
   },
   button: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '36px',
-    height: '36px',
+    width: '32px',
+    height: '32px',
     border: 'none',
     backgroundColor: 'transparent',
     borderRadius: '6px',
     cursor: 'pointer',
-    fontSize: '18px',
-    transition: 'background-color 0.15s',
+    color: '#1d1d1f',
+    transition: 'all 0.15s ease',
+  },
+  buttonActive: {
+    backgroundColor: 'rgba(0, 122, 255, 0.15)',
+    color: '#007aff',
+  },
+  buttonDisabled: {
+    opacity: 0.4,
+    cursor: 'not-allowed',
   },
   divider: {
     width: '1px',
-    height: '24px',
-    backgroundColor: '#ddd',
+    height: '20px',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
     margin: '0 8px',
   },
   select: {
-    padding: '6px 10px',
-    borderRadius: '4px',
-    border: '1px solid #ddd',
+    padding: '6px 12px',
+    paddingRight: '28px',
+    borderRadius: '6px',
+    border: '1px solid rgba(0, 0, 0, 0.1)',
     backgroundColor: '#fff',
     fontSize: '13px',
+    color: '#1d1d1f',
     cursor: 'pointer',
+    outline: 'none',
+    appearance: 'none',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+    backgroundRepeat: 'no-repeat',
+    backgroundPosition: 'right 8px center',
   },
 };
 
