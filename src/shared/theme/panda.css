@@ -344,6 +344,12 @@
 }
 
 /* Smooth hover transitions for all interactive elements */
+.files-interactive,
+.files-interactive * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .files-interactive {
   transition: background-color var(--files-transition-base),
               transform var(--files-transition-fast),
