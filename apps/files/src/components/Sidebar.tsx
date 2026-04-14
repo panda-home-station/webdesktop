@@ -1,7 +1,6 @@
 /**
  * Sidebar component
- * Location shortcuts like macOS Finder sidebar
- * Selection is controlled by user clicks only, not by current path changes
+ * Location shortcuts - Neo-Frost glass morphism design
  */
 
 import React, { useState } from 'react';
@@ -10,6 +9,7 @@ import {
   HardDrive,
   FolderOpen,
   Trash2,
+  ChevronDown,
 } from 'lucide-react';
 import type { Pool } from '@truenas/types/pool';
 
@@ -36,10 +36,28 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
         ...(isActive ? styles.itemActive : {}),
       }}
       onClick={onClick}
+      className="files-interactive"
     >
-      <span style={styles.itemIcon}>{icon}</span>
-      <span style={styles.itemLabel}>{label}</span>
-      {badge && <span style={styles.badge}>{badge}</span>}
+      <span style={{
+        ...styles.itemIcon,
+        ...(isActive ? styles.itemIconActive : {}),
+      }}>
+        {icon}
+      </span>
+      <span style={{
+        ...styles.itemLabel,
+        ...(isActive ? styles.itemLabelActive : {}),
+      }}>
+        {label}
+      </span>
+      {badge && (
+        <span style={{
+          ...styles.badge,
+          ...(isActive ? styles.badgeActive : {}),
+        }}>
+          {badge}
+        </span>
+      )}
     </button>
   );
 };
@@ -47,13 +65,37 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 interface SidebarSectionProps {
   title: string;
   children: React.ReactNode;
+  defaultExpanded?: boolean;
 }
 
-const SidebarSection: React.FC<SidebarSectionProps> = ({ title, children }) => {
+const SidebarSection: React.FC<SidebarSectionProps> = ({
+  title,
+  children,
+  defaultExpanded = true,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+
   return (
     <div style={styles.section}>
-      <div style={styles.sectionTitle}>{title}</div>
-      <div style={styles.sectionContent}>{children}</div>
+      <button
+        style={styles.sectionHeader}
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="files-interactive"
+      >
+        <span style={styles.sectionTitle}>{title}</span>
+        <ChevronDown
+          size={12}
+          style={{
+            ...styles.sectionChevron,
+            ...(isExpanded ? {} : styles.sectionChevronCollapsed),
+          }}
+        />
+      </button>
+      {isExpanded && (
+        <div style={styles.sectionContent} className="files-animate-in">
+          {children}
+        </div>
+      )}
     </div>
   );
 };
@@ -64,31 +106,31 @@ interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate }) => {
-  // Track the last sidebar-clicked path
-  // This is separate from currentPath so sidebar selection doesn't change
-  // when user navigates via double-click or other methods
   const [sidebarSelectedPath, setSidebarSelectedPath] = useState<string>('/mnt');
 
-  // Get pool mount point path
   const getPoolPath = (pool: Pool) => {
     return `/mnt/${pool.name}`;
   };
 
-  // Handle sidebar item click - navigate and update selection
   const handleSidebarClick = (path: string) => {
     setSidebarSelectedPath(path);
     onNavigate(path);
   };
 
-  // Check if a path is the currently selected sidebar item
   const isSelected = (path: string) => {
     return sidebarSelectedPath === path;
   };
 
   return (
-    <div style={styles.container}>
+    <div
+      className="files-glass files-sidebar"
+      style={styles.container}
+    >
+      {/* Fixed top padding for visual balance */}
+      <div style={styles.topSpacer} />
+
       {/* Locations Section */}
-      <SidebarSection title="位置">
+      <SidebarSection title="位置" defaultExpanded={true}>
         <SidebarItem
           icon={<Home size={18} />}
           label="家目录"
@@ -107,7 +149,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate }) => {
 
       {/* Storage Pools */}
       {pools.length > 0 && (
-        <SidebarSection title="存储池">
+        <SidebarSection title="存储池" defaultExpanded={true}>
           {pools.map((pool) => (
             <SidebarItem
               key={pool.id}
@@ -122,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate }) => {
       )}
 
       {/* Trash Section */}
-      <SidebarSection title="垃圾桶">
+      <SidebarSection title="垃圾桶" defaultExpanded={false}>
         <SidebarItem
           icon={<Trash2 size={18} />}
           label="回收站"
@@ -131,74 +173,137 @@ export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate }) => {
           onClick={() => handleSidebarClick('/mnt/.trash')}
         />
       </SidebarSection>
+
+      {/* Bottom spacer */}
+      <div style={styles.bottomSpacer} />
+
+      {/* Version info */}
+      <div style={styles.versionInfo}>
+        <span>TrueNAS Files</span>
+      </div>
     </div>
   );
 };
 
 const styles: Record<string, React.CSSProperties> = {
   container: {
-    width: '220px',
-    minWidth: '220px',
+    width: 'var(--files-sidebar-width)',
+    minWidth: 'var(--files-sidebar-min-width)',
     height: '100%',
-    backgroundColor: 'rgba(245, 245, 247, 0.95)',
-    borderRight: '1px solid rgba(0, 0, 0, 0.1)',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
+    borderRadius: 0,
+    borderTop: 'none',
+    borderBottom: 'none',
+    borderLeft: 'none',
+    borderRight: '1px solid var(--files-divider)',
+  },
+  topSpacer: {
+    height: 'var(--files-space-4)',
   },
   section: {
-    marginBottom: '8px',
+    marginBottom: 'var(--files-space-2)',
   },
-  sectionTitle: {
-    padding: '8px 16px 4px',
+  sectionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: 'var(--files-space-2) var(--files-space-4)',
+    border: 'none',
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+    color: 'var(--files-text-muted)',
     fontSize: '11px',
     fontWeight: 600,
-    color: '#86868b',
     textTransform: 'uppercase',
     letterSpacing: '0.5px',
+    fontFamily: 'inherit',
+  },
+  sectionTitle: {
+    display: 'flex',
+    alignItems: 'center',
+  },
+  sectionChevron: {
+    transition: 'transform var(--files-transition-base)',
+  },
+  sectionChevronCollapsed: {
+    transform: 'rotate(-90deg)',
   },
   sectionContent: {
     display: 'flex',
     flexDirection: 'column',
-    padding: '0 8px',
+    padding: '0 var(--files-space-3)',
+    gap: '2px',
   },
   item: {
     display: 'flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '6px 10px',
-    borderRadius: '6px',
+    gap: 'var(--files-space-3)',
+    padding: 'var(--files-space-2) var(--files-space-3)',
+    borderRadius: 'var(--files-radius-md)',
     border: 'none',
     backgroundColor: 'transparent',
     cursor: 'pointer',
     fontSize: '13px',
-    color: '#1d1d1f',
+    color: 'var(--files-text-secondary)',
     textAlign: 'left',
     width: '100%',
-    transition: 'background-color 0.15s ease',
+    transition: 'all var(--files-transition-base)',
+    fontFamily: 'inherit',
   },
   itemActive: {
-    backgroundColor: 'rgba(0, 122, 255, 0.15)',
-    color: '#007aff',
+    backgroundColor: 'var(--files-primary-light)',
+    color: 'var(--files-primary)',
   },
   itemIcon: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    opacity: 0.8,
+    color: 'var(--files-text-muted)',
+    transition: 'all var(--files-transition-base)',
+    flexShrink: 0,
+  },
+  itemIconActive: {
+    color: 'var(--files-primary)',
   },
   itemLabel: {
     flex: 1,
     overflow: 'hidden',
     textOverflow: 'ellipsis',
     whiteSpace: 'nowrap',
+    transition: 'color var(--files-transition-base)',
+  },
+  itemLabelActive: {
+    fontWeight: 500,
   },
   badge: {
-    fontSize: '11px',
+    fontSize: '10px',
     padding: '2px 6px',
     borderRadius: '10px',
-    backgroundColor: 'rgba(0, 0, 0, 0.08)',
-    color: '#86868b',
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+    color: 'var(--files-text-muted)',
+    fontWeight: 500,
+    transition: 'all var(--files-transition-base)',
+  },
+  badgeActive: {
+    backgroundColor: 'var(--files-primary)',
+    color: '#fff',
+  },
+  bottomSpacer: {
+    flex: 1,
+  },
+  versionInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 'var(--files-statusbar-height)',
+    padding: '0 var(--files-space-4)',
+    fontSize: '10px',
+    color: 'var(--files-text-disabled)',
+    borderTop: '1px solid var(--files-divider)',
+    boxSizing: 'border-box',
   },
 };
 

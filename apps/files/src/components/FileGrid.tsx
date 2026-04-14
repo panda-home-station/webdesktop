@@ -1,11 +1,12 @@
 /**
  * FileGrid component
- * Displays files in a grid/icon view - Apple Finder style
+ * Displays files in a grid/icon view - Neo-Frost refined design
  */
 
 import React, { useCallback, useRef } from 'react';
 import { FileStat } from '@truenas/types/filesystem-types';
 import { FileItem } from './FileItem';
+import { FolderOpen } from 'lucide-react';
 
 interface FileGridProps {
   entries: FileStat[];
@@ -26,26 +27,19 @@ export const FileGrid: React.FC<FileGridProps> = ({
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleClick = useCallback((e: React.MouseEvent, entry: FileStat) => {
-    // If there's a pending timer, it means this is the second click of a double-click
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
-      // This is the second click - let double-click handler deal with it
       return;
     }
 
-    // Set a timer - if double-click fires before it, this timer will be cancelled
     clickTimerRef.current = setTimeout(() => {
       clickTimerRef.current = null;
-      // Execute single click action (selection)
       if (e.shiftKey && lastClickedRef.current) {
-        // Range select
         onSelect(entry.path, true);
       } else if (e.ctrlKey || e.metaKey) {
-        // Toggle select
         onSelect(entry.path, true);
       } else {
-        // Single select
         onSelect(entry.path, false);
       }
       lastClickedRef.current = entry.path;
@@ -53,7 +47,6 @@ export const FileGrid: React.FC<FileGridProps> = ({
   }, [onSelect]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent, entry: FileStat) => {
-    // Cancel pending timer so single-click action doesn't fire
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -65,35 +58,35 @@ export const FileGrid: React.FC<FileGridProps> = ({
 
   if (entries.length === 0) {
     return (
-      <div style={styles.empty}>
-        <svg
-          width="64"
-          height="64"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          style={{ color: '#c7c7cc', marginBottom: '12px' }}
-        >
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-        <p style={styles.emptyText}>此文件夹为空</p>
+      <div style={styles.empty} className="files-animate-in">
+        <div style={styles.emptyIcon}>
+          <FolderOpen size={56} strokeWidth={1} />
+        </div>
+        <p style={styles.emptyTitle}>此文件夹为空</p>
+        <p style={styles.emptyHint}>将文件拖放到此处，或使用工具栏上传</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      {entries.map((entry) => (
-        <FileItem
+    <div style={styles.container} className="files-content">
+      {entries.map((entry, index) => (
+        <div
           key={entry.path}
-          entry={entry}
-          isSelected={selectedPaths.has(entry.path)}
-          viewMode="grid"
-          onClick={(e) => handleClick(e, entry)}
-          onDoubleClick={(e) => handleDoubleClick(e, entry)}
-          onContextMenu={(e) => onContextMenu(e, entry)}
-        />
+          style={{
+            animationDelay: `${Math.min(index * 20, 400)}ms`,
+          }}
+          className="files-animate-in"
+        >
+          <FileItem
+            entry={entry}
+            isSelected={selectedPaths.has(entry.path)}
+            viewMode="grid"
+            onClick={(e) => handleClick(e, entry)}
+            onDoubleClick={(e) => handleDoubleClick(e, entry)}
+            onContextMenu={(e) => onContextMenu(e, entry)}
+          />
+        </div>
       ))}
     </div>
   );
@@ -102,13 +95,13 @@ export const FileGrid: React.FC<FileGridProps> = ({
 const styles: Record<string, React.CSSProperties> = {
   container: {
     flex: 1,
-    display: 'flex',
-    flexWrap: 'wrap',
-    alignContent: 'flex-start',
-    padding: '16px 20px',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))',
+    gap: 'var(--files-space-2)',
+    padding: 'var(--files-space-4) var(--files-space-5)',
     overflow: 'auto',
-    gap: '4px',
-    backgroundColor: '#fff',
+    backgroundColor: 'var(--files-surface-3)',
+    alignContent: 'flex-start',
   },
   empty: {
     flex: 1,
@@ -116,12 +109,29 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#c7c7cc',
-    fontSize: '14px',
+    padding: 'var(--files-space-8)',
   },
-  emptyText: {
+  emptyIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '96px',
+    height: '96px',
+    marginBottom: 'var(--files-space-5)',
+    backgroundColor: 'var(--files-primary-subtle)',
+    borderRadius: 'var(--files-radius-xl)',
+    color: 'var(--files-primary)',
+  },
+  emptyTitle: {
+    margin: '0 0 var(--files-space-2) 0',
+    fontSize: '15px',
+    fontWeight: 500,
+    color: 'var(--files-text-secondary)',
+  },
+  emptyHint: {
     margin: 0,
-    color: '#86868b',
+    fontSize: '13px',
+    color: 'var(--files-text-muted)',
   },
 };
 

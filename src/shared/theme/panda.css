@@ -229,3 +229,208 @@
   border-bottom: 8px solid transparent;
   border-right: 8px solid rgba(0,0,0,0.85);
 }
+
+/* ============================================
+   Files App Design System
+   Neo-Frost Design Language
+   ============================================ */
+
+/* --- Color Palette --- */
+:root {
+  /* Primary Brand */
+  --files-primary: #3b82f6;
+  --files-primary-hover: #2563eb;
+  --files-primary-light: rgba(59, 130, 246, 0.12);
+  --files-primary-subtle: rgba(59, 130, 246, 0.08);
+
+  /* Accent - TrueNAS Blue Gradient */
+  --files-accent: #06b6d4;
+  --files-accent-secondary: #8b5cf6;
+
+  /* Surface Colors */
+  --files-surface-0: rgba(255, 255, 255, 0.72);
+  --files-surface-1: rgba(255, 255, 255, 0.52);
+  --files-surface-2: rgba(255, 255, 255, 0.35);
+  --files-surface-3: rgba(249, 250, 251, 0.85);
+
+  /* Glass Effect */
+  --files-glass-bg: rgba(255, 255, 255, 0.65);
+  --files-glass-border: rgba(255, 255, 255, 0.35);
+  --files-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  --files-glass-blur: blur(20px) saturate(180%);
+
+  /* Text Colors */
+  --files-text-primary: #0f172a;
+  --files-text-secondary: #475569;
+  --files-text-muted: #94a3b8;
+  --files-text-disabled: #cbd5e1;
+
+  /* Semantic Colors */
+  --files-success: #10b981;
+  --files-warning: #f59e0b;
+  --files-danger: #ef4444;
+  --files-info: #06b6d4;
+
+  /* Divider */
+  --files-divider: rgba(148, 163, 184, 0.2);
+
+  /* --- Spacing System (8px base) --- */
+  --files-space-1: 4px;
+  --files-space-2: 8px;
+  --files-space-3: 12px;
+  --files-space-4: 16px;
+  --files-space-5: 20px;
+  --files-space-6: 24px;
+  --files-space-8: 32px;
+
+  /* --- Border Radius --- */
+  --files-radius-sm: 6px;
+  --files-radius-md: 10px;
+  --files-radius-lg: 14px;
+  --files-radius-xl: 20px;
+
+  /* --- Shadows --- */
+  --files-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --files-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --files-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --files-shadow-xl: 0 16px 40px rgba(0, 0, 0, 0.1);
+
+  /* --- Transitions --- */
+  --files-transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  --files-transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --files-transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --files-transition-bounce: 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* --- Sidebar --- */
+  --files-sidebar-width: 180px;
+  --files-sidebar-min-width: 160px;
+
+  /* --- Toolbar --- */
+  --files-toolbar-height: 52px;
+
+  /* --- StatusBar --- */
+  --files-statusbar-height: 32px;
+}
+
+/* Files App Glass Effect Base */
+.files-glass {
+  background: var(--files-glass-bg);
+  backdrop-filter: var(--files-glass-blur);
+  -webkit-backdrop-filter: var(--files-glass-blur);
+  border: 1px solid var(--files-glass-border);
+  box-shadow: var(--files-glass-shadow);
+}
+
+/* Files App Selection State */
+.files-selected {
+  background: var(--files-primary-light) !important;
+  border-radius: var(--files-radius-md);
+}
+
+.files-selected:hover {
+  background: var(--files-primary-light) !important;
+}
+
+/* Files App Hover State */
+.files-hover {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: var(--files-radius-md);
+}
+
+/* Files App Active/Press State */
+.files-active {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: var(--files-radius-md);
+}
+
+/* Smooth hover transitions for all interactive elements */
+.files-interactive {
+  transition: background-color var(--files-transition-base),
+              transform var(--files-transition-fast),
+              box-shadow var(--files-transition-base);
+}
+
+.files-interactive:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+}
+
+.files-interactive:active {
+  transform: scale(0.98);
+  background-color: rgba(0, 0, 0, 0.06);
+}
+
+/* File Item Hover Animation */
+@keyframes files-item-hover {
+  from {
+    background-color: transparent;
+    transform: translateY(0);
+  }
+  to {
+    background-color: rgba(0, 0, 0, 0.03);
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes files-item-select {
+  from {
+    background-color: transparent;
+    box-shadow: none;
+  }
+  to {
+    background-color: var(--files-primary-light);
+    box-shadow: inset 0 0 0 2px var(--files-primary);
+  }
+}
+
+/* Staggered entrance animation */
+@keyframes files-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.files-animate-in {
+  animation: files-fade-in-up var(--files-transition-smooth) both;
+}
+
+/* Sidebar scrollbar styling */
+.files-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.files-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.files-sidebar::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+}
+
+.files-sidebar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+/* Content scrollbar styling */
+.files-content::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.files-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.files-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+}
+
+.files-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}

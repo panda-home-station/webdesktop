@@ -1,11 +1,12 @@
 /**
  * FileList component
- * Displays files in a list/table view - Apple Finder style
+ * Displays files in a list/table view - Neo-Frost refined design
  */
 
 import React, { useCallback, useRef } from 'react';
 import { FileStat } from '@truenas/types/filesystem-types';
 import { FileItem } from './FileItem';
+import { FolderOpen } from 'lucide-react';
 
 interface FileListProps {
   entries: FileStat[];
@@ -26,20 +27,15 @@ export const FileList: React.FC<FileListProps> = ({
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleClick = useCallback((e: React.MouseEvent, entry: FileStat) => {
-    // If there's a pending timer, it means this is the second click of a double-click
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
-      // This is the second click - let double-click handler deal with it
       return;
     }
 
-    // Set a timer - if double-click fires before it, this timer will be cancelled
     clickTimerRef.current = setTimeout(() => {
       clickTimerRef.current = null;
-      // Execute single click action (selection)
       if (e.shiftKey && lastClickedRef.current) {
-        // Range select
         const fromIndex = entries.findIndex((e) => e.path === lastClickedRef.current);
         const toIndex = entries.findIndex((e) => e.path === entry.path);
         if (fromIndex !== -1 && toIndex !== -1) {
@@ -50,10 +46,8 @@ export const FileList: React.FC<FileListProps> = ({
           }
         }
       } else if (e.ctrlKey || e.metaKey) {
-        // Toggle select
         onSelect(entry.path, true);
       } else {
-        // Single select
         onSelect(entry.path, false);
       }
       lastClickedRef.current = entry.path;
@@ -61,7 +55,6 @@ export const FileList: React.FC<FileListProps> = ({
   }, [entries, onSelect]);
 
   const handleDoubleClick = useCallback((e: React.MouseEvent, entry: FileStat) => {
-    // Cancel pending timer so single-click action doesn't fire
     if (clickTimerRef.current) {
       clearTimeout(clickTimerRef.current);
       clickTimerRef.current = null;
@@ -73,43 +66,47 @@ export const FileList: React.FC<FileListProps> = ({
 
   if (entries.length === 0) {
     return (
-      <div style={styles.empty}>
-        <svg
-          width="64"
-          height="64"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1"
-          style={{ color: '#c7c7cc', marginBottom: '12px' }}
-        >
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-        <p style={styles.emptyText}>此文件夹为空</p>
+      <div style={styles.empty} className="files-animate-in">
+        <div style={styles.emptyIcon}>
+          <FolderOpen size={56} strokeWidth={1} />
+        </div>
+        <p style={styles.emptyTitle}>此文件夹为空</p>
+        <p style={styles.emptyHint}>将文件拖放到此处，或使用工具栏上传</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="files-content">
       {/* Header */}
       <div style={styles.header}>
-        <div style={styles.headerName}>名称</div>
+        <div style={styles.headerName}>
+          <span style={styles.headerText}>名称</span>
+        </div>
         <div style={styles.headerSize}>大小</div>
         <div style={styles.headerTime}>修改时间</div>
+        <div style={styles.headerType}>类型</div>
       </div>
+
       {/* List */}
       <div style={styles.list}>
-        {entries.map((entry) => (
-          <FileItem
+        {entries.map((entry, index) => (
+          <div
             key={entry.path}
-            entry={entry}
-            isSelected={selectedPaths.has(entry.path)}
-            viewMode="list"
-            onClick={(e) => handleClick(e, entry)}
-            onDoubleClick={(e) => handleDoubleClick(e, entry)}
-            onContextMenu={(e) => onContextMenu(e, entry)}
-          />
+            style={{
+              animationDelay: `${Math.min(index * 30, 300)}ms`,
+            }}
+            className="files-animate-in"
+          >
+            <FileItem
+              entry={entry}
+              isSelected={selectedPaths.has(entry.path)}
+              viewMode="list"
+              onClick={(e) => handleClick(e, entry)}
+              onDoubleClick={(e) => handleDoubleClick(e, entry)}
+              onContextMenu={(e) => onContextMenu(e, entry)}
+            />
+          </div>
         ))}
       </div>
     </div>
@@ -122,35 +119,50 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    backgroundColor: '#fff',
+    backgroundColor: 'var(--files-surface-3)',
   },
   header: {
     display: 'flex',
     alignItems: 'center',
-    padding: '10px 16px',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-    backgroundColor: '#f5f5f7',
-    fontWeight: 500,
-    fontSize: '12px',
-    color: '#86868b',
+    padding: 'var(--files-space-3) var(--files-space-5)',
+    borderBottom: '1px solid var(--files-divider)',
+    backgroundColor: 'rgba(255, 255, 255, 0.6)',
+    backdropFilter: 'blur(10px)',
+    WebkitBackdropFilter: 'blur(10px)',
+    fontSize: '11px',
+    fontWeight: 600,
+    color: 'var(--files-text-muted)',
     textTransform: 'uppercase',
-    letterSpacing: '0.3px',
+    letterSpacing: '0.5px',
   },
   headerName: {
     flex: 1,
+    display: 'flex',
+    alignItems: 'center',
+  },
+  headerText: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--files-space-2)',
   },
   headerSize: {
-    width: '80px',
-    textAlign: 'right',
-    paddingRight: '24px',
-  },
-  headerTime: {
     width: '100px',
     textAlign: 'right',
+    paddingRight: 'var(--files-space-5)',
+  },
+  headerTime: {
+    width: '140px',
+    textAlign: 'right',
+    paddingRight: 'var(--files-space-4)',
+  },
+  headerType: {
+    width: '80px',
+    textAlign: 'left',
   },
   list: {
     flex: 1,
     overflow: 'auto',
+    padding: 'var(--files-space-2) 0',
   },
   empty: {
     flex: 1,
@@ -158,12 +170,29 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#c7c7cc',
-    fontSize: '14px',
+    padding: 'var(--files-space-8)',
   },
-  emptyText: {
+  emptyIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '96px',
+    height: '96px',
+    marginBottom: 'var(--files-space-5)',
+    backgroundColor: 'var(--files-primary-subtle)',
+    borderRadius: 'var(--files-radius-xl)',
+    color: 'var(--files-primary)',
+  },
+  emptyTitle: {
+    margin: '0 0 var(--files-space-2) 0',
+    fontSize: '15px',
+    fontWeight: 500,
+    color: 'var(--files-text-secondary)',
+  },
+  emptyHint: {
     margin: 0,
-    color: '#86868b',
+    fontSize: '13px',
+    color: 'var(--files-text-muted)',
   },
 };
 

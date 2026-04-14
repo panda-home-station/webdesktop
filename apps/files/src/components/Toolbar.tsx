@@ -1,6 +1,6 @@
 /**
  * Toolbar component
- * File browser toolbar - Apple Finder style with navigation, search, and actions
+ * File browser toolbar - Neo-Frost design with glass morphism
  */
 
 import React, { useState } from 'react';
@@ -13,7 +13,6 @@ import {
   RefreshCw,
   List,
   Grid3X3,
-  ArrowUpWideNarrow,
   X,
 } from 'lucide-react';
 import { PathBar } from './PathBar';
@@ -64,10 +63,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   };
 
   return (
-    <div style={styles.container}>
+    <div className="files-glass" style={styles.container}>
       {/* Left Section - Navigation */}
       <div style={styles.leftSection}>
-        {/* Navigation Buttons */}
+        {/* Navigation Buttons - Glass pill container */}
         <div style={styles.navGroup}>
           <ToolbarButton
             icon={<ArrowLeft size={16} />}
@@ -86,6 +85,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             onClick={onNavigateUp}
             title="上级目录"
           />
+          <div style={styles.navDivider} />
           <ToolbarButton
             icon={<RefreshCw size={16} />}
             onClick={onRefresh}
@@ -103,10 +103,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           ...styles.searchContainer,
           ...(isSearchFocused ? styles.searchContainerFocused : {}),
         }}>
-          <Search size={14} style={styles.searchIcon} />
+          <Search size={15} style={styles.searchIcon} />
           <input
             type="text"
-            placeholder="搜索"
+            placeholder="搜索文件..."
             value={searchQuery}
             onChange={handleSearchChange}
             onFocus={() => setIsSearchFocused(true)}
@@ -114,7 +114,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             style={styles.searchInput}
           />
           {searchQuery && (
-            <button style={styles.searchClear} onClick={handleSearchClear}>
+            <button
+              style={styles.searchClear}
+              onClick={handleSearchClear}
+              className="files-interactive"
+            >
               <X size={12} />
             </button>
           )}
@@ -134,10 +138,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <option value="size">大小</option>
             <option value="mtime">修改日期</option>
           </select>
-          <ArrowUpWideNarrow size={14} style={styles.sortIcon} />
         </div>
 
-        {/* View Toggle */}
+        {/* View Toggle - Glass pill */}
         <div style={styles.viewToggle}>
           <button
             style={{
@@ -146,6 +149,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             }}
             onClick={() => onViewModeChange('list')}
             title="列表视图"
+            className="files-interactive"
           >
             <List size={16} />
           </button>
@@ -156,6 +160,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             }}
             onClick={() => onViewModeChange('grid')}
             title="图标视图"
+            className="files-interactive"
           >
             <Grid3X3 size={16} />
           </button>
@@ -187,6 +192,7 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
       onClick={onClick}
       title={title}
       disabled={disabled}
+      className="files-interactive"
     >
       {icon}
     </button>
@@ -198,16 +204,19 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 12px',
-    backgroundColor: '#f5f5f7',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-    height: '48px',
-    gap: '12px',
+    padding: '0 16px',
+    height: 'var(--files-toolbar-height)',
+    gap: 'var(--files-space-6)',
+    borderRadius: 0,
+    borderTop: 'none',
+    borderLeft: 'none',
+    borderRight: 'none',
+    borderBottom: '1px solid var(--files-divider)',
   },
   leftSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: 'var(--files-space-3)',
     flex: 1,
     minWidth: 0,
   },
@@ -215,34 +224,41 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     justifyContent: 'center',
     flexShrink: 0,
-    width: '200px',
+    width: '180px',
   },
   rightSection: {
     display: 'flex',
     alignItems: 'center',
-    gap: '8px',
+    gap: 'var(--files-space-3)',
     flexShrink: 0,
   },
   navGroup: {
     display: 'flex',
     alignItems: 'center',
-    gap: '2px',
+    gap: 'var(--files-space-1)',
     padding: '4px',
     backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    borderRadius: '8px',
+    borderRadius: 'var(--files-radius-lg)',
+    border: '1px solid rgba(0, 0, 0, 0.06)',
+  },
+  navDivider: {
+    width: '1px',
+    height: '20px',
+    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    margin: '0 4px',
   },
   button: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '28px',
-    height: '28px',
+    width: '32px',
+    height: '32px',
     border: 'none',
     backgroundColor: 'transparent',
-    borderRadius: '6px',
+    borderRadius: 'var(--files-radius-md)',
     cursor: 'pointer',
-    color: '#1d1d1f',
-    transition: 'all 0.15s ease',
+    color: 'var(--files-text-secondary)',
+    transition: 'all var(--files-transition-base)',
   },
   buttonDisabled: {
     opacity: 0.35,
@@ -252,45 +268,46 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     width: '100%',
-    padding: '6px 10px',
-    backgroundColor: 'rgba(120, 120, 128, 0.12)',
-    borderRadius: '8px',
-    borderWidth: '2px',
-    borderStyle: 'solid',
-    borderColor: 'transparent',
-    transition: 'all 0.2s ease',
+    padding: '8px 14px',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderRadius: 'var(--files-radius-lg)',
+    border: '1px solid transparent',
+    transition: 'all var(--files-transition-smooth)',
   },
   searchContainerFocused: {
-    backgroundColor: '#fff',
-    borderColor: '#007aff',
-    boxShadow: '0 0 0 3px rgba(0, 122, 255, 0.1)',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: 'var(--files-primary)',
+    boxShadow: '0 0 0 3px var(--files-primary-light), var(--files-shadow-md)',
   },
   searchIcon: {
-    color: '#86868b',
-    marginRight: '6px',
+    color: 'var(--files-text-muted)',
+    marginRight: 'var(--files-space-2)',
     flexShrink: 0,
+    transition: 'color var(--files-transition-base)',
   },
   searchInput: {
     flex: 1,
     border: 'none',
     background: 'transparent',
     fontSize: '13px',
-    color: '#1d1d1f',
+    color: 'var(--files-text-primary)',
     outline: 'none',
+    fontFamily: 'inherit',
   },
   searchClear: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '16px',
-    height: '16px',
+    width: '18px',
+    height: '18px',
     border: 'none',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
     borderRadius: '50%',
     cursor: 'pointer',
-    color: '#fff',
+    color: 'var(--files-text-secondary)',
     padding: 0,
-    marginLeft: '4px',
+    marginLeft: 'var(--files-space-2)',
+    transition: 'all var(--files-transition-fast)',
   },
   sortContainer: {
     position: 'relative',
@@ -298,50 +315,53 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
   },
   sortSelect: {
-    padding: '5px 24px 5px 8px',
-    borderRadius: '6px',
-    border: '1px solid rgba(0, 0, 0, 0.1)',
+    padding: '6px 28px 6px 12px',
+    borderRadius: 'var(--files-radius-md)',
+    border: '1px solid rgba(0, 0, 0, 0.08)',
     backgroundColor: 'rgba(255, 255, 255, 0.8)',
     fontSize: '12px',
-    color: '#1d1d1f',
+    color: 'var(--files-text-secondary)',
     cursor: 'pointer',
     outline: 'none',
     appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+    fontFamily: 'inherit',
+    transition: 'all var(--files-transition-base)',
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 6px center',
+    backgroundPosition: 'right 10px center',
   },
   sortIcon: {
     position: 'absolute',
-    right: '8px',
-    color: '#86868b',
+    right: '10px',
+    color: 'var(--files-text-muted)',
     pointerEvents: 'none',
   },
   viewToggle: {
     display: 'flex',
     alignItems: 'center',
-    padding: '3px',
-    backgroundColor: 'rgba(0, 0, 0, 0.06)',
-    borderRadius: '8px',
-    gap: '2px',
+    padding: '4px',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderRadius: 'var(--files-radius-lg)',
+    border: '1px solid rgba(0, 0, 0, 0.06)',
+    gap: 'var(--files-space-1)',
   },
   viewButton: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '26px',
-    height: '26px',
+    width: '30px',
+    height: '30px',
     border: 'none',
     backgroundColor: 'transparent',
-    borderRadius: '5px',
+    borderRadius: 'var(--files-radius-md)',
     cursor: 'pointer',
-    color: '#86868b',
-    transition: 'all 0.15s ease',
+    color: 'var(--files-text-muted)',
+    transition: 'all var(--files-transition-base)',
   },
   viewButtonActive: {
     backgroundColor: '#fff',
-    color: '#007aff',
-    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+    color: 'var(--files-primary)',
+    boxShadow: 'var(--files-shadow-sm)',
   },
 };
 

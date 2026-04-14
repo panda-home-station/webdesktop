@@ -1,10 +1,10 @@
 /**
  * PathBar component
- * Windows Explorer-style path bar with clickable segments
+ * Windows Explorer-style path bar with Neo-Frost refined design
  */
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Folder } from 'lucide-react';
 
 interface PathBarProps {
   path: string;
@@ -15,7 +15,6 @@ export const PathBar: React.FC<PathBarProps> = ({ path, onNavigate }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
 
-  // Parse path into segments
   const pathParts = path.split('/').filter(Boolean);
 
   const handleSegmentClick = (index: number) => {
@@ -23,7 +22,6 @@ export const PathBar: React.FC<PathBarProps> = ({ path, onNavigate }) => {
     onNavigate(targetPath);
   };
 
-  // Scroll to end on mount/path change
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollLeft = containerRef.current.scrollWidth;
@@ -32,6 +30,11 @@ export const PathBar: React.FC<PathBarProps> = ({ path, onNavigate }) => {
 
   return (
     <div style={styles.container}>
+      {/* Root indicator */}
+      <div style={styles.rootIcon}>
+        <Folder size={14} />
+      </div>
+
       <div
         ref={containerRef}
         style={styles.pathWrapper}
@@ -55,6 +58,7 @@ export const PathBar: React.FC<PathBarProps> = ({ path, onNavigate }) => {
                 onMouseLeave={() => setHoveredIndex(null)}
                 disabled={isLast}
                 title={part}
+                className="files-interactive"
               >
                 <span style={styles.segmentText}>{part}</span>
               </button>
@@ -62,7 +66,7 @@ export const PathBar: React.FC<PathBarProps> = ({ path, onNavigate }) => {
               {/* Chevron Separator */}
               {!isLast && (
                 <ChevronRight
-                  size={12}
+                  size={13}
                   style={styles.chevron}
                 />
               )}
@@ -80,51 +84,61 @@ const styles: Record<string, React.CSSProperties> = {
     alignItems: 'center',
     flex: 1,
     minWidth: 0,
-    height: '28px',
-    backgroundColor: '#fff',
-    border: '1px solid rgba(0, 0, 0, 0.15)',
-    borderRadius: '6px',
-    padding: '0 4px',
+    height: '34px',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    border: '1px solid rgba(0, 0, 0, 0.08)',
+    borderRadius: 'var(--files-radius-md)',
+    padding: '0 var(--files-space-2)',
     overflow: 'hidden',
+    transition: 'all var(--files-transition-base)',
+  },
+  rootIcon: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: 'var(--files-text-muted)',
+    marginRight: 'var(--files-space-2)',
+    flexShrink: 0,
   },
   pathWrapper: {
     display: 'flex',
     alignItems: 'center',
-    overflowX: 'auto',
+    overflowX: 'hidden',
     overflowY: 'hidden',
-    gap: '2px',
+    gap: '3px',
     scrollBehavior: 'smooth',
-    WebkitOverflowScrolling: 'touch',
   },
   segment: {
     display: 'flex',
     alignItems: 'center',
-    padding: '2px 6px',
+    padding: '4px 8px',
     border: 'none',
     backgroundColor: 'transparent',
-    borderRadius: '4px',
+    borderRadius: 'var(--files-radius-sm)',
     cursor: 'pointer',
     fontSize: '13px',
-    color: '#333',
+    color: 'var(--files-text-secondary)',
     whiteSpace: 'nowrap',
-    transition: 'background-color 0.1s ease',
+    transition: 'all var(--files-transition-fast)',
+    fontFamily: 'inherit',
     flexShrink: 0,
   },
   segmentCurrent: {
     cursor: 'default',
     fontWeight: 500,
-    color: '#1d1d1f',
+    color: 'var(--files-text-primary)',
   },
   segmentHover: {
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    backgroundColor: 'var(--files-primary-light)',
+    color: 'var(--files-primary)',
   },
   segmentText: {
-    maxWidth: '120px',
+    maxWidth: '140px',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
   },
   chevron: {
-    color: '#999',
+    color: 'var(--files-text-disabled)',
     flexShrink: 0,
   },
 };
@@ -133,17 +147,11 @@ const styles: Record<string, React.CSSProperties> = {
 const styleSheet = document.createElement('style');
 styleSheet.textContent = `
   .path-bar-scroll::-webkit-scrollbar {
-    height: 4px;
+    display: none;
   }
-  .path-bar-scroll::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .path-bar-scroll::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 2px;
-  }
-  .path-bar-scroll::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.25);
+  .path-bar-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 `;
 if (document.head && !document.head.querySelector('.path-bar-scroll-style')) {
