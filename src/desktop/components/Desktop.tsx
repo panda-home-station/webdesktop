@@ -287,28 +287,11 @@ export default function Desktop() {
                 }}
                 onClick={() => {
                   closeMenu()
-                  openApp('files')
+                  window.location.reload()
                 }}
                 onMouseEnter={() => setHoverIndex(2)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(2)}
-                onBlur={() => setHoverIndex(null)}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style={{ width: '1.275rem', height: '1.275rem' }}><path d="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z" fill="currentColor" /></svg>
-                文件管理器
-              </button>
-              <button
-                style={{
-                  ...menuItemStyle,
-                  background: hoverIndex === 3 ? hoverColor : 'transparent'
-                }}
-                onClick={() => {
-                  closeMenu()
-                  window.location.reload()
-                }}
-                onMouseEnter={() => setHoverIndex(3)}
-                onMouseLeave={() => setHoverIndex(null)}
-                onFocus={() => setHoverIndex(3)}
                 onBlur={() => setHoverIndex(null)}
               >
                 <Icon path={mdiRefresh} size={0.85} />
@@ -317,15 +300,15 @@ export default function Desktop() {
               <button
                 style={{
                   ...menuItemStyle,
-                  background: hoverIndex === 4 ? hoverColor : 'transparent'
+                  background: hoverIndex === 3 ? hoverColor : 'transparent'
                 }}
                 onClick={() => {
                   closeMenu()
                   openApp('system-settings')
                 }}
-                onMouseEnter={() => setHoverIndex(4)}
+                onMouseEnter={() => setHoverIndex(3)}
                 onMouseLeave={() => setHoverIndex(null)}
-                onFocus={() => setHoverIndex(4)}
+                onFocus={() => setHoverIndex(3)}
                 onBlur={() => setHoverIndex(null)}
               >
                 <Icon path={mdiCogOutline} size={0.85} />
@@ -334,15 +317,15 @@ export default function Desktop() {
               <button
                 style={{
                   ...menuItemStyle,
-                  background: hoverIndex === 5 ? hoverColor : 'transparent',
+                  background: hoverIndex === 4 ? hoverColor : 'transparent',
                 }}
                 onClick={() => {
                   closeMenu()
                   openApp('user-center')
                 }}
-                onMouseEnter={() => setHoverIndex(5)}
+                onMouseEnter={() => setHoverIndex(4)}
                 onMouseLeave={() => setHoverIndex(null)}
-                onFocus={() => setHoverIndex(5)}
+                onFocus={() => setHoverIndex(4)}
                 onBlur={() => setHoverIndex(null)}
               >
                 <Icon path={mdiAccountCircleOutline} size={0.85} />
