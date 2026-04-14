@@ -21,7 +21,8 @@ export function Drawer({
   headerExtra
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null)
-  const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight })
+  // Force re-render on window resize to get accurate dimensions
+  const [, setTick] = useState(0)
 
   useEffect(() => {
     if (!open) return
@@ -33,7 +34,7 @@ export function Drawer({
     }
 
     const handleResize = () => {
-      setViewport({ width: window.innerWidth, height: window.innerHeight })
+      setTick(t => t + 1)
     }
 
     const timeout = setTimeout(() => {
@@ -51,8 +52,10 @@ export function Drawer({
   if (!open) return null
 
   const panelWidth = typeof width === 'number' ? width : 400
-  const viewportHeight = viewport.height
-  const viewportWidth = viewport.width
+
+  // Always use current window dimensions
+  const viewportHeight = window.innerHeight
+  const viewportWidth = window.innerWidth
   const margin = 12
 
   // Minimum height for the drawer
