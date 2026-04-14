@@ -7,7 +7,7 @@ Before committing, perform a code review of the changes.
 ### 1. 代码逻辑 (Code Logic)
 - [ ] 没有死代码 (No dead code)
 - [ ] 没有未使用的导入 (No unused imports)
-- [ ] 没有 console.log/console.error 调试代码 (No debug code left)
+- [ ] **禁止 console.log/console.error/console.warn 调试代码 (STRICT: No debug code - must be removed before commit)**
 - [ ] 逻辑正确，无明显 bug
 
 ### 2. 安全性 (Security)
