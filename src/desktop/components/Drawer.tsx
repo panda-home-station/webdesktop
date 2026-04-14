@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
 export interface DrawerProps {
@@ -21,6 +21,7 @@ export function Drawer({
   headerExtra
 }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const [viewport, setViewport] = useState({ width: window.innerWidth, height: window.innerHeight })
 
   useEffect(() => {
     if (!open) return
@@ -31,42 +32,85 @@ export function Drawer({
       }
     }
 
+    const handleResize = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight })
+    }
+
     const timeout = setTimeout(() => {
       document.addEventListener('mousedown', handleClickOutside)
+      window.addEventListener('resize', handleResize)
     }, 100)
 
     return () => {
       clearTimeout(timeout)
       document.removeEventListener('mousedown', handleClickOutside)
+      window.removeEventListener('resize', handleResize)
     }
   }, [open, onClose])
 
   if (!open) return null
 
   const panelWidth = typeof width === 'number' ? width : 400
-  const panelHeight = 520
+  const viewportHeight = viewport.height
+  const viewportWidth = viewport.width
+  const margin = 12
+
+  // Minimum height for the drawer
+  const minHeight = 300
+  // Maximum height for the drawer (full screen height by default)
+  const maxHeight = viewportHeight - margin * 2
 
   const position = anchorEl
     ? (() => {
-        const preferredTop = anchorEl.y + 44
-        const preferredLeft = Math.min(anchorEl.x, window.innerWidth - panelWidth - 12)
+        const preferredLeft = Math.min(anchorEl.x, viewportWidth - panelWidth - margin) + 8
 
-        if (preferredTop + panelHeight > window.innerHeight - 12) {
+        // Space below preferredTop to viewport bottom
+        const spaceBelow = viewportHeight - (anchorEl.y + 44) - margin
+        // Space above anchor point to viewport top
+        const spaceAbove = anchorEl.y - margin
+
+        if (spaceBelow >= minHeight && spaceBelow >= spaceAbove) {
+          // Position below anchor, align bottom to screen bottom
           return {
             left: preferredLeft,
-            top: Math.max(12, anchorEl.y - panelHeight - 8),
+            top: anchorEl.y + 44,
+            maxHeight: Math.min(Math.max(spaceBelow, minHeight), maxHeight),
           }
         }
 
+        if (spaceAbove >= minHeight) {
+          // Position above anchor, align to screen bottom
+          const top = margin
+          const height = viewportHeight - margin * 2
+          return {
+            left: preferredLeft,
+            top,
+            maxHeight: Math.max(height, minHeight),
+          }
+        }
+
+        // Neither has enough space, use the larger one
+        if (spaceBelow >= spaceAbove) {
+          return {
+            left: preferredLeft,
+            top: anchorEl.y + 44,
+            maxHeight: Math.max(spaceBelow, minHeight),
+          }
+        }
+
+        const top = margin
+        const height = viewportHeight - margin * 2
         return {
           left: preferredLeft,
-          top: preferredTop,
+          top,
+          maxHeight: Math.max(height, minHeight),
         }
       })()
     : {
         left: '50%',
         top: '50%',
         transform: 'translate(-50%, -50%)',
+        maxHeight,
       }
 
   return createPortal(
@@ -77,7 +121,8 @@ export function Drawer({
         left: position.left,
         top: position.top,
         width,
-        maxHeight: 'calc(100vh - 24px)',
+        height: position.maxHeight,
+        maxHeight: position.maxHeight,
         zIndex: 10001,
         background: '#fff',
         borderRadius: 20,
@@ -118,7 +163,7 @@ export function Drawer({
       {/* Content */}
       <div style={{
         flex: 1,
-        overflow: 'hidden',
+        overflow: 'auto',
         display: 'flex',
         flexDirection: 'column',
       }}>

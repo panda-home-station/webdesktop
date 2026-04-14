@@ -334,11 +334,16 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
           className="dock-item"
           title="通知中心"
           style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, background: 'transparent', border: 'none', outline: 'none', boxShadow: 'none', cursor: 'pointer', position: 'relative' }}
+          onMouseDown={(e) => e.stopPropagation()}
           onClick={(e) => {
             if (isLauncherOpen && onCloseLauncher) onCloseLauncher()
-            const r = e.currentTarget.getBoundingClientRect()
-            setNotificationCenterAnchor({ x: r.right + 12, y: r.top })
-            setIsNotificationCenterOpen(true)
+            if (isNotificationCenterOpen) {
+              setIsNotificationCenterOpen(false)
+            } else {
+              const r = e.currentTarget.getBoundingClientRect()
+              setNotificationCenterAnchor({ x: r.right + 12, y: r.top })
+              setIsNotificationCenterOpen(true)
+            }
           }}
           onMouseEnter={(e) => showTip('通知中心', e.currentTarget)}
           onMouseLeave={hideTip}

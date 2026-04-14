@@ -1,4 +1,4 @@
-import { useState, useMemo, memo } from 'react'
+import { useMemo, memo } from 'react'
 import { Bell, Repeat, CheckCircle2, XCircle, Clock, AlertTriangle, X, Trash2, Loader2 } from 'lucide-react'
 import useAlertStore from '@truenas/stores/alert'
 import { useJobStore } from '@truenas/stores/job'
@@ -16,8 +16,6 @@ type NotificationItem = {
   data: Alert | Job
   timestamp: number
 }
-
-type Tab = 'all' | 'tasks' | 'alerts'
 
 // ==================== Utility Functions ====================
 
@@ -333,48 +331,6 @@ const JobBubble = memo(({ job, onClick }: {
 })
 JobBubble.displayName = 'JobBubble'
 
-// ==================== Tab Button ====================
-
-const TabButton = memo(({ active, label, count, onClick }: {
-  active: boolean
-  label: string
-  count?: number
-  onClick: () => void
-}) => (
-  <button
-    onClick={onClick}
-    style={{
-      padding: '8px 16px',
-      border: 'none',
-      background: active ? colors.primary : 'transparent',
-      color: active ? '#fff' : colors.textSecondary,
-      borderRadius: 20,
-      cursor: 'pointer',
-      fontSize: 14,
-      fontWeight: '500',
-      transition: 'all 0.2s ease',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-    }}
-  >
-    {label}
-    {count !== undefined && count > 0 && (
-      <span style={{
-        background: active ? 'rgba(255,255,255,0.3)' : 'rgba(0,122,255,0.1)',
-        color: active ? '#fff' : colors.primary,
-        padding: '2px 8px',
-        borderRadius: 10,
-        fontSize: 12,
-        fontWeight: '600',
-      }}>
-        {count}
-      </span>
-    )}
-  </button>
-))
-TabButton.displayName = 'TabButton'
-
 // ==================== Empty State ====================
 
 const EmptyState = memo(({ message, subMessage }: {
@@ -430,13 +386,10 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ open, onClose, anchorEl }: NotificationCenterProps) {
-  const [tab, setTab] = useState<Tab>('all')
-
+  
   const alerts = useAlertStore(state => state.alerts)
   const jobs = useJobStore(state => state.jobs)
   const dismissAlert = useAlertStore(state => state.dismissAlert)
-  const unreadAlertCount = useAlertStore(state => state.getImportantUnreadAlertsCount())
-  const jobCounts = useJobStore(state => state.counts)
 
   // Combine and sort notifications
   const notifications = useMemo<NotificationItem[]>(() => {
@@ -464,18 +417,7 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
     return combined.slice(0, 50)
   }, [alerts, jobs])
 
-  const filteredNotifications = useMemo(() => {
-    if (tab === 'tasks') {
-      return notifications.filter(n => n.type === 'job')
-    }
-    if (tab === 'alerts') {
-      return notifications.filter(n => n.type === 'alert')
-    }
-    return notifications
-  }, [notifications, tab])
-
-  const totalCount = unreadAlertCount + jobCounts.running + jobCounts.failed
-  const runningJobCount = jobCounts.running + jobCounts.failed
+  const totalCount = notifications.length
 
   const handleDismissAlert = (alertId: string) => {
     dismissAlert(alertId)
@@ -519,34 +461,6 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
           )}
         </div>
       }
-      headerExtra={
-        <div style={{
-          display: 'flex',
-          gap: 4,
-          background: colors.background,
-          padding: 4,
-          borderRadius: 12,
-        }}>
-          <TabButton
-            active={tab === 'all'}
-            label="全部"
-            count={totalCount}
-            onClick={() => setTab('all')}
-          />
-          <TabButton
-            active={tab === 'tasks'}
-            label="任务"
-            count={runningJobCount || undefined}
-            onClick={() => setTab('tasks')}
-          />
-          <TabButton
-            active={tab === 'alerts'}
-            label="提醒"
-            count={unreadAlertCount || undefined}
-            onClick={() => setTab('alerts')}
-          />
-        </div>
-      }
     >
       <div style={{
         flex: 1,
@@ -555,10 +469,10 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
         flexDirection: 'column',
         background: colors.background,
       }}>
-        {filteredNotifications.length === 0 ? (
+        {notifications.length === 0 ? (
           <EmptyState
-            message={tab === 'tasks' ? '暂无任务' : '暂无通知'}
-            subMessage={tab === 'tasks' ? '所有任务都将显示在这里' : '所有提醒都将显示在这里'}
+            message="暂无通知"
+            subMessage="所有提醒都将显示在这里"
           />
         ) : (
           <>
@@ -571,7 +485,7 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
               flexDirection: 'column',
               gap: 12,
             }}>
-              {filteredNotifications.map((item) => (
+              {notifications.map((item) => (
                 item.type === 'alert' ? (
                   <AlertBubble
                     key={item.id}
