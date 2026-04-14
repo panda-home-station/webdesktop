@@ -3,7 +3,7 @@
  * File browser toolbar - Apple Finder style with navigation, search, and actions
  */
 
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { ViewMode, SortBy } from '@truenas/types/filesystem-types';
 import {
   ArrowUp,
@@ -11,14 +11,12 @@ import {
   ArrowRight,
   Search,
   RefreshCw,
-  FolderPlus,
-  Upload,
-  Trash2,
   List,
   Grid3X3,
-  SortAsc,
+  SlidersHorizontal,
   X,
 } from 'lucide-react';
+import { PathBar } from './PathBar';
 
 interface ToolbarProps {
   viewMode: ViewMode;
@@ -33,10 +31,6 @@ interface ToolbarProps {
   onNavigateForward: () => void;
   onNavigate: (path: string) => void;
   onRefresh: () => void;
-  onNewFolder: () => void;
-  onUpload?: () => void;
-  onDelete: () => void;
-  hasSelection: boolean;
   onSearch?: (query: string) => void;
 }
 
@@ -53,27 +47,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onNavigateForward,
   onNavigate,
   onRefresh,
-  onNewFolder,
-  onDelete,
-  hasSelection,
   onSearch,
 }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      const event = new CustomEvent('files:upload', { detail: Array.from(files) });
-      window.dispatchEvent(event);
-      e.target.value = '';
-    }
-  };
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
@@ -84,15 +61,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const handleSearchClear = () => {
     setSearchQuery('');
     onSearch?.('');
-  };
-
-  // Parse path for breadcrumb
-  const pathParts = currentPath.split('/').filter(Boolean);
-  const currentName = pathParts[pathParts.length - 1] || 'root';
-
-  const handlePathClick = (index: number) => {
-    const targetPath = '/' + pathParts.slice(0, index + 1).join('/');
-    onNavigate(targetPath);
   };
 
   return (
@@ -125,12 +93,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </div>
 
-        {/* Current Path */}
-        <div style={styles.pathContainer}>
-          <button style={styles.pathButton} onClick={() => handlePathClick(pathParts.length - 1)}>
-            {currentName}
-          </button>
-        </div>
+        {/* Current Path - Windows Style */}
+        <PathBar path={currentPath} onNavigate={onNavigate} />
       </div>
 
       {/* Center Section - Search */}
@@ -170,34 +134,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <option value="size">大小</option>
             <option value="mtime">修改日期</option>
           </select>
-          <SortAsc size={14} style={styles.sortIcon} />
-        </div>
-
-        {/* Action Buttons */}
-        <div style={styles.actionGroup}>
-          <ToolbarButton
-            icon={<FolderPlus size={16} />}
-            onClick={onNewFolder}
-            title="新建文件夹"
-          />
-          <ToolbarButton
-            icon={<Upload size={16} />}
-            onClick={handleUploadClick}
-            title="上传"
-          />
-          <ToolbarButton
-            icon={<Trash2 size={16} />}
-            onClick={onDelete}
-            disabled={!hasSelection}
-            title="删除"
-          />
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            style={{ display: 'none' }}
-            onChange={handleFileChange}
-          />
+          <SlidersHorizontal size={14} style={styles.sortIcon} />
         </div>
 
         {/* View Toggle */}
@@ -271,13 +208,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    flexShrink: 0,
+    flex: 1,
+    minWidth: 0,
   },
   centerSection: {
-    flex: 1,
     display: 'flex',
     justifyContent: 'center',
-    maxWidth: '320px',
+    flexShrink: 0,
+    width: '200px',
   },
   rightSection: {
     display: 'flex',
@@ -310,35 +248,16 @@ const styles: Record<string, React.CSSProperties> = {
     opacity: 0.35,
     cursor: 'not-allowed',
   },
-  pathContainer: {
-    display: 'flex',
-    alignItems: 'center',
-    padding: '4px 12px',
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    borderRadius: '6px',
-  },
-  pathButton: {
-    background: 'none',
-    border: 'none',
-    cursor: 'pointer',
-    fontSize: '13px',
-    fontWeight: 500,
-    color: '#1d1d1f',
-    padding: '2px 4px',
-    borderRadius: '4px',
-    maxWidth: '150px',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    whiteSpace: 'nowrap',
-  },
   searchContainer: {
     display: 'flex',
     alignItems: 'center',
     width: '100%',
     padding: '6px 10px',
-    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+    backgroundColor: 'rgba(120, 120, 128, 0.12)',
     borderRadius: '8px',
-    border: '2px solid transparent',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: 'transparent',
     transition: 'all 0.2s ease',
   },
   searchContainerFocused: {
@@ -397,14 +316,6 @@ const styles: Record<string, React.CSSProperties> = {
     right: '8px',
     color: '#86868b',
     pointerEvents: 'none',
-  },
-  actionGroup: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '2px',
-    padding: '4px',
-    backgroundColor: 'rgba(0, 0, 0, 0.04)',
-    borderRadius: '8px',
   },
   viewToggle: {
     display: 'flex',

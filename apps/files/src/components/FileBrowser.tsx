@@ -6,6 +6,8 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { FileStat, SortBy, ViewMode } from '@truenas/types/filesystem-types';
+import type { Pool } from '@truenas/types/pool';
+import { poolService } from '@truenas/services/pool';
 import { useFileBrowserStore } from '../stores/fileBrowserStore';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { Toolbar } from './Toolbar';
@@ -46,8 +48,22 @@ export const FileBrowser: React.FC = () => {
   } = useFileSystem();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [pools, setPools] = useState<Pool[]>([]);
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
+
+  // Fetch pools for sidebar
+  useEffect(() => {
+    const fetchPools = async () => {
+      try {
+        const result = await poolService.query([], { extra: { is_upgraded: true } });
+        setPools(result);
+      } catch (err) {
+        console.error('Failed to fetch pools:', err);
+      }
+    };
+    fetchPools();
+  }, []);
 
   // Load directory on mount and path change
   useEffect(() => {
@@ -169,7 +185,7 @@ export const FileBrowser: React.FC = () => {
     <div style={styles.container}>
       {/* Sidebar */}
       <Sidebar
-        currentPath={currentPath}
+        pools={pools}
         onNavigate={handleNavigate}
       />
 
@@ -189,10 +205,6 @@ export const FileBrowser: React.FC = () => {
           onNavigateForward={navigateForward}
           onNavigate={handleNavigate}
           onRefresh={() => refreshRef.current()}
-          onNewFolder={() => setShowCreateDialog(true)}
-          onUpload={() => {}}
-          hasSelection={selectedPaths.size > 0}
-          onDelete={() => {}}
         />
 
         {/* Content */}

@@ -1,17 +1,17 @@
 /**
  * Sidebar component
  * Location shortcuts like macOS Finder sidebar
+ * Selection is controlled by user clicks only, not by current path changes
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Home,
   HardDrive,
-  Trash2,
-  Star,
   FolderOpen,
-  Cloud,
+  Trash2,
 } from 'lucide-react';
+import type { Pool } from '@truenas/types/pool';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -59,69 +59,67 @@ const SidebarSection: React.FC<SidebarSectionProps> = ({ title, children }) => {
 };
 
 interface SidebarProps {
-  currentPath: string;
+  pools: Pool[];
   onNavigate: (path: string) => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => {
-  // Determine active item based on current path
-  const getActiveItem = () => {
-    if (currentPath.startsWith('/mnt')) return 'storage';
-    if (currentPath.startsWith('/home')) return 'home';
-    if (currentPath.includes('.trash')) return 'trash';
-    return 'storage';
+export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate }) => {
+  // Track the last sidebar-clicked path
+  // This is separate from currentPath so sidebar selection doesn't change
+  // when user navigates via double-click or other methods
+  const [sidebarSelectedPath, setSidebarSelectedPath] = useState<string>('/mnt');
+
+  // Get pool mount point path
+  const getPoolPath = (pool: Pool) => {
+    return `/mnt/${pool.name}`;
   };
 
-  const activeItem = getActiveItem();
+  // Handle sidebar item click - navigate and update selection
+  const handleSidebarClick = (path: string) => {
+    setSidebarSelectedPath(path);
+    onNavigate(path);
+  };
+
+  // Check if a path is the currently selected sidebar item
+  const isSelected = (path: string) => {
+    return sidebarSelectedPath === path;
+  };
 
   return (
     <div style={styles.container}>
-      {/* Favorites Section */}
-      <SidebarSection title="个人收藏">
+      {/* Locations Section */}
+      <SidebarSection title="位置">
         <SidebarItem
           icon={<Home size={18} />}
           label="家目录"
           path="/home"
-          isActive={activeItem === 'home'}
-          onClick={() => onNavigate('/home')}
+          isActive={isSelected('/home')}
+          onClick={() => handleSidebarClick('/home')}
         />
-        <SidebarItem
-          icon={<Star size={18} />}
-          label="收藏夹"
-          path="/favorite"
-          isActive={activeItem === 'favorite'}
-          onClick={() => onNavigate('/home')}
-        />
-      </SidebarSection>
-
-      {/* Locations Section */}
-      <SidebarSection title="位置">
         <SidebarItem
           icon={<HardDrive size={18} />}
           label="存储池"
           path="/mnt"
-          isActive={activeItem === 'storage'}
-          onClick={() => onNavigate('/mnt')}
-        />
-        <SidebarItem
-          icon={<Cloud size={18} />}
-          label="云同步"
-          path="/cloud"
-          isActive={activeItem === 'cloud'}
-          onClick={() => onNavigate('/mnt')}
+          isActive={isSelected('/mnt')}
+          onClick={() => handleSidebarClick('/mnt')}
         />
       </SidebarSection>
 
-      {/* Storage Pools - will be populated dynamically */}
-      <SidebarSection title="存储池">
-        <SidebarItem
-          icon={<FolderOpen size={18} />}
-          label="Pool 1"
-          path="/mnt/pool1"
-          isActive={currentPath.startsWith('/mnt/pool1')}
-          onClick={() => onNavigate('/mnt/pool1')}
-        />
-      </SidebarSection>
+      {/* Storage Pools */}
+      {pools.length > 0 && (
+        <SidebarSection title="存储池">
+          {pools.map((pool) => (
+            <SidebarItem
+              key={pool.id}
+              icon={<FolderOpen size={18} />}
+              label={pool.name}
+              path={getPoolPath(pool)}
+              isActive={isSelected(getPoolPath(pool))}
+              onClick={() => handleSidebarClick(getPoolPath(pool))}
+            />
+          ))}
+        </SidebarSection>
+      )}
 
       {/* Trash Section */}
       <SidebarSection title="垃圾桶">
@@ -129,8 +127,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPath, onNavigate }) => 
           icon={<Trash2 size={18} />}
           label="回收站"
           path="/mnt/.trash"
-          isActive={activeItem === 'trash'}
-          onClick={() => onNavigate('/mnt/.trash')}
+          isActive={isSelected('/mnt/.trash')}
+          onClick={() => handleSidebarClick('/mnt/.trash')}
         />
       </SidebarSection>
     </div>
