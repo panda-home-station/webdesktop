@@ -58,10 +58,26 @@ const JobStateEnum = {
 
 // ==================== Utility Functions ====================
 
-function formatDate(timestamp: string | null | undefined): string {
-  if (!timestamp) return '-'
-  const date = new Date(timestamp)
-  if (isNaN(date.getTime())) return '-'
+// TrueNAS API timestamp format: { $date: number } (Unix timestamp in milliseconds)
+type ApiTimestamp = { $date: number }
+
+function extractTimestamp(value: string | number | ApiTimestamp | null | undefined): number | null {
+  if (!value) return null
+  if (typeof value === 'number') return value
+  if (typeof value === 'string') {
+    const parsed = new Date(value).getTime()
+    return isNaN(parsed) ? null : parsed
+  }
+  if (typeof value === 'object' && '$date' in value) {
+    return (value as ApiTimestamp).$date
+  }
+  return null
+}
+
+function formatDate(timestamp: string | number | ApiTimestamp | null | undefined): string {
+  const ms = extractTimestamp(timestamp)
+  if (ms === null) return '-'
+  const date = new Date(ms)
   return new Intl.DateTimeFormat('zh-CN', {
     month: '2-digit',
     day: '2-digit',
@@ -71,12 +87,11 @@ function formatDate(timestamp: string | null | undefined): string {
   }).format(date)
 }
 
-function formatDuration(start: string | null | undefined, end: string | null | undefined): string {
-  if (!end) return '进行中'
-  const startTime = new Date(start!).getTime()
-  const endTime = new Date(end).getTime()
-  if (isNaN(startTime) || isNaN(endTime)) return '进行中'
-  const diff = Math.floor((endTime - startTime) / 1000)
+function formatDuration(start: string | number | ApiTimestamp | null | undefined, end: string | number | ApiTimestamp | null | undefined): string {
+  const startMs = extractTimestamp(start)
+  const endMs = extractTimestamp(end)
+  if (startMs === null || endMs === null) return '进行中'
+  const diff = Math.floor((endMs - startMs) / 1000)
 
   if (diff < 60) return `${diff}秒`
   if (diff < 3600) return `${Math.floor(diff / 60)}分${diff % 60}秒`

@@ -503,7 +503,7 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
       anchorEl={anchorEl}
       width={400}
       title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
           <span>通知中心</span>
           {totalCount > 0 && (
             <span style={{
