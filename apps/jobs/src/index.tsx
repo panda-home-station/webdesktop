@@ -20,7 +20,8 @@ export default function JobsApp() {
   const [pageSize, setPageSize] = useState(20)
 
   const filteredJobs = useMemo(() => {
-    let filtered = [...jobs]
+    // Filter out transient jobs (same as webui)
+    let filtered = jobs.filter(j => !j.transient)
 
     switch (tab) {
       case 'running':
@@ -66,11 +67,15 @@ export default function JobsApp() {
     setCurrentPage(1)
   }, [])
 
-  const counts = useMemo(() => ({
-    all: jobs.length,
-    running: jobs.filter(j => j.state === JobStateEnum.RUNNING || j.state === JobStateEnum.WAITING).length,
-    failed: jobs.filter(j => j.state === JobStateEnum.FAILED || j.state === JobStateEnum.ABORTED).length,
-  }), [jobs])
+  const counts = useMemo(() => {
+    // Exclude transient jobs from counts (same as webui)
+    const nonTransientJobs = jobs.filter(j => !j.transient)
+    return {
+      all: nonTransientJobs.length,
+      running: nonTransientJobs.filter(j => j.state === JobStateEnum.RUNNING || j.state === JobStateEnum.WAITING).length,
+      failed: nonTransientJobs.filter(j => j.state === JobStateEnum.FAILED || j.state === JobStateEnum.ABORTED).length,
+    }
+  }, [jobs])
 
   const handleAbort = useCallback(async (job: ExtendedJob) => {
     if (!confirm(`确定要停止任务 "${getJobDescription(job)}" 吗？`)) return

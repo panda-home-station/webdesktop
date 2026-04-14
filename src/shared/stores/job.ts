@@ -36,7 +36,16 @@ export const useJobStore = create<JobState>((set, get) => ({
   loadJobs: async () => {
     set({ isLoading: true })
     try {
-      const jobs = await truenasApi.call('core.get_jobs') as Job[]
+      // Fetch all jobs and filter client-side (matching webui logic):
+      // - Non-SUCCESS jobs (all)
+      // - SUCCESS jobs (limit 30, sorted by id desc)
+      const allJobs = await truenasApi.call('core.get_jobs') as Job[]
+      const notCompletedJobs = allJobs.filter(j => j.state !== 'SUCCESS')
+      const completedJobs = allJobs
+        .filter(j => j.state === 'SUCCESS')
+        .sort((a, b) => (b.id ?? 0) - (a.id ?? 0))
+        .slice(0, 30)
+      const jobs = [...notCompletedJobs, ...completedJobs]
       const counts = calculateCounts(jobs)
       set({ jobs, counts, isLoading: false })
     } catch (error) {
@@ -52,12 +61,13 @@ export const useJobStore = create<JobState>((set, get) => ({
     }
 
     const newUnsubscribe = truenasApi.subscribe('core.get_jobs', (data) => {
-      const eventData = data as { msg: 'ADDED' | 'CHANGED' | 'REMOVED'; id?: number; fields?: Job }
+      // msg is lowercase from TrueNAS backend: 'added' | 'changed' | 'removed'
+      const eventData = data as { msg: string; id?: number; fields?: Job }
 
       set((state) => {
         let jobs = [...state.jobs]
 
-        if (eventData.msg === 'ADDED' && eventData.fields) {
+        if (eventData.msg === 'added' && eventData.fields) {
           // Check if job already exists
           const existingIndex = jobs.findIndex(j => j.id === eventData.fields!.id)
           if (existingIndex === -1) {
@@ -65,12 +75,12 @@ export const useJobStore = create<JobState>((set, get) => ({
           } else {
             jobs[existingIndex] = eventData.fields
           }
-        } else if (eventData.msg === 'CHANGED' && eventData.fields) {
+        } else if (eventData.msg === 'changed' && eventData.fields) {
           const index = jobs.findIndex(j => j.id === eventData.id)
           if (index !== -1) {
             jobs[index] = eventData.fields
           }
-        } else if (eventData.msg === 'REMOVED' && eventData.id !== undefined) {
+        } else if (eventData.msg === 'removed' && eventData.id !== undefined) {
           jobs = jobs.filter(j => j.id !== eventData.id)
         }
 
