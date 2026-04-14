@@ -386,13 +386,13 @@ export default function Window({
           flexShrink: 0,
           display: 'flex',
           alignItems: 'center',
-          padding: '0 12px',
+          padding: '0 14px',
           cursor: 'move',
           borderTopLeftRadius: maximized ? 0 : 'var(--win-radius)',
           borderTopRightRadius: maximized ? 0 : 'var(--win-radius)',
           userSelect: 'none',
           background: 'var(--titlebar-bg)',
-          borderBottom: '1px solid rgba(0,0,0,0.05)'
+          borderBottom: '1px solid rgba(0,0,0,0.04)'
         }}
         onMouseDown={handleTitleMouseDown}
         onDoubleClick={() => onMaximize(id)}
@@ -401,13 +401,13 @@ export default function Window({
           e.stopPropagation()
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, transform: 'translateZ(0)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, transform: 'translateZ(0)' }}>
           {iconUrl ? (
-            <img src={iconUrl} alt="" width={18} height={18} style={{ borderRadius: 4, flexShrink: 0 }} />
+            <img src={iconUrl} alt="" width={16} height={16} style={{ borderRadius: 3, flexShrink: 0, opacity: 0.85 }} />
           ) : (
-            <div style={{ width: 16, height: 16, borderRadius: 4, background: 'rgba(0,0,0,0.08)', flexShrink: 0 }} />
+            <div style={{ width: 14, height: 14, borderRadius: 3, background: 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
           )}
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 16 }}>{title}</span>
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 13, fontWeight: 500, letterSpacing: '-0.01em' }}>{title}</span>
         </div>
         <div className="win-ctl" style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
           <button

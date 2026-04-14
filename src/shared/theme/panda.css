@@ -4,9 +4,10 @@
   --muted: #4b5563;
   --win-bg: #ffffff;
   --win-border: transparent;
-  --win-radius: 14px;
-  --win-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
-  --titlebar-bg: #e2e4e9;
+  --win-radius: 12px;
+  --win-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --titlebar-bg: linear-gradient(180deg, #f8f9fa 0%, #f1f3f5 100%);
+  --titlebar-text: #495057;
   --button-bg: rgba(255, 255, 255, 0.85);
   --button-border: rgba(0,0,0,0.06);
   --button-text: #0b1220;
@@ -53,7 +54,7 @@
 
 .panda-titlebar {
   background: var(--titlebar-bg);
-  color: #374151;
+  color: var(--titlebar-text);
   user-select: none;
   -webkit-user-select: none;
 }
@@ -177,26 +178,29 @@
 .dot-amber { background: #f59e0b; }
 .dot-green { background: #10b981; }
 
-.win-ctl { gap: 6px; }
+.win-ctl { gap: 4px; }
 .win-btn {
-  width: 36px;
-  height: 28px;
+  width: 28px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: transparent;
   border: none;
-  color: var(--button-text);
-  border-radius: 6px;
+  color: var(--titlebar-text);
+  border-radius: 4px;
   line-height: 1;
-  transition: background-color 120ms ease, color 120ms ease;
+  opacity: 0.6;
+  transition: opacity 120ms ease, background-color 120ms ease;
 }
 .win-btn:hover {
-  background: rgba(0,0,0,0.08);
+  opacity: 1;
+  background: rgba(0,0,0,0.06);
 }
 .win-btn.close:hover {
   background: #ef4444;
   color: #fff;
+  opacity: 1;
 }
 
 .semi-portal { position: relative; }

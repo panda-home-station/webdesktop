@@ -1,6 +1,6 @@
 // iOS-style color palette for system-settings
 export const colors = {
-  background: '#f2f2f7',
+  background: '#ffffff',
   cardBg: '#ffffff',
   primary: '#007aff',
   success: '#34c759',
