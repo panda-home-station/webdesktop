@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Folder } from 'lucide-react';
 
 interface BreadcrumbProps {
   path: string;
@@ -13,17 +13,7 @@ interface BreadcrumbProps {
 
 export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate }) => {
   const parts = path.split('/').filter(Boolean);
-
-  const getIcon = (index: number) => {
-    if (index === 0) {
-      return (
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      );
-    }
-    return null;
-  };
+  const currentName = parts[parts.length - 1] || 'root';
 
   const handleClick = (index: number) => {
     const targetPath = '/' + parts.slice(0, index + 1).join('/');
@@ -32,27 +22,37 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({ path, onNavigate }) => {
 
   return (
     <div style={styles.container}>
-      {parts.map((part, index) => (
-        <React.Fragment key={index}>
-          {index > 0 && (
-            <ChevronRight
-              size={14}
-              style={styles.separator}
-              strokeWidth={2}
-            />
-          )}
-          <button
-            style={{
-              ...styles.part,
-              ...(index === parts.length - 1 ? styles.partActive : {}),
-            }}
-            onClick={() => handleClick(index)}
-          >
-            <span style={styles.icon}>{getIcon(index)}</span>
-            <span>{part}</span>
-          </button>
-        </React.Fragment>
-      ))}
+      {/* Current Location */}
+      <div style={styles.currentLocation}>
+        <Folder size={18} strokeWidth={1.5} style={styles.currentIcon} />
+        <span style={styles.currentName}>{currentName}</span>
+      </div>
+
+      {/* Path Breadcrumbs */}
+      {parts.length > 1 && (
+        <div style={styles.breadcrumbPath}>
+          {parts.map((part, index) => (
+            <React.Fragment key={index}>
+              {index > 0 && (
+                <ChevronRight
+                  size={14}
+                  style={styles.separator}
+                  strokeWidth={2}
+                />
+              )}
+              <button
+                style={{
+                  ...styles.part,
+                  ...(index === parts.length - 1 ? styles.partActive : {}),
+                }}
+                onClick={() => handleClick(index)}
+              >
+                <span>{part}</span>
+              </button>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -66,6 +66,27 @@ const styles: Record<string, React.CSSProperties> = {
     borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
     fontSize: '13px',
     overflow: 'auto',
+    gap: '12px',
+  },
+  currentLocation: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '6px 12px',
+    backgroundColor: 'rgba(0, 122, 255, 0.1)',
+    borderRadius: '6px',
+  },
+  currentIcon: {
+    color: '#007aff',
+  },
+  currentName: {
+    fontSize: '14px',
+    fontWeight: 600,
+    color: '#1d1d1f',
+  },
+  breadcrumbPath: {
+    display: 'flex',
+    alignItems: 'center',
     gap: '2px',
   },
   part: {
@@ -84,11 +105,6 @@ const styles: Record<string, React.CSSProperties> = {
   partActive: {
     color: '#1d1d1f',
     cursor: 'default',
-  },
-  icon: {
-    display: 'flex',
-    alignItems: 'center',
-    color: '#007aff',
   },
   separator: {
     color: '#c7c7cc',

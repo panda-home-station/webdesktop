@@ -28,6 +28,9 @@ interface FileBrowserState {
     free_bytes: number;
     avail_bytes: number;
   } | null;
+  // Navigation history
+  history: string[];
+  historyIndex: number;
 }
 
 interface FileBrowserActions {
@@ -35,6 +38,10 @@ interface FileBrowserActions {
   setPath: (path: string) => void;
   navigateUp: () => void;
   navigateTo: (path: string) => void;
+  navigateBack: () => void;
+  navigateForward: () => void;
+  canNavigateBack: () => boolean;
+  canNavigateForward: () => boolean;
 
   // Entries
   setEntries: (entries: FileStat[]) => void;
@@ -79,6 +86,8 @@ const initialState: FileBrowserState = {
   isLoading: false,
   error: null,
   filesystemStats: null,
+  history: ['/mnt'],
+  historyIndex: 0,
 };
 
 export const useFileBrowserStore = create<FileBrowserState & FileBrowserActions>((set, get) => ({
@@ -88,7 +97,7 @@ export const useFileBrowserStore = create<FileBrowserState & FileBrowserActions>
   setPath: (path) => set({ currentPath: path }),
 
   navigateUp: () => {
-    const { currentPath } = get();
+    const { currentPath, history, historyIndex } = get();
     if (currentPath === '/mnt' || currentPath === '/') return;
 
     const parts = currentPath.split('/').filter(Boolean);
@@ -97,10 +106,64 @@ export const useFileBrowserStore = create<FileBrowserState & FileBrowserActions>
       return;
     }
     parts.pop();
-    set({ currentPath: '/' + parts.join('/') });
+    const newPath = '/' + parts.join('/');
+    // Add to history
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newPath);
+    set({
+      currentPath: newPath,
+      selectedPaths: new Set(),
+      history: newHistory,
+      historyIndex: newHistory.length - 1,
+    });
   },
 
-  navigateTo: (path) => set({ currentPath: path, selectedPaths: new Set() }),
+  navigateTo: (path) => {
+    const { history, historyIndex } = get();
+    // Add to history
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(path);
+    set({
+      currentPath: path,
+      selectedPaths: new Set(),
+      history: newHistory,
+      historyIndex: newHistory.length - 1,
+    });
+  },
+
+  navigateBack: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      set({
+        currentPath: history[newIndex],
+        historyIndex: newIndex,
+        selectedPaths: new Set(),
+      });
+    }
+  },
+
+  navigateForward: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      set({
+        currentPath: history[newIndex],
+        historyIndex: newIndex,
+        selectedPaths: new Set(),
+      });
+    }
+  },
+
+  canNavigateBack: () => {
+    const { historyIndex } = get();
+    return historyIndex > 0;
+  },
+
+  canNavigateForward: () => {
+    const { history, historyIndex } = get();
+    return historyIndex < history.length - 1;
+  },
 
   // Entries
   setEntries: (entries) => set({ entries }),

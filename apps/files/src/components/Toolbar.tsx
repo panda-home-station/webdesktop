@@ -1,46 +1,66 @@
 /**
  * Toolbar component
- * File browser toolbar with actions - Apple SF Symbols style
+ * File browser toolbar - Apple Finder style with navigation, search, and actions
  */
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { ViewMode, SortBy } from '@truenas/types/filesystem-types';
 import {
   ArrowUp,
+  ArrowLeft,
+  ArrowRight,
+  Search,
+  RefreshCw,
+  FolderPlus,
   Upload,
   Trash2,
   List,
   Grid3X3,
-  ArrowUpDown,
-  FolderPlus,
+  SortAsc,
+  X,
 } from 'lucide-react';
 
 interface ToolbarProps {
   viewMode: ViewMode;
   sortBy: SortBy;
+  currentPath: string;
+  canGoBack: boolean;
+  canGoForward: boolean;
   onViewModeChange: (mode: ViewMode) => void;
   onSortByChange: (sortBy: SortBy) => void;
   onNavigateUp: () => void;
+  onNavigateBack: () => void;
+  onNavigateForward: () => void;
+  onNavigate: (path: string) => void;
   onRefresh: () => void;
   onNewFolder: () => void;
-  onUpload: () => void;
-  hasSelection: boolean;
+  onUpload?: () => void;
   onDelete: () => void;
+  hasSelection: boolean;
+  onSearch?: (query: string) => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
   viewMode,
   sortBy,
+  currentPath,
+  canGoBack,
+  canGoForward,
   onViewModeChange,
   onSortByChange,
   onNavigateUp,
+  onNavigateBack,
+  onNavigateForward,
+  onNavigate,
   onRefresh,
   onNewFolder,
-  onUpload: _onUpload,
-  hasSelection,
   onDelete,
+  hasSelection,
+  onSearch,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -49,100 +69,160 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      // Emit custom event with files
       const event = new CustomEvent('files:upload', { detail: Array.from(files) });
       window.dispatchEvent(event);
-      // Reset input
       e.target.value = '';
     }
   };
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    onSearch?.(query);
+  };
+
+  const handleSearchClear = () => {
+    setSearchQuery('');
+    onSearch?.('');
+  };
+
+  // Parse path for breadcrumb
+  const pathParts = currentPath.split('/').filter(Boolean);
+  const currentName = pathParts[pathParts.length - 1] || 'root';
+
+  const handlePathClick = (index: number) => {
+    const targetPath = '/' + pathParts.slice(0, index + 1).join('/');
+    onNavigate(targetPath);
+  };
+
   return (
     <div style={styles.container}>
-      {/* Navigation */}
-      <div style={styles.group}>
-        <ToolbarButton
-          icon={<ArrowUp size={18} />}
-          onClick={onNavigateUp}
-          title="返回上级目录 (Backspace)"
-        />
-        <ToolbarButton
-          icon={<ArrowUpDown size={18} />}
-          onClick={onRefresh}
-          title="刷新 (F5)"
-        />
+      {/* Left Section - Navigation */}
+      <div style={styles.leftSection}>
+        {/* Navigation Buttons */}
+        <div style={styles.navGroup}>
+          <ToolbarButton
+            icon={<ArrowLeft size={16} />}
+            onClick={onNavigateBack}
+            disabled={!canGoBack}
+            title="后退"
+          />
+          <ToolbarButton
+            icon={<ArrowRight size={16} />}
+            onClick={onNavigateForward}
+            disabled={!canGoForward}
+            title="前进"
+          />
+          <ToolbarButton
+            icon={<ArrowUp size={16} />}
+            onClick={onNavigateUp}
+            title="上级目录"
+          />
+          <ToolbarButton
+            icon={<RefreshCw size={16} />}
+            onClick={onRefresh}
+            title="刷新"
+          />
+        </div>
+
+        {/* Current Path */}
+        <div style={styles.pathContainer}>
+          <button style={styles.pathButton} onClick={() => handlePathClick(pathParts.length - 1)}>
+            {currentName}
+          </button>
+        </div>
       </div>
 
-      {/* Divider */}
-      <div style={styles.divider} />
-
-      {/* Create */}
-      <div style={styles.group}>
-        <ToolbarButton
-          icon={<FolderPlus size={18} />}
-          onClick={onNewFolder}
-          title="新建文件夹"
-        />
-        <ToolbarButton
-          icon={<Upload size={18} />}
-          onClick={handleUploadClick}
-          title="上传文件"
-        />
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
+      {/* Center Section - Search */}
+      <div style={styles.centerSection}>
+        <div style={{
+          ...styles.searchContainer,
+          ...(isSearchFocused ? styles.searchContainerFocused : {}),
+        }}>
+          <Search size={14} style={styles.searchIcon} />
+          <input
+            type="text"
+            placeholder="搜索"
+            value={searchQuery}
+            onChange={handleSearchChange}
+            onFocus={() => setIsSearchFocused(true)}
+            onBlur={() => setIsSearchFocused(false)}
+            style={styles.searchInput}
+          />
+          {searchQuery && (
+            <button style={styles.searchClear} onClick={handleSearchClear}>
+              <X size={12} />
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Divider */}
-      <div style={styles.divider} />
+      {/* Right Section - Actions */}
+      <div style={styles.rightSection}>
+        {/* Sort Dropdown */}
+        <div style={styles.sortContainer}>
+          <select
+            style={styles.sortSelect}
+            value={sortBy}
+            onChange={(e) => onSortByChange(e.target.value as SortBy)}
+          >
+            <option value="name">名称</option>
+            <option value="size">大小</option>
+            <option value="mtime">修改日期</option>
+          </select>
+          <SortAsc size={14} style={styles.sortIcon} />
+        </div>
 
-      {/* Delete */}
-      <div style={styles.group}>
-        <ToolbarButton
-          icon={<Trash2 size={18} />}
-          onClick={hasSelection ? onDelete : undefined}
-          title="删除"
-          disabled={!hasSelection}
-        />
-      </div>
+        {/* Action Buttons */}
+        <div style={styles.actionGroup}>
+          <ToolbarButton
+            icon={<FolderPlus size={16} />}
+            onClick={onNewFolder}
+            title="新建文件夹"
+          />
+          <ToolbarButton
+            icon={<Upload size={16} />}
+            onClick={handleUploadClick}
+            title="上传"
+          />
+          <ToolbarButton
+            icon={<Trash2 size={16} />}
+            onClick={onDelete}
+            disabled={!hasSelection}
+            title="删除"
+          />
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+          />
+        </div>
 
-      {/* Spacer */}
-      <div style={{ flex: 1 }} />
-
-      {/* Sort */}
-      <div style={styles.group}>
-        <select
-          style={styles.select}
-          value={sortBy}
-          onChange={(e) => onSortByChange(e.target.value as SortBy)}
-        >
-          <option value="name">名称</option>
-          <option value="size">大小</option>
-          <option value="mtime">修改时间</option>
-        </select>
-      </div>
-
-      {/* Divider */}
-      <div style={styles.divider} />
-
-      {/* View mode */}
-      <div style={styles.group}>
-        <ToolbarButton
-          icon={<List size={18} />}
-          onClick={() => onViewModeChange('list')}
-          title="列表视图"
-          isActive={viewMode === 'list'}
-        />
-        <ToolbarButton
-          icon={<Grid3X3 size={18} />}
-          onClick={() => onViewModeChange('grid')}
-          title="图标视图"
-          isActive={viewMode === 'grid'}
-        />
+        {/* View Toggle */}
+        <div style={styles.viewToggle}>
+          <button
+            style={{
+              ...styles.viewButton,
+              ...(viewMode === 'list' ? styles.viewButtonActive : {}),
+            }}
+            onClick={() => onViewModeChange('list')}
+            title="列表视图"
+          >
+            <List size={16} />
+          </button>
+          <button
+            style={{
+              ...styles.viewButton,
+              ...(viewMode === 'grid' ? styles.viewButtonActive : {}),
+            }}
+            onClick={() => onViewModeChange('grid')}
+            title="图标视图"
+          >
+            <Grid3X3 size={16} />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -153,7 +233,6 @@ interface ToolbarButtonProps {
   onClick?: () => void;
   title?: string;
   disabled?: boolean;
-  isActive?: boolean;
 }
 
 const ToolbarButton: React.FC<ToolbarButtonProps> = ({
@@ -161,13 +240,11 @@ const ToolbarButton: React.FC<ToolbarButtonProps> = ({
   onClick,
   title,
   disabled,
-  isActive,
 }) => {
   return (
     <button
       style={{
         ...styles.button,
-        ...(isActive ? styles.buttonActive : {}),
         ...(disabled ? styles.buttonDisabled : {}),
       }}
       onClick={onClick}
@@ -183,23 +260,45 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     display: 'flex',
     alignItems: 'center',
-    padding: '8px 12px',
+    justifyContent: 'space-between',
+    padding: '0 12px',
     backgroundColor: '#f5f5f7',
     borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-    gap: '4px',
-    height: '44px',
+    height: '48px',
+    gap: '12px',
   },
-  group: {
+  leftSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexShrink: 0,
+  },
+  centerSection: {
+    flex: 1,
+    display: 'flex',
+    justifyContent: 'center',
+    maxWidth: '320px',
+  },
+  rightSection: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexShrink: 0,
+  },
+  navGroup: {
     display: 'flex',
     alignItems: 'center',
     gap: '2px',
+    padding: '4px',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderRadius: '8px',
   },
   button: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    width: '32px',
-    height: '32px',
+    width: '28px',
+    height: '28px',
     border: 'none',
     backgroundColor: 'transparent',
     borderRadius: '6px',
@@ -207,34 +306,131 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#1d1d1f',
     transition: 'all 0.15s ease',
   },
-  buttonActive: {
-    backgroundColor: 'rgba(0, 122, 255, 0.15)',
-    color: '#007aff',
-  },
   buttonDisabled: {
-    opacity: 0.4,
+    opacity: 0.35,
     cursor: 'not-allowed',
   },
-  divider: {
-    width: '1px',
-    height: '20px',
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
-    margin: '0 8px',
+  pathContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '4px 12px',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderRadius: '6px',
   },
-  select: {
-    padding: '6px 12px',
-    paddingRight: '28px',
+  pathButton: {
+    background: 'none',
+    border: 'none',
+    cursor: 'pointer',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#1d1d1f',
+    padding: '2px 4px',
+    borderRadius: '4px',
+    maxWidth: '150px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+  searchContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    width: '100%',
+    padding: '6px 10px',
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+    borderRadius: '8px',
+    border: '2px solid transparent',
+    transition: 'all 0.2s ease',
+  },
+  searchContainerFocused: {
+    backgroundColor: '#fff',
+    borderColor: '#007aff',
+    boxShadow: '0 0 0 3px rgba(0, 122, 255, 0.1)',
+  },
+  searchIcon: {
+    color: '#86868b',
+    marginRight: '6px',
+    flexShrink: 0,
+  },
+  searchInput: {
+    flex: 1,
+    border: 'none',
+    background: 'transparent',
+    fontSize: '13px',
+    color: '#1d1d1f',
+    outline: 'none',
+  },
+  searchClear: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '16px',
+    height: '16px',
+    border: 'none',
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: '50%',
+    cursor: 'pointer',
+    color: '#fff',
+    padding: 0,
+    marginLeft: '4px',
+  },
+  sortContainer: {
+    position: 'relative',
+    display: 'flex',
+    alignItems: 'center',
+  },
+  sortSelect: {
+    padding: '5px 24px 5px 8px',
     borderRadius: '6px',
     border: '1px solid rgba(0, 0, 0, 0.1)',
-    backgroundColor: '#fff',
-    fontSize: '13px',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    fontSize: '12px',
     color: '#1d1d1f',
     cursor: 'pointer',
     outline: 'none',
     appearance: 'none',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
     backgroundRepeat: 'no-repeat',
-    backgroundPosition: 'right 8px center',
+    backgroundPosition: 'right 6px center',
+  },
+  sortIcon: {
+    position: 'absolute',
+    right: '8px',
+    color: '#86868b',
+    pointerEvents: 'none',
+  },
+  actionGroup: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '2px',
+    padding: '4px',
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+    borderRadius: '8px',
+  },
+  viewToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: '3px',
+    backgroundColor: 'rgba(0, 0, 0, 0.06)',
+    borderRadius: '8px',
+    gap: '2px',
+  },
+  viewButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '26px',
+    height: '26px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    color: '#86868b',
+    transition: 'all 0.15s ease',
+  },
+  viewButtonActive: {
+    backgroundColor: '#fff',
+    color: '#007aff',
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
   },
 };
 

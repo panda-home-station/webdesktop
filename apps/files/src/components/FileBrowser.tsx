@@ -8,7 +8,6 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { FileStat, SortBy, ViewMode } from '@truenas/types/filesystem-types';
 import { useFileBrowserStore } from '../stores/fileBrowserStore';
 import { useFileSystem } from '../hooks/useFileSystem';
-import { Breadcrumb } from './Breadcrumb';
 import { Toolbar } from './Toolbar';
 import { FileList } from './FileList';
 import { FileGrid } from './FileGrid';
@@ -32,6 +31,10 @@ export const FileBrowser: React.FC = () => {
     clearSelection,
     setSortBy,
     setViewMode,
+    navigateBack,
+    navigateForward,
+    canNavigateBack,
+    canNavigateForward,
   } = useFileBrowserStore();
 
   const {
@@ -176,20 +179,20 @@ export const FileBrowser: React.FC = () => {
         <Toolbar
           viewMode={viewMode}
           sortBy={sortBy}
+          currentPath={currentPath}
+          canGoBack={canNavigateBack()}
+          canGoForward={canNavigateForward()}
           onViewModeChange={handleViewModeChange}
           onSortByChange={handleSortChange}
           onNavigateUp={handleNavigateUp}
+          onNavigateBack={navigateBack}
+          onNavigateForward={navigateForward}
+          onNavigate={handleNavigate}
           onRefresh={() => refreshRef.current()}
           onNewFolder={() => setShowCreateDialog(true)}
           onUpload={() => {}}
           hasSelection={selectedPaths.size > 0}
           onDelete={() => {}}
-        />
-
-        {/* Breadcrumb */}
-        <Breadcrumb
-          path={currentPath}
-          onNavigate={handleNavigate}
         />
 
         {/* Content */}
