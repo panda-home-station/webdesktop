@@ -12,7 +12,7 @@ import {
   mdiChevronRight,
 } from '@mdi/js'
 import { showDesktop, openLauncher } from '../../shared/sdk/desktop'
-import { mdiFolderOutline, mdiViewGridOutline, mdiMonitor } from '@mdi/js'
+import { mdiViewGridOutline, mdiMonitor } from '@mdi/js'
 
 function SmoothWallpaper({ src }: { src?: string }) {
   const [cur, setCur] = useState<string | null>(null)
@@ -287,15 +287,15 @@ export default function Desktop() {
                 }}
                 onClick={() => {
                   closeMenu()
-                  openApp('file-manager')
+                  openApp('files')
                 }}
                 onMouseEnter={() => setHoverIndex(2)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(2)}
                 onBlur={() => setHoverIndex(null)}
               >
-                <Icon path={mdiFolderOutline} size={0.85} />
-                文档管理器
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style={{ width: '1.275rem', height: '1.275rem' }}><path d="M19,20H4C2.89,20 2,19.1 2,18V6C2,4.89 2.89,4 4,4H10L12,6H19A2,2 0 0,1 21,8H21L4,8V18L6.14,10H23.21L20.93,18.5C20.7,19.37 19.92,20 19,20Z" fill="currentColor" /></svg>
+                文件管理器
               </button>
               <button
                 style={{
