@@ -22,7 +22,7 @@ interface FileItemProps {
   isSelected: boolean;
   viewMode: 'list' | 'grid';
   onClick: (e: React.MouseEvent) => void;
-  onDoubleClick: () => void;
+  onDoubleClick: (e: React.MouseEvent) => void;
   onContextMenu: (e: React.MouseEvent) => void;
 }
 
@@ -91,7 +91,11 @@ export const FileItem: React.FC<FileItemProps> = ({
         >
           {getIcon()}
         </div>
-        <div style={styles.gridName} title={entry.name}>
+        <div
+          style={{ ...styles.gridName, userSelect: 'none' }}
+          title={entry.name}
+          onDoubleClickCapture={(e) => e.preventDefault()}
+        >
           {entry.name}
         </div>
       </div>
@@ -117,7 +121,11 @@ export const FileItem: React.FC<FileItemProps> = ({
       >
         {getIcon()}
       </div>
-      <div style={styles.listName} title={entry.name}>
+      <div
+        style={{ ...styles.listName, userSelect: 'none' }}
+        title={entry.name}
+        onDoubleClickCapture={(e) => e.preventDefault()}
+      >
         {entry.name}
       </div>
       <div style={styles.listSize}>

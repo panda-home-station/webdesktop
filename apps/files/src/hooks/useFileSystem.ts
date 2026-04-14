@@ -60,8 +60,8 @@ export function useFileSystem() {
       const entries = await filesystemService.listdir(path);
       setEntries(entries);
 
-      // Update path in store
-      useFileBrowserStore.getState().setPath(path);
+      // Update path in store - use store's navigateTo which handles history and clears selection
+      useFileBrowserStore.getState().navigateTo(path);
 
       // Also load filesystem stats
       try {

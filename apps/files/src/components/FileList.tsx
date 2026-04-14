@@ -23,32 +23,51 @@ export const FileList: React.FC<FileListProps> = ({
   onContextMenu,
 }) => {
   const lastClickedRef = useRef<string | null>(null);
+  const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleClick = useCallback((e: React.MouseEvent, entry: FileStat) => {
-    if (e.shiftKey && lastClickedRef.current) {
-      // Range select
-      const fromIndex = entries.findIndex((e) => e.path === lastClickedRef.current);
-      const toIndex = entries.findIndex((e) => e.path === entry.path);
-      if (fromIndex !== -1 && toIndex !== -1) {
-        const start = Math.min(fromIndex, toIndex);
-        const end = Math.max(fromIndex, toIndex);
-        const newSelection = new Set<string>();
-        for (let i = start; i <= end; i++) {
-          newSelection.add(entries[i].path);
-        }
-        onSelect(entry.path, true);
-      }
-    } else if (e.ctrlKey || e.metaKey) {
-      // Toggle select
-      onSelect(entry.path, true);
-    } else {
-      // Single select
-      onSelect(entry.path, false);
+    // If there's a pending timer, it means this is the second click of a double-click
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+      // This is the second click - let double-click handler deal with it
+      return;
     }
-    lastClickedRef.current = entry.path;
+
+    // Set a timer - if double-click fires before it, this timer will be cancelled
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      // Execute single click action (selection)
+      if (e.shiftKey && lastClickedRef.current) {
+        // Range select
+        const fromIndex = entries.findIndex((e) => e.path === lastClickedRef.current);
+        const toIndex = entries.findIndex((e) => e.path === entry.path);
+        if (fromIndex !== -1 && toIndex !== -1) {
+          const start = Math.min(fromIndex, toIndex);
+          const end = Math.max(fromIndex, toIndex);
+          for (let i = start; i <= end; i++) {
+            onSelect(entries[i].path, true);
+          }
+        }
+      } else if (e.ctrlKey || e.metaKey) {
+        // Toggle select
+        onSelect(entry.path, true);
+      } else {
+        // Single select
+        onSelect(entry.path, false);
+      }
+      lastClickedRef.current = entry.path;
+    }, 200);
   }, [entries, onSelect]);
 
-  const handleDoubleClick = useCallback((entry: FileStat) => {
+  const handleDoubleClick = useCallback((e: React.MouseEvent, entry: FileStat) => {
+    // Cancel pending timer so single-click action doesn't fire
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    e.preventDefault();
+    e.stopPropagation();
     onOpen(entry);
   }, [onOpen]);
 
@@ -88,7 +107,7 @@ export const FileList: React.FC<FileListProps> = ({
             isSelected={selectedPaths.has(entry.path)}
             viewMode="list"
             onClick={(e) => handleClick(e, entry)}
-            onDoubleClick={() => handleDoubleClick(entry)}
+            onDoubleClick={(e) => handleDoubleClick(e, entry)}
             onContextMenu={(e) => onContextMenu(e, entry)}
           />
         ))}
