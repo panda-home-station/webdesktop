@@ -5,16 +5,8 @@
 
 import React from 'react';
 import { FileStat } from '@truenas/types/filesystem-types';
-import {
-  Folder,
-  File,
-  FileText,
-  FileImage,
-  FileCode,
-  Film,
-  Music,
-  Archive,
-} from 'lucide-react';
+import { Folder } from 'lucide-react';
+import { FileIcon, defaultStyles } from 'react-file-icon';
 import { formatBytes, formatRelativeTime } from '../utils/formatters';
 
 interface FileItemProps {
@@ -36,39 +28,50 @@ export const FileItem: React.FC<FileItemProps> = ({
 }) => {
   const isDirectory = entry.type === 'DIRECTORY';
 
-  const getIcon = () => {
+  // Get extension from filename
+  const ext = entry.name.split('.').pop()?.toLowerCase() || '';
+
+  // Get react-file-icon style for this extension
+  const getFileIconStyle = () => {
+    const style = (defaultStyles as Record<string, Record<string, unknown>>)[ext];
+    if (style) {
+      return style;
+    }
+    // Default style for unknown extensions
+    return { type: 'document', labelColor: '#888' };
+  };
+
+  const renderIcon = () => {
     if (isDirectory) {
-      return <Folder size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
+      return (
+        <Folder
+          size={viewMode === 'grid' ? 48 : 20}
+          strokeWidth={1.5}
+          color="#007aff"
+        />
+      );
     }
 
-    const ext = entry.name.split('.').pop()?.toLowerCase() || '';
-
-    // Images
-    if (['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp', 'bmp'].includes(ext)) {
-      return <FileImage size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
-    }
-    // Code
-    if (['js', 'ts', 'jsx', 'tsx', 'py', 'java', 'cpp', 'c', 'h', 'css', 'html', 'json', 'xml', 'yaml', 'yml'].includes(ext)) {
-      return <FileCode size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
-    }
-    // Documents
-    if (['pdf', 'doc', 'docx', 'txt', 'md', 'rtf'].includes(ext)) {
-      return <FileText size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
-    }
-    // Video
-    if (['mp4', 'avi', 'mkv', 'mov', 'wmv'].includes(ext)) {
-      return <Film size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
-    }
-    // Audio
-    if (['mp3', 'wav', 'flac', 'aac', 'ogg'].includes(ext)) {
-      return <Music size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
-    }
-    // Archives
-    if (['zip', 'tar', 'gz', 'rar', '7z'].includes(ext)) {
-      return <Archive size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
+    if (viewMode === 'grid') {
+      return (
+        <div style={styles.gridFileIcon}>
+          <FileIcon
+            extension={ext || 'file'}
+            {...getFileIconStyle()}
+            radius={8}
+          />
+        </div>
+      );
     }
 
-    return <File size={viewMode === 'grid' ? 64 : 20} strokeWidth={1.5} />;
+    // List view
+    return (
+      <FileIcon
+        extension={ext || 'file'}
+        {...getFileIconStyle()}
+        radius={4}
+      />
+    );
   };
 
   if (viewMode === 'grid') {
@@ -83,13 +86,8 @@ export const FileItem: React.FC<FileItemProps> = ({
         onDoubleClick={onDoubleClick}
         onContextMenu={onContextMenu}
       >
-        <div
-          style={{
-            ...styles.gridIcon,
-            color: isDirectory ? '#007aff' : '#5e5ce6',
-          }}
-        >
-          {getIcon()}
+        <div style={styles.gridIcon}>
+          {renderIcon()}
         </div>
         <div
           style={{ ...styles.gridName, userSelect: 'none' }}
@@ -113,13 +111,8 @@ export const FileItem: React.FC<FileItemProps> = ({
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
     >
-      <div
-        style={{
-          ...styles.listIcon,
-          color: isDirectory ? '#007aff' : '#5e5ce6',
-        }}
-      >
-        {getIcon()}
+      <div style={styles.listIcon}>
+        {renderIcon()}
       </div>
       <div
         style={{ ...styles.listName, userSelect: 'none' }}
@@ -160,6 +153,10 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  gridFileIcon: {
+    width: '48px',
+    height: '48px',
   },
   gridName: {
     fontSize: '12px',

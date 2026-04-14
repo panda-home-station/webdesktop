@@ -13,7 +13,7 @@ import {
   RefreshCw,
   List,
   Grid3X3,
-  SlidersHorizontal,
+  ArrowUpWideNarrow,
   X,
 } from 'lucide-react';
 import { PathBar } from './PathBar';
@@ -134,7 +134,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <option value="size">大小</option>
             <option value="mtime">修改日期</option>
           </select>
-          <SlidersHorizontal size={14} style={styles.sortIcon} />
+          <ArrowUpWideNarrow size={14} style={styles.sortIcon} />
         </div>
 
         {/* View Toggle */}
