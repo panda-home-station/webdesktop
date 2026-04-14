@@ -13,7 +13,8 @@ interface FileGridProps {
   selectedPaths: Set<string>;
   onSelect: (path: string, multiSelect: boolean) => void;
   onOpen: (entry: FileStat) => void;
-  onContextMenu: (e: React.MouseEvent, entry: FileStat) => void;
+  onContextMenu: (e: React.MouseEvent, entry?: FileStat) => void;
+  onBlankContextMenu: (e: React.MouseEvent) => void;
 }
 
 export const FileGrid: React.FC<FileGridProps> = ({
@@ -22,6 +23,7 @@ export const FileGrid: React.FC<FileGridProps> = ({
   onSelect,
   onOpen,
   onContextMenu,
+  onBlankContextMenu,
 }) => {
   const lastClickedRef = useRef<string | null>(null);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -69,7 +71,11 @@ export const FileGrid: React.FC<FileGridProps> = ({
   }
 
   return (
-    <div style={styles.container} className="files-content">
+    <div
+      style={styles.container}
+      className="files-content"
+      onContextMenu={onBlankContextMenu}
+    >
       {entries.map((entry, index) => (
         <div
           key={entry.path}

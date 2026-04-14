@@ -13,7 +13,8 @@ interface FileListProps {
   selectedPaths: Set<string>;
   onSelect: (path: string, multiSelect: boolean) => void;
   onOpen: (entry: FileStat) => void;
-  onContextMenu: (e: React.MouseEvent, entry: FileStat) => void;
+  onContextMenu: (e: React.MouseEvent, entry?: FileStat) => void;
+  onBlankContextMenu: (e: React.MouseEvent) => void;
 }
 
 export const FileList: React.FC<FileListProps> = ({
@@ -22,6 +23,7 @@ export const FileList: React.FC<FileListProps> = ({
   onSelect,
   onOpen,
   onContextMenu,
+  onBlankContextMenu,
 }) => {
   const lastClickedRef = useRef<string | null>(null);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -77,7 +79,11 @@ export const FileList: React.FC<FileListProps> = ({
   }
 
   return (
-    <div style={styles.container} className="files-content">
+    <div
+      style={styles.container}
+      className="files-content"
+      onContextMenu={onBlankContextMenu}
+    >
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerName}>
