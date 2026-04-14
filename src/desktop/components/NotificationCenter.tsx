@@ -1,11 +1,15 @@
-import { useMemo, memo } from 'react'
-import { Bell, Repeat, CheckCircle2, XCircle, Clock, AlertTriangle, X, Trash2, Loader2 } from 'lucide-react'
+import { useMemo, memo, useState } from 'react'
+import {
+  Clock, AlertTriangle, X, Bell, Trash2,
+  HardDrive, RefreshCw, Folder, Monitor, Download, Settings, Wifi, Cpu, Database,
+  Globe, Shield, Cloud
+} from 'lucide-react'
 import useAlertStore from '@truenas/stores/alert'
 import { useJobStore } from '@truenas/stores/job'
 import { Drawer } from './Drawer'
 import { Alert } from '@truenas/types/alert.interface'
 import { AlertLevel } from '@truenas/types/alert.enum'
-import { Job, JobState } from '@truenas/types/job-types'
+import { Job } from '@truenas/types/job-types'
 import { openApp } from '@shared/sdk/desktop'
 
 // ==================== Types ====================
@@ -70,202 +74,241 @@ const colors = {
   separator: '#E5E5EA',
 }
 
-// ==================== Alert Bubble ====================
+// ==================== Unified Notification Bubble ====================
 
-const AlertBubble = memo(({ alert, onDismiss, onClick }: {
-  alert: Alert
-  onDismiss: (id: string) => void
-  onClick: (alert: Alert) => void
-}) => {
-  const timestamp = formatTimestamp(getAlertTimestamp(alert))
+// App source icon mapping
+const getAppIcon = (item: NotificationItem) => {
+  if (item.type === 'alert') {
+    const alert = item.data as Alert
+    const source = (alert.source || alert.klass || '').toLowerCase()
 
-  // Color based on severity
-  const getSeverityColor = (level: AlertLevel) => {
-    switch (level) {
+    // Storage related
+    if (source.includes('pool') || source.includes('disk') || source.includes('volume') || source.includes('storage')) {
+      return { icon: HardDrive, category: 'storage' }
+    }
+    // Network related
+    if (source.includes('network') || source.includes('interface') || source.includes('ethernet') || source.includes('wifi') || source.includes('bridge')) {
+      return { icon: Wifi, category: 'network' }
+    }
+    // System/CPU related
+    if (source.includes('cpu') || source.includes('memory') || source.includes('system') || source.includes('hardware')) {
+      return { icon: Cpu, category: 'system' }
+    }
+    // Update related
+    if (source.includes('update') || source.includes('upgrade') || source.includes('download')) {
+      return { icon: Download, category: 'update' }
+    }
+    // Security related
+    if (source.includes('security') || source.includes('ssl') || source.includes('certificate') || source.includes('ssh')) {
+      return { icon: Shield, category: 'security' }
+    }
+    // Service related
+    if (source.includes('service') || source.includes('smb') || source.includes('nfs') || source.includes('iscsi') || source.includes('ftp')) {
+      return { icon: Globe, category: 'service' }
+    }
+    // Database related
+    if (source.includes('database') || source.includes('postgres') || source.includes('sql')) {
+      return { icon: Database, category: 'database' }
+    }
+    // Cloud/Sync related
+    if (source.includes('cloud') || source.includes('sync') || source.includes('snapshot')) {
+      return { icon: Cloud, category: 'cloud' }
+    }
+    // Default alert icon
+    return { icon: AlertTriangle, category: 'alert' }
+  } else {
+    const job = item.data as Job
+    const method = (job.method || '').toLowerCase()
+
+    // Storage related
+    if (method.includes('pool') || method.includes('disk') || method.includes('volume') || method.includes('scrub') || method.includes('resilver')) {
+      return { icon: HardDrive, category: 'storage' }
+    }
+    // Network related
+    if (method.includes('network') || method.includes('interface') || method.includes('vlan') || method.includes('bridge')) {
+      return { icon: Wifi, category: 'network' }
+    }
+    // VM related
+    if (method.includes('vm') || method.includes('virtual') || method.includes('kvm') || method.includes('docker') || method.includes('container')) {
+      return { icon: Monitor, category: 'vm' }
+    }
+    // Update related
+    if (method.includes('update') || method.includes('upgrade') || method.includes('download') || method.includes('reboot')) {
+      return { icon: Download, category: 'update' }
+    }
+    // Replication related
+    if (method.includes('replication') || method.includes('replica') || method.includes('rsync')) {
+      return { icon: RefreshCw, category: 'replication' }
+    }
+    // Service related
+    if (method.includes('service') || method.includes('smb') || method.includes('nfs') || method.includes('iscsi')) {
+      return { icon: Globe, category: 'service' }
+    }
+    // Folder/Directory related
+    if (method.includes('directory') || method.includes('permission') || method.includes('smb')) {
+      return { icon: Folder, category: 'directory' }
+    }
+    // Default job icon
+    return { icon: Settings, category: 'job' }
+  }
+}
+
+// Get icon color based on severity/state
+const getIconColor = (item: NotificationItem) => {
+  if (item.type === 'alert') {
+    const alert = item.data as Alert
+    switch (alert.level) {
       case AlertLevel.Emergency:
       case AlertLevel.Alert:
       case AlertLevel.Critical:
       case AlertLevel.Error:
-        return { bg: '#FFEEEE', icon: '#FF3B30', dot: '#FF3B30' }
+        return { color: '#FF3B30', shadow: 'rgba(255,59,48,0.12)' }
       case AlertLevel.Warning:
-        return { bg: '#FFF8E6', icon: '#FF9500', dot: '#FF9500' }
+        return { color: '#FF9500', shadow: 'rgba(255,149,0,0.12)' }
       case AlertLevel.Notice:
       case AlertLevel.Info:
       default:
-        return { bg: '#F0F7FF', icon: '#007AFF', dot: '#007AFF' }
+        return { color: '#007AFF', shadow: 'rgba(0,122,255,0.12)' }
     }
-  }
-
-  const severity = getSeverityColor(alert.level)
-
-  return (
-    <div
-      onClick={() => onClick(alert)}
-      style={{
-        background: severity.bg,
-        borderRadius: 16,
-        padding: '14px 16px',
-        display: 'flex',
-        gap: 12,
-        alignItems: 'flex-start',
-        transition: 'all 0.2s ease',
-        cursor: 'pointer',
-        border: 'none',
-        outline: 'none',
-      }}>
-      {/* Icon Container */}
-      <div style={{
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        background: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        flexShrink: 0,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-      }}>
-        <AlertTriangle size={20} color={severity.icon} />
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: 15,
-          fontWeight: '600',
-          color: colors.text,
-          lineHeight: 1.4,
-          marginBottom: 4,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
-          overflow: 'hidden',
-        }}>
-          {alert.formatted || alert.text || '系统通知'}
-        </div>
-        <div style={{
-          fontSize: 13,
-          color: colors.textSecondary,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-        }}>
-          <Clock size={12} />
-          <span>{timestamp}</span>
-          {alert.dismissed && (
-            <span style={{
-              background: 'rgba(0,0,0,0.06)',
-              padding: '2px 8px',
-              borderRadius: 6,
-              fontSize: 11,
-              fontWeight: '500',
-            }}>
-              已忽略
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Actions */}
-      <div style={{ display: 'flex', gap: 4 }}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            onDismiss(alert.id)
-          }}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            border: 'none',
-            background: 'rgba(0,0,0,0.04)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.15s ease',
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.background = 'rgba(255,59,48,0.1)'
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.background = 'rgba(0,0,0,0.04)'
-          }}
-        >
-          <X size={16} color={colors.textSecondary} />
-        </button>
-      </div>
-    </div>
-  )
-})
-AlertBubble.displayName = 'AlertBubble'
-
-// ==================== Job Bubble ====================
-
-const JobBubble = memo(({ job, onClick }: {
-  job: Job
-  onClick: (job: Job) => void
-}) => {
-  const timestamp = formatTimestamp(getJobTimestamp(job))
-  const progress = getJobProgress(job)
-  const description = getJobDescription(job)
-
-  const getStateConfig = (state: JobState) => {
-    switch (state) {
+  } else {
+    const job = item.data as Job
+    switch (job.state) {
       case 'RUNNING':
-        return { bg: '#F0F7FF', icon: '#007AFF' }
-      case 'WAITING':
-        return { bg: '#F5F5F5', icon: '#8E8E93' }
+        return { color: '#007AFF', shadow: 'rgba(0,122,255,0.12)' }
       case 'SUCCESS':
-        return { bg: '#E8F9ED', icon: '#34C759' }
+        return { color: '#34C759', shadow: 'rgba(52,199,89,0.12)' }
       case 'FAILED':
-        return { bg: '#FFEEEE', icon: '#FF3B30' }
-      case 'ABORTED':
-        return { bg: '#F5F5F5', icon: '#8E8E93' }
+        return { color: '#FF3B30', shadow: 'rgba(255,59,48,0.12)' }
       default:
-        return { bg: '#F5F5F5', icon: '#8E8E93' }
+        return { color: '#8E8E93', shadow: 'rgba(142,142,147,0.12)' }
+    }
+  }
+}
+
+const NotificationBubble = memo(({ item, onDismiss, onClick }: {
+  item: NotificationItem
+  onDismiss: (id: string) => void
+  onClick: (item: NotificationItem) => void
+}) => {
+  const [isHovered, setIsHovered] = useState(false)
+
+  const timestamp = item.type === 'alert'
+    ? formatTimestamp(getAlertTimestamp(item.data as Alert))
+    : formatTimestamp(getJobTimestamp(item.data as Job))
+
+  const description = item.type === 'alert'
+    ? ((item.data as Alert).formatted || (item.data as Alert).text || '系统通知')
+    : getJobDescription(item.data as Job)
+
+  const progress = item.type === 'job' ? getJobProgress(item.data as Job) : 0
+  const isRunning = item.type === 'job' && (item.data as Job).state === 'RUNNING'
+
+  const appIcon = getAppIcon(item)
+  const iconConfig = getIconColor(item)
+
+  // Gradient based on severity/state
+  const getGradient = () => {
+    if (item.type === 'alert') {
+      const alert = item.data as Alert
+      switch (alert.level) {
+        case AlertLevel.Emergency:
+        case AlertLevel.Alert:
+        case AlertLevel.Critical:
+        case AlertLevel.Error:
+          return 'linear-gradient(135deg, #FFEEEE 0%, #FFE4E4 100%)'
+        case AlertLevel.Warning:
+          return 'linear-gradient(135deg, #FFF8E6 0%, #FFF3D6 100%)'
+        default:
+          return 'linear-gradient(135deg, #F0F7FF 0%, #E8F2FF 100%)'
+      }
+    } else {
+      const job = item.data as Job
+      switch (job.state) {
+        case 'RUNNING':
+          return 'linear-gradient(135deg, #F0F7FF 0%, #E8F2FF 100%)'
+        case 'SUCCESS':
+          return 'linear-gradient(135deg, #E8F9ED 0%, #DFF6E8 100%)'
+        case 'FAILED':
+          return 'linear-gradient(135deg, #FFEEEE 0%, #FFE4E4 100%)'
+        default:
+          return 'linear-gradient(135deg, #F5F5F5 0%, #EEEEEE 100%)'
+      }
     }
   }
 
-  const stateConfig = getStateConfig(job.state)
-  const isRunning = job.state === 'RUNNING'
+  const getBorder = () => {
+    if (item.type === 'alert') {
+      const alert = item.data as Alert
+      switch (alert.level) {
+        case AlertLevel.Emergency:
+        case AlertLevel.Alert:
+        case AlertLevel.Critical:
+        case AlertLevel.Error:
+          return 'rgba(255,59,48,0.15)'
+        case AlertLevel.Warning:
+          return 'rgba(255,149,0,0.15)'
+        default:
+          return 'rgba(0,122,255,0.15)'
+      }
+    } else {
+      const job = item.data as Job
+      switch (job.state) {
+        case 'RUNNING':
+          return 'rgba(0,122,255,0.15)'
+        case 'SUCCESS':
+          return 'rgba(52,199,89,0.15)'
+        case 'FAILED':
+          return 'rgba(255,59,48,0.15)'
+        default:
+          return 'rgba(142,142,147,0.15)'
+      }
+    }
+  }
+
+  const isAlertDismissed = item.type === 'alert' && (item.data as Alert).dismissed
+
+  const IconComponent = appIcon.icon
+  const isSpinning = isRunning
 
   return (
     <div
-      onClick={() => onClick(job)}
+      onClick={() => onClick(item)}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       style={{
-        background: stateConfig.bg,
+        background: getGradient(),
         borderRadius: 16,
         padding: '14px 16px',
         display: 'flex',
         gap: 12,
         alignItems: 'flex-start',
-        transition: 'all 0.2s ease',
         cursor: 'pointer',
-        border: 'none',
+        border: `1px solid ${getBorder()}`,
         outline: 'none',
+        transform: isHovered ? 'translateY(-2px) scale(1.01)' : 'translateY(0) scale(1)',
+        boxShadow: isHovered
+          ? `0 8px 24px ${iconConfig.shadow}, 0 2px 8px rgba(0,0,0,0.04)`
+          : `0 2px 8px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02)`,
+        transition: 'all 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
       }}>
       {/* Icon Container */}
       <div style={{
         width: 44,
         height: 44,
-        borderRadius: 12,
-        background: '#fff',
+        borderRadius: 14,
+        background: 'linear-gradient(145deg, #ffffff 0%, #f8f9fa 100%)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         flexShrink: 0,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+        boxShadow: `0 4px 12px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.8)`,
+        border: '1px solid rgba(255,255,255,0.6)',
       }}>
-        {isRunning ? (
-          <Loader2 size={20} color={stateConfig.icon} style={{ animation: 'spin 1s linear infinite' }} />
-        ) : job.state === 'SUCCESS' ? (
-          <CheckCircle2 size={20} color={stateConfig.icon} />
-        ) : job.state === 'FAILED' ? (
-          <XCircle size={20} color={stateConfig.icon} />
-        ) : (
-          <Repeat size={20} color={stateConfig.icon} />
-        )}
+        <IconComponent
+          size={20}
+          color={iconConfig.color}
+          style={isSpinning ? { animation: 'spin 1s linear infinite' } : undefined}
+        />
       </div>
 
       {/* Content */}
@@ -276,10 +319,9 @@ const JobBubble = memo(({ job, onClick }: {
           color: colors.text,
           lineHeight: 1.4,
           marginBottom: isRunning ? 10 : 4,
-          display: '-webkit-box',
-          WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical',
+          whiteSpace: 'nowrap',
           overflow: 'hidden',
+          textOverflow: 'ellipsis',
         }}>
           {description}
         </div>
@@ -296,7 +338,7 @@ const JobBubble = memo(({ job, onClick }: {
             <div style={{
               width: `${progress}%`,
               height: '100%',
-              background: stateConfig.icon,
+              background: iconConfig.color,
               borderRadius: 2,
               transition: 'width 0.3s ease',
             }} />
@@ -312,7 +354,18 @@ const JobBubble = memo(({ job, onClick }: {
         }}>
           <Clock size={12} />
           <span>{timestamp}</span>
-          {isRunning && job.progress?.details && (
+          {isAlertDismissed && (
+            <span style={{
+              background: 'rgba(0,0,0,0.06)',
+              padding: '2px 8px',
+              borderRadius: 6,
+              fontSize: 11,
+              fontWeight: '500',
+            }}>
+              已忽略
+            </span>
+          )}
+          {isRunning && (item.data as Job).progress?.details && (
             <span style={{
               background: 'rgba(0,122,255,0.1)',
               color: '#007AFF',
@@ -321,15 +374,49 @@ const JobBubble = memo(({ job, onClick }: {
               fontSize: 11,
               fontWeight: '500',
             }}>
-              {job.progress.details}
+              {(item.data as Job).progress?.details}
             </span>
           )}
         </div>
       </div>
+
+      {/* Dismiss Button for Alerts */}
+      {item.type === 'alert' && (
+        <div style={{ display: 'flex', gap: 4 }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onDismiss(item.id)
+            }}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: 8,
+              border: 'none',
+              background: isHovered ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.04)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(255,59,48,0.12)'
+              e.currentTarget.style.transform = 'scale(1.05)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(0,0,0,0.06)'
+              e.currentTarget.style.transform = 'scale(1)'
+            }}
+          >
+            <X size={16} color={colors.textSecondary} />
+          </button>
+        </div>
+      )}
     </div>
   )
 })
-JobBubble.displayName = 'JobBubble'
+NotificationBubble.displayName = 'NotificationBubble'
 
 // ==================== Empty State ====================
 
@@ -423,13 +510,8 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
     dismissAlert(alertId)
   }
 
-  const handleAlertClick = (_alert: Alert) => {
+  const handleItemClick = (_item: NotificationItem) => {
     openApp('notifications')
-    onClose()
-  }
-
-  const handleJobClick = (_job: Job) => {
-    openApp('jobs')
     onClose()
   }
 
@@ -486,20 +568,12 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
               gap: 12,
             }}>
               {notifications.map((item) => (
-                item.type === 'alert' ? (
-                  <AlertBubble
-                    key={item.id}
-                    alert={item.data as Alert}
-                    onDismiss={handleDismissAlert}
-                    onClick={handleAlertClick}
-                  />
-                ) : (
-                  <JobBubble
-                    key={item.id}
-                    job={item.data as Job}
-                    onClick={handleJobClick}
-                  />
-                )
+                <NotificationBubble
+                  key={item.id}
+                  item={item}
+                  onDismiss={handleDismissAlert}
+                  onClick={handleItemClick}
+                />
               ))}
             </div>
 
