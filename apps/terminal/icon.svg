@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e1e2e"/>
+      <stop offset="100%" style="stop-color:#181825"/>
+    </linearGradient>
+    <linearGradient id="promptGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#89dceb"/>
+      <stop offset="100%" style="stop-color:#a6e3a1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded rectangle (terminal window) -->
+  <rect x="8" y="16" width="112" height="96" rx="12" fill="url(#bgGrad)"/>
+
+  <!-- Title bar -->
+  <rect x="8" y="16" width="112" height="24" rx="12" fill="#181825"/>
+  <rect x="8" y="28" width="112" height="12" fill="#181825"/>
+
+  <!-- Window controls -->
+  <circle cx="24" cy="28" r="5" fill="#f38ba8"/>
+  <circle cx="40" cy="28" r="5" fill="#f9e2af"/>
+  <circle cx="56" cy="28" r="5" fill="#a6e3a1"/>
+
+  <!-- Prompt line -->
+  <g>
+    <!-- Prompt > symbol -->
+    <path d="M 26 58 L 38 70 L 26 82" fill="none" stroke="url(#promptGrad)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Cursor -->
+    <rect x="44" y="78" width="44" height="4" rx="2" fill="url(#promptGrad)" opacity="0.85"/>
+  </g>
+
+  <!-- Decorative dots -->
+  <circle cx="88" cy="80" r="3" fill="#89dceb" opacity="0.5"/>
+  <circle cx="98" cy="80" r="3" fill="#f5c2e7" opacity="0.5"/>
+  <circle cx="108" cy="80" r="3" fill="#a6e3a1" opacity="0.5"/>
+</svg>

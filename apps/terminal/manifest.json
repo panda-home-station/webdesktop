@@ -1,0 +1,12 @@
+{
+  "name": "terminal",
+  "title": "命令行",
+  "version": "1.0.0",
+  "capabilities": ["core"],
+  "entry": "./src/index.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 600,
+  "minHeight": 400
+}

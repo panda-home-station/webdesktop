@@ -73,6 +73,11 @@ export default defineConfig(({ mode }) => {
           target: `http://${truenasRemote}`,
           changeOrigin: true,
         },
+        '/websocket/shell': {
+          target: `http://${truenasRemote}`,
+          changeOrigin: true,
+          ws: true,
+        },
       },
     },
     preview: {

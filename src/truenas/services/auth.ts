@@ -58,7 +58,7 @@ export class AuthService {
     // If login successful, generate and save a token for future use
     if (loginResult === LoginResult.Success && result.response_type === LoginExResponseType.Success) {
       try {
-        const token = await truenasApi.call('auth.generate_token', 300, {}, true, true) as string;
+        const token = await truenasApi.call('auth.generate_token', 300, {}, true, false) as string;
         this.saveToken(token);
       } catch (tokenError) {
         console.error('Failed to generate token:', tokenError);
@@ -207,6 +207,14 @@ export class AuthService {
     const user = await truenasApi.call('auth.me') as LoggedInUser;
     const authStore = useAuthStore.getState();
     authStore.setUser(user);
+  }
+
+  /**
+   * Get a one-time token for shell connection
+   * This creates a single-use token that is destroyed after use
+   */
+  async getOneTimeToken(): Promise<string> {
+    return truenasApi.call('auth.generate_token', 300, {}, true, true) as Promise<string>;
   }
 }
 
