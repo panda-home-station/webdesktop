@@ -4,9 +4,9 @@
  */
 
 import { useCallback } from 'react';
-import { filesystemService } from '@truenas/services/filesystem';
 import { FileStat } from '@truenas/types/filesystem-types';
 import { useFileBrowserStore } from '../stores/fileBrowserStore';
+import { fileOperations } from '../services/fileOperations';
 
 export function useFileSystem() {
   const {
@@ -25,7 +25,7 @@ export function useFileSystem() {
     setError(null);
 
     try {
-      const entries = await filesystemService.listdir(path);
+      const entries = await fileOperations.listDirectory(path);
       setEntries(entries);
     } catch (error) {
       const message = error instanceof Error ? error.message : '加载目录失败';
@@ -44,7 +44,7 @@ export function useFileSystem() {
     setError(null);
 
     try {
-      const entries = await filesystemService.listdir(path);
+      const entries = await fileOperations.listDirectory(path);
       setEntries(entries);
 
       // Update path in store - use store's navigateTo which handles history and clears selection
@@ -62,7 +62,7 @@ export function useFileSystem() {
    * Navigate to parent directory
    */
   const navigateUp = useCallback(async () => {
-    const parentPath = filesystemService.getParentPath(currentPath);
+    const parentPath = fileOperations.getParentPath(currentPath);
     await navigateTo(parentPath);
   }, [currentPath, navigateTo]);
 
@@ -71,17 +71,14 @@ export function useFileSystem() {
    */
   const createDirectory = useCallback(async (name: string): Promise<FileStat | null> => {
     try {
-      const newPath = filesystemService.joinPath(currentPath, name);
-      const job = await filesystemService.mkdir(newPath);
-      // mkdir returns a Job<FileStat>, extract the result
-      const entry = job.result;
+      const newPath = fileOperations.joinPath(currentPath, name);
+      const entry = await fileOperations.createDirectory(newPath);
       addEntry(entry);
       return entry;
     } catch (error) {
       let message = '创建文件夹失败';
       if (error instanceof Error) {
         message = error.message;
-        // TrueNASError has a 'reason' field with the actual error details
         if ('reason' in error && error.reason) {
           message = error.reason;
         }
@@ -97,8 +94,8 @@ export function useFileSystem() {
    */
   const uploadFile = useCallback(async (file: File): Promise<boolean> => {
     try {
-      const filePath = filesystemService.joinPath(currentPath, file.name);
-      await filesystemService.upload(filePath, file);
+      const filePath = fileOperations.joinPath(currentPath, file.name);
+      await fileOperations.uploadFile(filePath, file);
 
       // Refresh directory to show new file
       await loadDirectory();
@@ -115,7 +112,7 @@ export function useFileSystem() {
    */
   const downloadFile = useCallback(async (path: string, filename: string) => {
     try {
-      const blob = await filesystemService.download(path);
+      const blob = await fileOperations.downloadFile(path);
 
       // Create download link
       const url = URL.createObjectURL(blob);
@@ -133,11 +130,101 @@ export function useFileSystem() {
   }, [setError]);
 
   /**
+   * Delete files/directories
+   * TODO: Await middleware API implementation
+   */
+  const deleteFiles = useCallback(async (paths: string[]): Promise<boolean> => {
+    try {
+      await fileOperations.delete(paths, true);
+      await loadDirectory();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '删除失败';
+      console.error('[FileSystem] Delete error:', message);
+      setError(message);
+      return false;
+    }
+  }, [loadDirectory, setError]);
+
+  /**
+   * Rename a file or directory
+   * TODO: Await middleware API implementation
+   */
+  const renameFile = useCallback(async (oldPath: string, newName: string): Promise<boolean> => {
+    try {
+      await fileOperations.rename(oldPath, newName);
+      await loadDirectory();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '重命名失败';
+      console.error('[FileSystem] Rename error:', message);
+      setError(message);
+      return false;
+    }
+  }, [loadDirectory, setError]);
+
+  /**
+   * Copy files/directories
+   * TODO: Await middleware API implementation
+   */
+  const copyFiles = useCallback(async (sources: string[], destination: string): Promise<boolean> => {
+    try {
+      for (const source of sources) {
+        const fileName = source.split('/').pop() || '';
+        const destPath = `${destination}${destination.endsWith('/') ? '' : '/'}${fileName}`;
+        await fileOperations.copy(source, destPath, true);
+      }
+      await loadDirectory();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '复制失败';
+      console.error('[FileSystem] Copy error:', message);
+      setError(message);
+      return false;
+    }
+  }, [loadDirectory, setError]);
+
+  /**
+   * Move files/directories
+   * TODO: Await middleware API implementation
+   */
+  const moveFiles = useCallback(async (sources: string[], destination: string): Promise<boolean> => {
+    try {
+      for (const source of sources) {
+        const fileName = source.split('/').pop() || '';
+        const destPath = `${destination}${destination.endsWith('/') ? '' : '/'}${fileName}`;
+        await fileOperations.move(source, destPath);
+      }
+      await loadDirectory();
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '移动失败';
+      console.error('[FileSystem] Move error:', message);
+      setError(message);
+      return false;
+    }
+  }, [loadDirectory, setError]);
+
+  /**
    * Refresh current directory
    */
   const refresh = useCallback(async () => {
     await loadDirectory();
   }, [loadDirectory]);
+
+  /**
+   * Get user home directory
+   */
+  const getUserHome = useCallback(async (): Promise<string | null> => {
+    try {
+      await fileOperations.stat('/etc/passwd');
+      // This won't work, we need a proper API call
+      // For now, return null
+      return null;
+    } catch {
+      return null;
+    }
+  }, []);
 
   return {
     loadDirectory,
@@ -146,6 +233,11 @@ export function useFileSystem() {
     createDirectory,
     uploadFile,
     downloadFile,
+    deleteFiles,
+    renameFile,
+    copyFiles,
+    moveFiles,
     refresh,
+    getUserHome,
   };
 }

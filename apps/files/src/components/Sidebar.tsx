@@ -12,6 +12,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import type { Pool } from '@truenas/types/pool';
+import type { UserHomeInfo } from '../types/file-manager';
 
 interface SidebarItemProps {
   icon: React.ReactNode;
@@ -103,10 +104,15 @@ const SidebarSection: React.FC<SidebarSectionProps> = ({
 interface SidebarProps {
   pools: Pool[];
   onNavigate: (path: string) => void;
+  userHome?: UserHomeInfo;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate, userHome }) => {
   const [sidebarSelectedPath, setSidebarSelectedPath] = useState<string>('/mnt');
+
+  // For admin users, don't show home directory - they only see pools
+  const showHomeDirectory = userHome && !userHome.isAdmin && userHome.homeAccessible;
+  const effectiveUserHome = showHomeDirectory ? userHome.home : '/mnt';
 
   const getPoolPath = (pool: Pool) => {
     return `/mnt/${pool.name}`;
@@ -131,19 +137,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ pools, onNavigate }) => {
 
       {/* Locations Section */}
       <SidebarSection title="位置" defaultExpanded={true}>
-        <SidebarItem
-          icon={<Home size={18} />}
-          label="家目录"
-          path="/home"
-          isActive={isSelected('/home')}
-          onClick={() => handleSidebarClick('/home')}
-        />
+        {showHomeDirectory && (
+          <SidebarItem
+            icon={<Home size={18} />}
+            label="家目录"
+            path={effectiveUserHome}
+            isActive={isSelected(effectiveUserHome)}
+            onClick={() => handleSidebarClick(effectiveUserHome)}
+          />
+        )}
         <SidebarItem
           icon={<HardDrive size={18} />}
           label="存储池"
-          path="/mnt"
-          isActive={isSelected('/mnt')}
-          onClick={() => handleSidebarClick('/mnt')}
+          path="/mnt/"
+          isActive={isSelected('/mnt/')}
+          onClick={() => handleSidebarClick('/mnt/')}
         />
       </SidebarSection>
 

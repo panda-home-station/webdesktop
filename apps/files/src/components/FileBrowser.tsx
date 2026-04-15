@@ -3,22 +3,30 @@
  * Main file browser component - Neo-Frost refined design
  */
 
-import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { FileStat, SortBy, ViewMode } from '@truenas/types/filesystem-types';
 import type { Pool } from '@truenas/types/pool';
 import { poolService } from '@truenas/services/pool';
 import { filesystemService } from '@truenas/services/filesystem';
 import { useFileBrowserStore } from '../stores/fileBrowserStore';
+import { useClipboardStore } from '../stores/clipboardStore';
+import { useUIStore } from '../stores/uiStore';
 import { useFileSystem } from '../hooks/useFileSystem';
+import { useClipboard } from '../hooks/useClipboard';
+import { useUserHome } from '../hooks/useUserHome';
 import { Toolbar } from './Toolbar';
 import { FileList } from './FileList';
 import { FileGrid } from './FileGrid';
-import { CreateFolderDialog } from './CreateFolderDialog';
-import { CreateFileDialog } from './CreateFileDialog';
+import { ContextMenu } from './ContextMenu';
 import { StatusBar } from './StatusBar';
 import { Sidebar } from './Sidebar';
-import { Loader2, FolderPlus, FilePlus, Upload, FolderInput, Download, Trash2, RefreshCw, FolderOpen, Copy, Scissors, Clipboard } from 'lucide-react';
+import {
+  CreateItemDialog,
+  DeleteConfirmDialog,
+  RenameDialog,
+  CopyMoveDialog,
+} from './dialogs';
+import { Loader2 } from 'lucide-react';
 
 export const FileBrowser: React.FC = () => {
   const {
@@ -41,60 +49,52 @@ export const FileBrowser: React.FC = () => {
     canNavigateForward,
   } = useFileBrowserStore();
 
+  const { contextMenu, closeContextMenu } = useUIStore();
+  const { hasClipboard } = useClipboardStore();
+
   const {
     navigateTo,
     navigateUp,
     createDirectory,
     uploadFile,
+    deleteFiles,
+    renameFile,
     refresh,
   } = useFileSystem();
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showCreateFileDialog, setShowCreateFileDialog] = useState(false);
+  const { copyFiles, cutFiles, pasteFiles } = useClipboard();
+  const { userHome } = useUserHome();
+
   const [pools, setPools] = useState<Pool[]>([]);
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const folderInputRef = useRef<HTMLInputElement>(null);
+  const _fileInputRef = useRef<HTMLInputElement>(null);
+  const _folderInputRef = useRef<HTMLInputElement>(null);
 
-  // Context menu state
-  const [contextMenu, setContextMenu] = useState<{
-    x: number;
-    y: number;
-    type: 'blank' | 'item';
-    entry?: FileStat;
-  } | null>(null);
+  // UI State from stores
+  const ui = useUIStore();
+  const _clipboard = useClipboardStore();
 
   // Close context menu
-  const closeContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
+  const handleCloseContextMenu = useCallback(() => {
+    closeContextMenu();
+  }, [closeContextMenu]);
 
-  // Handle blank area context menu
+  // Context menu handlers
   const handleBlankContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, type: 'blank' });
+    useUIStore.getState().openContextMenu(e.clientX, e.clientY, 'blank');
   }, []);
 
-  // Handle item context menu
   const handleItemContextMenu = useCallback((e: React.MouseEvent, entry: FileStat) => {
     e.preventDefault();
     e.stopPropagation();
     if (!selectedPaths.has(entry.path)) {
       toggleSelection(entry.path, false);
     }
-    setContextMenu({ x: e.clientX, y: e.clientY, type: 'item', entry });
+    useUIStore.getState().openContextMenu(e.clientX, e.clientY, 'item', entry);
   }, [selectedPaths, toggleSelection]);
-
-  // Handle click outside to close menu
-  useEffect(() => {
-    const handleClick = () => closeContextMenu();
-    if (contextMenu) {
-      window.addEventListener('click', handleClick);
-      return () => window.removeEventListener('click', handleClick);
-    }
-  }, [contextMenu, closeContextMenu]);
 
   // Upload files handler
   const uploadFiles = useCallback((files: FileList | null) => {
@@ -143,7 +143,7 @@ export const FileBrowser: React.FC = () => {
   }, [uploadFile]);
 
   // Sort entries
-  const sortedEntries = React.useMemo(() => {
+  const sortedEntries = useMemo(() => {
     const sorted = [...entries].sort((a, b) => {
       // Directories always first
       if (a.type === 'DIRECTORY' && b.type !== 'DIRECTORY') return -1;
@@ -198,7 +198,7 @@ export const FileBrowser: React.FC = () => {
   }, [navigateUp, clearSelection]);
 
   // Handle create folder
-  const handleCreateFolder = useCallback(async (name: string) => {
+  const _handleCreateFolder = useCallback(async (name: string) => {
     await createDirectory(name);
   }, [createDirectory]);
 
@@ -228,11 +228,7 @@ export const FileBrowser: React.FC = () => {
   // Direct create folder (like Windows)
   const directCreateFolder = useCallback(async () => {
     const name = getUniqueName('新建文件夹', true);
-    try {
-      await createDirectory(name);
-    } catch (err) {
-      console.error('Failed to create folder:', err);
-    }
+    await createDirectory(name);
     closeContextMenu();
   }, [getUniqueName, createDirectory, closeContextMenu]);
 
@@ -241,14 +237,25 @@ export const FileBrowser: React.FC = () => {
     const name = getUniqueName('新建文本文档', false);
     const filePath = filesystemService.joinPath(currentPath, name);
     const emptyBlob = new Blob([''], { type: 'application/octet-stream' });
-    try {
-      await filesystemService.upload(filePath, emptyBlob);
-      refreshRef.current();
-    } catch (err) {
-      console.error('Failed to create file:', err);
-    }
+    await filesystemService.upload(filePath, emptyBlob);
+    refreshRef.current();
     closeContextMenu();
   }, [getUniqueName, currentPath, closeContextMenu]);
+
+  // Handle download
+  const handleDownload = useCallback((entry: FileStat) => {
+    filesystemService.download(entry.path).then((blob) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = entry.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+    closeContextMenu();
+  }, [closeContextMenu]);
 
   // Handle view mode change
   const handleViewModeChange = useCallback((mode: ViewMode) => {
@@ -287,12 +294,76 @@ export const FileBrowser: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleNavigateUp, entries, setSelectedPaths, clearSelection]);
 
+  // Dialog handlers
+  const handleCreateItemDialogClose = useCallback(() => {
+    useUIStore.getState().closeCreateItemDialog();
+  }, []);
+
+  const handleDeleteDialogClose = useCallback(() => {
+    useUIStore.getState().closeDeleteDialog();
+  }, []);
+
+  const handleRenameDialogClose = useCallback(() => {
+    useUIStore.getState().closeRenameDialog();
+  }, []);
+
+  const handleCopyMoveDialogClose = useCallback(() => {
+    useUIStore.getState().closeCopyMoveDialog();
+  }, []);
+
+  // Context menu actions
+  const handleContextMenuCopy = useCallback(() => {
+    const sources = contextMenu?.entry ? [contextMenu.entry.path] : Array.from(selectedPaths);
+    copyFiles(sources);
+    closeContextMenu();
+  }, [contextMenu, selectedPaths, copyFiles, closeContextMenu]);
+
+  const handleContextMenuCut = useCallback(() => {
+    const sources = contextMenu?.entry ? [contextMenu.entry.path] : Array.from(selectedPaths);
+    cutFiles(sources);
+    closeContextMenu();
+  }, [contextMenu, selectedPaths, cutFiles, closeContextMenu]);
+
+  const handleContextMenuPaste = useCallback(() => {
+    pasteFiles(currentPath);
+    closeContextMenu();
+  }, [currentPath, pasteFiles, closeContextMenu]);
+
+  const handleContextMenuRename = useCallback(() => {
+    if (contextMenu?.entry) {
+      useUIStore.getState().openRenameDialog(contextMenu.entry);
+    }
+    closeContextMenu();
+  }, [contextMenu, closeContextMenu]);
+
+  const handleContextMenuDelete = useCallback(() => {
+    useUIStore.getState().openDeleteDialog();
+    closeContextMenu();
+  }, [closeContextMenu]);
+
+  // Dialog confirm handlers
+  const handleDeleteConfirm = useCallback(async () => {
+    const paths = Array.from(selectedPaths);
+    if (paths.length > 0) {
+      await deleteFiles(paths);
+    }
+    useUIStore.getState().closeDeleteDialog();
+  }, [selectedPaths, deleteFiles]);
+
+  const handleRenameConfirm = useCallback(async (newName: string) => {
+    if (contextMenu?.entry) {
+      await renameFile(contextMenu.entry.path, newName);
+    }
+    useUIStore.getState().closeRenameDialog();
+  }, [contextMenu, renameFile]);
+
   return (
     <div style={styles.container}>
       {/* Sidebar */}
       <Sidebar
         pools={pools}
         onNavigate={handleNavigate}
+        userHome={userHome}
       />
 
       {/* Main Content */}
@@ -314,7 +385,10 @@ export const FileBrowser: React.FC = () => {
         />
 
         {/* Content */}
-        <div style={styles.content}>
+        <div
+          style={styles.content}
+          onContextMenu={handleBlankContextMenu}
+        >
           {isLoading && (
             <div style={styles.loading}>
               <div style={styles.spinnerContainer}>
@@ -375,261 +449,70 @@ export const FileBrowser: React.FC = () => {
         />
       </div>
 
-      {/* Create Folder Dialog */}
-      <CreateFolderDialog
-        isOpen={showCreateDialog}
-        onClose={() => setShowCreateDialog(false)}
-        onCreate={handleCreateFolder}
+      {/* Context Menu */}
+      <ContextMenu
+        contextMenu={contextMenu}
+        onClose={handleCloseContextMenu}
+        onCreateFolder={directCreateFolder}
+        onCreateFile={directCreateFile}
+        onUpload={uploadFiles}
+        onRefresh={() => refreshRef.current()}
+        onOpen={() => contextMenu?.entry && openEntry(contextMenu.entry)}
+        onDownload={() => contextMenu?.entry && handleDownload(contextMenu.entry)}
+        onCopy={handleContextMenuCopy}
+        onCut={handleContextMenuCut}
+        onPaste={handleContextMenuPaste}
+        onRename={handleContextMenuRename}
+        onDelete={handleContextMenuDelete}
+        hasClipboard={hasClipboard()}
+        currentPath={currentPath}
       />
 
-      {/* Create File Dialog */}
-      <CreateFileDialog
-        isOpen={showCreateFileDialog}
-        onClose={() => setShowCreateFileDialog(false)}
+      {/* Create Item Dialog */}
+      <CreateItemDialog
+        isOpen={ui.showCreateItemDialog}
+        type={ui.createItemType}
+        onClose={handleCreateItemDialogClose}
         onCreate={async (name) => {
-          const filePath = filesystemService.joinPath(currentPath, name);
-          const emptyBlob = new Blob([''], { type: 'application/octet-stream' });
-          try {
+          if (ui.createItemType === 'directory') {
+            await createDirectory(name);
+          } else {
+            const filePath = filesystemService.joinPath(currentPath, name);
+            const emptyBlob = new Blob([''], { type: 'application/octet-stream' });
             await filesystemService.upload(filePath, emptyBlob);
             refreshRef.current();
-          } catch (err) {
-            console.error('Failed to create file:', err);
           }
+          handleCreateItemDialogClose();
         }}
       />
 
-      {/* Context Menu */}
-      {contextMenu && createPortal(
-        <div
-          className="semi-portal"
-          style={{ zIndex: 10005 }}
-          onContextMenu={(e) => e.preventDefault()}
-        >
-          <div
-            tabIndex={-1}
-            className="semi-portal-inner"
-            style={{
-              position: 'fixed',
-              left: Math.min(contextMenu.x, window.innerWidth - 200),
-              top: Math.min(contextMenu.y, window.innerHeight - 300),
-              zIndex: 10006,
-            }}
-          >
-            <div style={styles.contextMenu}>
-              {contextMenu.type === 'blank' ? (
-                <>
-                  <button
-                    style={styles.contextMenuItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      directCreateFolder();
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <FolderPlus size={16} />
-                    <span>新建文件夹</span>
-                  </button>
-                  <button
-                    style={styles.contextMenuItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      directCreateFile();
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <FilePlus size={16} />
-                    <span>新建文件</span>
-                  </button>
-                  <div style={styles.contextMenuDivider} />
-                  <button
-                    style={styles.contextMenuItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      fileInputRef.current?.click();
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <Upload size={16} />
-                    <span>上传文件</span>
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      uploadFiles(e.target.files);
-                    }}
-                  />
-                  <button
-                    style={styles.contextMenuItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      folderInputRef.current?.click();
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <FolderInput size={16} />
-                    <span>上传文件夹</span>
-                  </button>
-                  <input
-                    ref={folderInputRef}
-                    type="file"
-                    multiple
-                    // @ts-expect-error webkitdirectory is not in TS types
-                    webkitdirectory=""
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      uploadFiles(e.target.files);
-                    }}
-                  />
-                  <div style={styles.contextMenuDivider} />
-                  <button
-                    style={styles.contextMenuItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      refreshRef.current();
-                      closeContextMenu();
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <RefreshCw size={16} />
-                    <span>刷新</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  {contextMenu.entry?.type === 'DIRECTORY' && (
-                    <button
-                      style={styles.contextMenuItem}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (contextMenu.entry) openEntry(contextMenu.entry);
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <FolderOpen size={16} />
-                      <span>打开</span>
-                    </button>
-                  )}
-                  {contextMenu.entry?.type !== 'DIRECTORY' && (
-                    <button
-                      style={styles.contextMenuItem}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (contextMenu.entry) {
-                          filesystemService.download(contextMenu.entry.path).then((blob) => {
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = contextMenu.entry!.name;
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                          });
-                        }
-                        closeContextMenu();
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    >
-                      <Download size={16} />
-                      <span>下载</span>
-                    </button>
-                  )}
-                  <div style={styles.contextMenuDivider} />
-                  <button
-                    style={styles.contextMenuItem}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      refreshRef.current();
-                      closeContextMenu();
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <RefreshCw size={16} />
-                    <span>刷新</span>
-                  </button>
-                  <div style={styles.contextMenuDivider} />
-                  <button
-                    style={{
-                      ...styles.contextMenuItem,
-                      color: 'var(--files-text-disabled)',
-                      cursor: 'not-allowed',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    title="此功能暂不可用"
-                  >
-                    <Copy size={16} />
-                    <span>复制</span>
-                  </button>
-                  <button
-                    style={{
-                      ...styles.contextMenuItem,
-                      color: 'var(--files-text-disabled)',
-                      cursor: 'not-allowed',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    title="此功能暂不可用"
-                  >
-                    <Scissors size={16} />
-                    <span>剪切</span>
-                  </button>
-                  <button
-                    style={{
-                      ...styles.contextMenuItem,
-                      color: 'var(--files-text-disabled)',
-                      cursor: 'not-allowed',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--files-primary-light)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                    title="此功能暂不可用"
-                  >
-                    <Clipboard size={16} />
-                    <span>粘贴</span>
-                  </button>
-                  <div style={styles.contextMenuDivider} />
-                  <button
-                    style={{
-                      ...styles.contextMenuItem,
-                      color: 'var(--files-danger)',
-                    }}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      closeContextMenu();
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)')}
-                    onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <Trash2 size={16} />
-                    <span>删除</span>
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          <div
-            style={{ position: 'fixed', left: 0, top: 0, right: 0, bottom: 0, zIndex: 10004 }}
-            onMouseDown={closeContextMenu}
-          />
-        </div>,
-        document.body
-      )}
+      {/* Delete Confirm Dialog */}
+      <DeleteConfirmDialog
+        isOpen={ui.showDeleteDialog}
+        paths={Array.from(selectedPaths)}
+        onClose={handleDeleteDialogClose}
+        onConfirm={handleDeleteConfirm}
+      />
+
+      {/* Rename Dialog */}
+      <RenameDialog
+        isOpen={ui.showRenameDialog}
+        oldPath={contextMenu?.entry?.path || ''}
+        oldName={contextMenu?.entry?.name || ''}
+        onClose={handleRenameDialogClose}
+        onRename={handleRenameConfirm}
+      />
+
+      {/* Copy/Move Dialog */}
+      <CopyMoveDialog
+        isOpen={ui.showCopyMoveDialog}
+        operation={ui.copyMoveOperation}
+        sources={Array.from(selectedPaths)}
+        onClose={handleCopyMoveDialogClose}
+        onConfirm={(_destination) => {
+          handleCopyMoveDialogClose();
+        }}
+      />
     </div>
   );
 };
@@ -740,40 +623,6 @@ const styles: Record<string, React.CSSProperties> = {
     cursor: 'pointer',
     transition: 'all var(--files-transition-base)',
     fontFamily: 'inherit',
-  },
-  contextMenu: {
-    minWidth: 180,
-    padding: 6,
-    borderRadius: 10,
-    background: 'rgba(255, 255, 255, 0.98)',
-    backdropFilter: 'blur(12px)',
-    WebkitBackdropFilter: 'blur(12px)',
-    border: '1px solid var(--files-divider)',
-    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 2,
-  },
-  contextMenuItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 'var(--files-space-3)',
-    padding: 'var(--files-space-2) var(--files-space-3)',
-    borderRadius: 6,
-    border: 'none',
-    background: 'transparent',
-    cursor: 'pointer',
-    fontSize: '13px',
-    color: 'var(--files-text-primary)',
-    textAlign: 'left',
-    width: '100%',
-    transition: 'background var(--files-transition-fast)',
-    fontFamily: 'inherit',
-  },
-  contextMenuDivider: {
-    height: 1,
-    backgroundColor: 'var(--files-divider)',
-    margin: '4px 8px',
   },
 };
 
