@@ -59,7 +59,7 @@ export function SpecGroup({ title, children }: { title: string; children: React.
   return (
     <div style={{ marginBottom: 28 }}>
       <h3 style={{ fontSize: 13, fontWeight: 600, color: '#374151', marginBottom: 12, paddingLeft: 2 }}>{title}</h3>
-      <div style={{ background: colors.cardBg, borderRadius: 8, border: '1px solid #e5e5eb', overflow: 'hidden', boxShadow: '0 1px 2px rgba(0,0,0,0.02)' }}>
+      <div style={{ background: colors.cardBg, borderRadius: 8, border: '1px solid #e5e5eb', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03)' }}>
         {children}
       </div>
     </div>

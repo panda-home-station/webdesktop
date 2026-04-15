@@ -202,7 +202,7 @@ export default function SystemSettings() {
         height: '100%',
         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
         color: '#1c1c1e',
-        background: '#ffffff'
+        background: '#f5f5f7'
       }}
       className="noselect"
     >
