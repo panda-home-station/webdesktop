@@ -40,7 +40,6 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [connectionId, setConnectionId] = useState<string | null>(null);
-  const [fontSize, setFontSize] = useState(14);
 
   const waitParentChanges = 300;
 
@@ -54,7 +53,6 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
       cols: 80 as number,
       rows: 20 as number,
       focus: true,
-      fontSize: fontSize,
       fontFamily: 'monospace',
       allowTransparency: true,
     });
@@ -76,7 +74,7 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
       terminal.options.fontFamily = 'Inconsolata';
       terminal.refresh(0, terminal.rows - 1);
     });
-  }, [fontSize]);
+  }, []);
 
   // Handle terminal data input
   const handleTerminalData = useCallback((data: string) => {
@@ -128,17 +126,6 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
     setIsReconnecting(true);
     connectShell();
   }, [connectShell]);
-
-  // Font size change handler
-  const handleFontSizeChange = useCallback((newSize: number) => {
-    setFontSize(newSize);
-    if (xtermRef.current) {
-      xtermRef.current.options.fontSize = newSize;
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
-    }
-  }, []);
 
   // Initialize on mount
   useEffect(() => {
@@ -207,16 +194,6 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
     }
   }, [handleTerminalData, handleTerminalBinary]);
 
-  // Handle font size changes
-  useEffect(() => {
-    if (xtermRef.current) {
-      xtermRef.current.options.fontSize = fontSize;
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
-    }
-  }, [fontSize]);
-
   return (
     <div style={{
       display: 'flex',
@@ -226,39 +203,6 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
       backgroundColor: '#1e1e1e',
       position: 'relative',
     }}>
-      {/* Toolbar */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'flex-end',
-        padding: '4px 8px',
-        backgroundColor: '#252526',
-        borderBottom: '1px solid #3c3c3c',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ color: '#cccccc', fontSize: '12px' }}>字号:</span>
-          <select
-            value={fontSize}
-            onChange={(e) => handleFontSizeChange(Number(e.target.value))}
-            style={{
-              backgroundColor: '#3c3c3c',
-              color: '#cccccc',
-              border: '1px solid #555555',
-              borderRadius: '3px',
-              padding: '2px 6px',
-              fontSize: '12px',
-            }}
-          >
-            <option value={10}>10</option>
-            <option value={12}>12</option>
-            <option value={14}>14</option>
-            <option value={16}>16</option>
-            <option value={18}>18</option>
-            <option value={20}>20</option>
-          </select>
-        </div>
-      </div>
-
       {/* Terminal container */}
       <div style={{
         flex: 1,
