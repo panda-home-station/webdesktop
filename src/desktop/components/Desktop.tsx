@@ -10,6 +10,7 @@ import {
   mdiCogOutline,
   mdiAccountCircleOutline,
   mdiChevronRight,
+  mdiFolderOutline,
 } from '@mdi/js'
 import { showDesktop, openLauncher } from '../../shared/sdk/desktop'
 import { mdiViewGridOutline, mdiMonitor } from '@mdi/js'
@@ -122,6 +123,7 @@ const menuItemStyle: React.CSSProperties = {
 }
 
 const hoverColor = '#d1d5db'
+const iconColor = '#6b7280'
 
 export default function Desktop() {
   const [wallpaper, setWallpaperUrl] = useState<string>(getWallpaper())
@@ -130,7 +132,7 @@ export default function Desktop() {
   const closeMenu = useCallback(() => setMenu(null), [])
 
   const allApps = useMemo(() => {
-    return listApps().filter(a => !['file-manager', 'system-settings', 'user-center'].includes(a.id))
+    return listApps().filter(a => !['files', 'system-settings', 'user-center'].includes(a.id))
   }, [])
 
   useEffect(() => {
@@ -213,7 +215,7 @@ export default function Desktop() {
                 onFocus={() => setHoverIndex(0)}
                 onBlur={() => setHoverIndex(null)}
               >
-                <Icon path={mdiMonitor} size={0.85} />
+                <Icon path={mdiMonitor} size={0.85} color={iconColor} />
                 显示桌面
               </button>
               <div
@@ -229,7 +231,7 @@ export default function Desktop() {
                 onMouseEnter={() => setHoverIndex(1)}
                 onMouseLeave={() => setHoverIndex(null)}
               >
-                <Icon path={mdiViewGridOutline} size={0.85} />
+                <Icon path={mdiViewGridOutline} size={0.85} color={iconColor} />
                 <span style={{ flex: 1 }}>全部应用</span>
                 <Icon path={mdiChevronRight} size={0.85} />
 
@@ -283,19 +285,19 @@ export default function Desktop() {
               <button
                 style={{
                   ...menuItemStyle,
-                  background: hoverIndex === 2 ? hoverColor : 'transparent'
+                  background: hoverIndex === 2 ? hoverColor : 'transparent',
                 }}
                 onClick={() => {
                   closeMenu()
-                  window.location.reload()
+                  openApp('files')
                 }}
                 onMouseEnter={() => setHoverIndex(2)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(2)}
                 onBlur={() => setHoverIndex(null)}
               >
-                <Icon path={mdiRefresh} size={0.85} />
-                刷新
+                <Icon path={mdiFolderOutline} size={0.85} color={iconColor} />
+                文件管理器
               </button>
               <button
                 style={{
@@ -304,31 +306,48 @@ export default function Desktop() {
                 }}
                 onClick={() => {
                   closeMenu()
-                  openApp('system-settings')
+                  window.location.reload()
                 }}
                 onMouseEnter={() => setHoverIndex(3)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(3)}
                 onBlur={() => setHoverIndex(null)}
               >
-                <Icon path={mdiCogOutline} size={0.85} />
-                系统设置
+                <Icon path={mdiRefresh} size={0.85} color={iconColor} />
+                刷新
               </button>
               <button
                 style={{
                   ...menuItemStyle,
-                  background: hoverIndex === 4 ? hoverColor : 'transparent',
+                  background: hoverIndex === 4 ? hoverColor : 'transparent'
                 }}
                 onClick={() => {
                   closeMenu()
-                  openApp('user-center')
+                  openApp('system-settings')
                 }}
                 onMouseEnter={() => setHoverIndex(4)}
                 onMouseLeave={() => setHoverIndex(null)}
                 onFocus={() => setHoverIndex(4)}
                 onBlur={() => setHoverIndex(null)}
               >
-                <Icon path={mdiAccountCircleOutline} size={0.85} />
+                <Icon path={mdiCogOutline} size={0.85} color={iconColor} />
+                系统设置
+              </button>
+              <button
+                style={{
+                  ...menuItemStyle,
+                  background: hoverIndex === 5 ? hoverColor : 'transparent',
+                }}
+                onClick={() => {
+                  closeMenu()
+                  openApp('user-center')
+                }}
+                onMouseEnter={() => setHoverIndex(5)}
+                onMouseLeave={() => setHoverIndex(null)}
+                onFocus={() => setHoverIndex(5)}
+                onBlur={() => setHoverIndex(null)}
+              >
+                <Icon path={mdiAccountCircleOutline} size={0.85} color={iconColor} />
                 我的账号
               </button>
             </div>
