@@ -113,6 +113,8 @@ class ShellService {
           };
 
           this.ws.onclose = (event) => {
+            // Capture if this was the active connection before marking it inactive
+            const wasActive = isThisConnectionActive;
             isThisConnectionActive = false;
             if (!this.isConnected) {
               this.isConnecting = false;
@@ -120,7 +122,8 @@ class ShellService {
             clearTimeout(timeout);
             clearInterval(this.checkConnectedTimer);
             this.checkConnectedTimer = null;
-            if (this.isConnected) {
+            // Only reconnect if this connection was active (not superseded by new connect)
+            if (wasActive && this.isConnected) {
               this.shellConnectedCallbacks.forEach(cb => cb({ connected: false }));
               this.scheduleReconnect(connectionData);
             }
@@ -213,7 +216,7 @@ class ShellService {
 
         const token = await authService.getOneTimeToken();
         await this.connect(connectionData, token);
-      } catch (error) {
+      } catch {
         // Reconnection failed - will be handled by UI showing reconnect button
       }
     }, RECONNECT_DELAY);
