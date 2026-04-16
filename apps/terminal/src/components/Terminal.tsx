@@ -124,6 +124,19 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
       // Then update state (triggers re-render for UI)
       setIsConnected(event.connected);
       setIsReconnecting(false);
+
+      // When connected, fit terminal to container and notify backend of size
+      if (event.connected) {
+        setTimeout(() => {
+          if (fitAddonRef.current && xtermRef.current) {
+            fitAddonRef.current.fit();
+            const size = fitAddonRef.current.proposeDimensions();
+            if (size && event.id) {
+              shellService.resize(size.cols, size.rows);
+            }
+          }
+        }, 100);
+      }
     });
 
     // Connect to shell - capture connectionData at effect creation time to avoid stale closure
@@ -134,13 +147,19 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
       console.error('Failed to connect to shell:', error);
     });
 
-    // Handle window resize
-    window.addEventListener('resize', handleResize);
+    // Handle window resize - listen to container size changes
+    const containerElement = terminalRef.current?.parentElement;
+    const resizeObserver = containerElement ? new ResizeObserver(() => {
+      handleResize();
+    }) : null;
+    if (resizeObserver && containerElement) {
+      resizeObserver.observe(containerElement);
+    }
 
     return () => {
       unsubOutput();
       unsubConnected();
-      window.removeEventListener('resize', handleResize);
+      resizeObserver?.disconnect();
 
       if (resizeTimeoutRef.current) {
         clearTimeout(resizeTimeoutRef.current);
