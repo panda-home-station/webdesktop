@@ -3,10 +3,15 @@
  *
  * Zustand store for managing desktop window state
  * Handles window lifecycle, positioning, z-order, and persistence
+ *
+ * Note: Window state is stored in window-private storage (sessionStorage with
+ * window-specific prefix) to allow multiple browser tabs to have independent
+ * window layouts.
  */
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { createWindowStorage } from './persistence'
 
 export interface WindowState {
   id: string
@@ -260,7 +265,7 @@ export const useWindowsStore = create<WindowsStore>()(
     }),
     {
       name: 'windows-store',
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => createWindowStorage()),
       partialize: (state) => ({
         // Only persist essential data, not React content
         windows: state.windows.map((w) => ({

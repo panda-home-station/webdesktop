@@ -2,12 +2,15 @@
  * Unified State Persistence Layer
  *
  * Provides a unified interface for storing state with different persistence strategies:
- * - LocalStorage: persists across browser sessions
- * - SessionStorage: persists for current session only
+ * - LocalStorage: persists across browser sessions (shared between windows)
+ * - SessionStorage: persists for current session only (shared between windows)
+ * - WindowStorage: session storage private to each browser tab (isolated per window)
  * - Memory: in-memory only, cleared on page reload
  */
 
-export type StorageType = 'localStorage' | 'sessionStorage' | 'memory'
+import { getWindowId } from './window-identity'
+
+export type StorageType = 'localStorage' | 'sessionStorage' | 'windowPrivate' | 'memory'
 
 interface PersistenceConfig {
   type: StorageType
@@ -25,6 +28,9 @@ function getStorage(type: StorageType): Storage {
     case 'localStorage':
       return window.localStorage
     case 'sessionStorage':
+      return window.sessionStorage
+    case 'windowPrivate':
+      // windowPrivate uses sessionStorage but with window-specific prefix
       return window.sessionStorage
     case 'memory':
       return memoryStorage as unknown as Storage
@@ -79,7 +85,13 @@ class StorageManager {
       config.type === 'memory'
         ? memoryStorageInstance
         : (getStorage(config.type) as Storage)
-    this.prefix = config.prefix ?? ''
+
+    // For windowPrivate storage, include the window ID in the prefix
+    if (config.type === 'windowPrivate') {
+      this.prefix = `phs_${getWindowId()}_${config.prefix ?? ''}`
+    } else {
+      this.prefix = config.prefix ?? ''
+    }
   }
 
   /**
@@ -193,7 +205,11 @@ class StorageManager {
    * Get storage type
    */
   getStorageType(): StorageType {
-    return this.storage === memoryStorageInstance ? 'memory' : (this.storage === window.localStorage ? 'localStorage' : 'sessionStorage')
+    if (this.storage === memoryStorageInstance) return 'memory'
+    if (this.storage === window.localStorage) return 'localStorage'
+    // Since windowPrivate also uses sessionStorage, we check the prefix to differentiate
+    if (this.prefix.includes('win_')) return 'windowPrivate'
+    return 'sessionStorage'
   }
 }
 
@@ -221,6 +237,32 @@ export const memoryStorageManager = createStorageManager({
   type: 'memory',
   prefix: 'phs',
 })
+
+/**
+ * Window-private storage manager
+ * Each browser tab gets its own isolated storage
+ * Uses sessionStorage internally but with window-specific prefix
+ *
+ * Returns a Storage-compatible object for use with Zustand persist middleware
+ */
+export function createWindowStorage(prefix?: string): Storage {
+  const manager = createStorageManager({
+    type: 'windowPrivate',
+    prefix: prefix ?? '',
+  })
+
+  // Return a Storage-compatible interface
+  return {
+    getItem: (key: string) => manager.get<string>(key) ?? null,
+    setItem: (key: string, value: string) => manager.set(key, value),
+    removeItem: (key: string) => manager.remove(key),
+    key: (index: number) => manager.keys()[index] ?? null,
+    get length(): number {
+      return manager.keys().length
+    },
+    clear: () => manager.clear(),
+  }
+}
 
 /**
  * Typed storage helpers
