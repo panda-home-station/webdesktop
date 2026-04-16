@@ -1,38 +1,31 @@
 /**
- * App Store Application
- * Docker Apps management interface for WebDesktop
- * Focuses on browsing and managing installed apps
+ * Docker Application
+ * Container management for WebDesktop
  */
 
 import { useEffect } from 'react';
 import { TabsLayout, TabItem } from '@desktop/layouts/TabsLayout';
-import { InstalledApps } from './components/InstalledApps';
-import { AvailableApps } from './components/AvailableApps';
+import { ContainerImages } from './components/ContainerImages';
+import { DockerRegistries } from './components/DockerRegistries';
 import { useDockerStore } from '@truenas/stores/docker';
-import { useAppsStore } from '@truenas/stores/apps';
 
-export default function AppStore() {
-  const { initialize: initDocker, status: dockerStatus, config: dockerConfig } = useDockerStore();
-  const { subscribeToChanges } = useAppsStore();
+export default function Docker() {
+  const { status: dockerStatus, initialize: initDocker } = useDockerStore();
 
   useEffect(() => {
     initDocker();
-    const unsubscribe = subscribeToChanges();
-    return () => {
-      unsubscribe();
-    };
-  }, [initDocker, subscribeToChanges]);
+  }, [initDocker]);
 
   const tabs: TabItem[] = [
     {
-      id: 'installed',
-      label: 'Installed',
-      content: <InstalledApps />,
+      id: 'images',
+      label: 'Images',
+      content: <ContainerImages />,
     },
     {
-      id: 'available',
-      label: 'Discover',
-      content: <AvailableApps />,
+      id: 'registries',
+      label: 'Registries',
+      content: <DockerRegistries />,
     },
   ];
 
@@ -41,7 +34,7 @@ export default function AppStore() {
       {/* Header */}
       <div style={styles.header}>
         <div style={styles.headerContent}>
-          <h1 style={styles.title}>App Store</h1>
+          <h1 style={styles.title}>Docker</h1>
           <div style={styles.dockerStatus}>
             <span
               style={{
@@ -53,18 +46,13 @@ export default function AppStore() {
             <span style={styles.statusText}>
               Docker {dockerStatus.status === 'RUNNING' ? 'Running' : 'Stopped'}
             </span>
-            {dockerConfig?.pool && (
-              <span style={styles.poolInfo}>
-                Pool: {dockerConfig.pool}
-              </span>
-            )}
           </div>
         </div>
       </div>
 
       {/* Tabs Content */}
       <div style={styles.content}>
-        <TabsLayout items={tabs} defaultActiveId="installed" />
+        <TabsLayout items={tabs} defaultActiveId="images" />
       </div>
     </div>
   );
@@ -96,7 +84,7 @@ const styles: Record<string, React.CSSProperties> = {
   dockerStatus: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
     padding: '6px 12px',
     backgroundColor: '#f5f5f5',
     borderRadius: 16,
@@ -109,12 +97,6 @@ const styles: Record<string, React.CSSProperties> = {
   statusText: {
     fontSize: 13,
     color: '#666',
-  },
-  poolInfo: {
-    fontSize: 12,
-    color: '#999',
-    paddingLeft: 8,
-    borderLeft: '1px solid #e0e0e0',
   },
   content: {
     flex: 1,

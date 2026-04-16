@@ -1,0 +1,10 @@
+{
+  "name": "docker",
+  "title": "Docker",
+  "entry": "./src/App.tsx",
+  "icons": {
+    "default": "./icon.svg"
+  },
+  "minWidth": 800,
+  "minHeight": 500
+}

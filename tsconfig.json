@@ -47,7 +47,8 @@
       "@truenas/types/dedup-enum": ["src/shared/types/dedup-enum-types"],
       "@truenas/utils/storage": ["src/shared/utils/storage.utils"],
       "@truenas/utils/topology": ["src/shared/utils/topology.utils"],
-      "@truenas/utils/dataset": ["src/shared/utils/dataset.utils"]
+      "@truenas/utils/dataset": ["src/shared/utils/dataset.utils"],
+      "@shared/*": ["src/shared/*"]
     }
   },
   "include": ["src"]
