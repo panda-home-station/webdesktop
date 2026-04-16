@@ -5,24 +5,6 @@ import { shellService } from '../services/shell.service';
 import { authService } from '@truenas/services/auth';
 import '@xterm/xterm/css/xterm.css';
 
-// FontFaceObserver for font loading
-const fontObserver = (fontName: string, fallback: () => void): Promise<void> => {
-  return new Promise((resolve) => {
-    // @ts-expect-error FontFaceSet API
-    if (document.fonts && document.fonts.load) {
-      document.fonts.load(`14px "${fontName}"`).then(() => {
-        resolve();
-      }).catch(() => {
-        fallback();
-        resolve();
-      });
-    } else {
-      fallback();
-      resolve();
-    }
-  });
-};
-
 interface TerminalProps {
   connectionData?: Record<string, never>;
 }
@@ -53,8 +35,34 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
       cols: 80 as number,
       rows: 20 as number,
       focus: true,
-      fontFamily: 'monospace',
-      allowTransparency: true,
+      fontFamily: '"Courier New", monospace',
+      fontSize: 14,
+      fontWeight: 'normal',
+      fontWeightBold: 'bold',
+      allowTransparency: false,
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#cccccc',
+        cursor: '#cccccc',
+        cursorAccent: '#1e1e1e',
+        selectionBackground: '#3c3c3c',
+        black: '#000000',
+        red: '#cd3131',
+        green: '#0dbc79',
+        yellow: '#e5e510',
+        blue: '#2472c8',
+        magenta: '#bc3fbc',
+        cyan: '#11a8cd',
+        white: '#e5e5e5',
+        brightBlack: '#666666',
+        brightRed: '#f14c4c',
+        brightGreen: '#23d18b',
+        brightYellow: '#f5f543',
+        brightBlue: '#3b8eea',
+        brightMagenta: '#d670d6',
+        brightCyan: '#29b8db',
+        brightWhite: '#ffffff',
+      },
     });
 
     const fitAddon = new FitAddon();
@@ -65,15 +73,6 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
 
     terminal.open(terminalRef.current);
     fitAddon.fit();
-
-    // Load custom font
-    fontObserver('Inconsolata', () => {
-      terminal.options.fontFamily = 'monospace';
-      terminal.refresh(0, terminal.rows - 1);
-    }).then(() => {
-      terminal.options.fontFamily = 'Inconsolata';
-      terminal.refresh(0, terminal.rows - 1);
-    });
   }, []);
 
   // Handle terminal data input
@@ -188,9 +187,14 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
 
   // Update terminal data handlers when xterm is ready
   useEffect(() => {
-    if (xtermRef.current) {
-      xtermRef.current.onData(handleTerminalData);
-      xtermRef.current.onBinary(handleTerminalBinary);
+    const terminal = xtermRef.current;
+    if (terminal) {
+      const disposeData = terminal.onData(handleTerminalData);
+      const disposeBinary = terminal.onBinary(handleTerminalBinary);
+      return () => {
+        disposeData.dispose();
+        disposeBinary.dispose();
+      };
     }
   }, [handleTerminalData, handleTerminalBinary]);
 
