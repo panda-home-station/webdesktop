@@ -29,6 +29,9 @@ class ShellService {
   private checkConnectedTimer: ReturnType<typeof setInterval> | null = null;
   private encoder = new TextEncoder();
   private isConnecting = false;
+  // Connection generation counter - incremented on each connect/disconnect cycle
+  // Used to invalidate stale handlers from previous connections
+  private connectionGeneration = 0;
 
   /**
    * Connect to the shell WebSocket endpoint
@@ -43,16 +46,15 @@ class ShellService {
 
     this.isConnecting = true;
 
-    // Track if THIS connection attempt is still active
-    let isThisConnectionActive = true;
+    // Capture current generation - handlers will check this to ensure they're still valid
+    const thisGeneration = ++this.connectionGeneration;
 
     return new Promise((resolve, reject) => {
       // Timeout after 10 seconds
       const timeout = setTimeout(() => {
-        if (isThisConnectionActive) {
+        // Only reject if this is still the current generation and not connected
+        if (thisGeneration === this.connectionGeneration && !this.isConnected) {
           this.isConnecting = false;
-        }
-        if (!this.isConnected) {
           reject(new Error('Connection timeout'));
         }
       }, 10000);
@@ -60,6 +62,11 @@ class ShellService {
       // Wait for any previous WebSocket to fully close before creating new one
       const doConnect = async () => {
         try {
+          // Check if this connection is still valid (not superseded by newer connect)
+          if (thisGeneration !== this.connectionGeneration) {
+            return;
+          }
+
           if (this.ws) {
             const oldWs = this.ws;
             await new Promise<void>((resolveClose) => {
@@ -78,8 +85,8 @@ class ShellService {
             if (this.ws === oldWs) {
               this.ws = null;
             }
-            // Check if this connection was superseded
-            if (!isThisConnectionActive) {
+            // Check if this connection was superseded while waiting
+            if (thisGeneration !== this.connectionGeneration) {
               return;
             }
           }
@@ -88,7 +95,6 @@ class ShellService {
           if (!authToken) {
             console.error('No auth token available');
             this.isConnecting = false;
-            isThisConnectionActive = false;
             clearTimeout(timeout);
             reject(new Error('No auth token'));
             return;
@@ -103,34 +109,44 @@ class ShellService {
           this.ws.binaryType = 'arraybuffer';
 
           this.ws.onopen = () => {
-            if (!isThisConnectionActive) return;
+            // Check if this handler is still valid
+            if (thisGeneration !== this.connectionGeneration) {
+              return;
+            }
             this.ws?.send(JSON.stringify({ token: authToken, options: connectionData }));
           };
 
           this.ws.onmessage = (event: MessageEvent<ArrayBuffer | string>) => {
-            if (!isThisConnectionActive) return;
+            // Check if this handler is still valid
+            if (thisGeneration !== this.connectionGeneration) {
+              return;
+            }
             this.handleMessage(event);
           };
 
           this.ws.onclose = () => {
-            // Capture if this was the active connection before marking it inactive
-            const wasActive = isThisConnectionActive;
-            isThisConnectionActive = false;
+            // Check if this handler is still valid
+            if (thisGeneration !== this.connectionGeneration) {
+              return;
+            }
             if (!this.isConnected) {
               this.isConnecting = false;
             }
             clearTimeout(timeout);
             clearInterval(this.checkConnectedTimer);
             this.checkConnectedTimer = null;
-            // Only reconnect if this connection was active (not superseded by new connect)
-            if (wasActive && this.isConnected) {
+            // Only reconnect if connected (connection was established then lost)
+            if (this.isConnected) {
               this.shellConnectedCallbacks.forEach(cb => cb({ connected: false }));
               this.scheduleReconnect(connectionData);
             }
           };
 
           this.ws.onerror = () => {
-            isThisConnectionActive = false;
+            // Check if this handler is still valid
+            if (thisGeneration !== this.connectionGeneration) {
+              return;
+            }
             if (!this.isConnected) {
               this.isConnecting = false;
             }
@@ -139,7 +155,13 @@ class ShellService {
 
           // Check periodically if connected
           this.checkConnectedTimer = setInterval(() => {
-            if (this.isConnected && isThisConnectionActive) {
+            // Check if this timer is still valid
+            if (thisGeneration !== this.connectionGeneration) {
+              clearInterval(this.checkConnectedTimer);
+              this.checkConnectedTimer = null;
+              return;
+            }
+            if (this.isConnected) {
               clearInterval(this.checkConnectedTimer);
               this.checkConnectedTimer = null;
               clearTimeout(timeout);
@@ -149,7 +171,9 @@ class ShellService {
           }, 100);
 
         } catch (error) {
-          isThisConnectionActive = false;
+          if (thisGeneration !== this.connectionGeneration) {
+            return;
+          }
           this.isConnecting = false;
           clearTimeout(timeout);
           reject(error);
@@ -269,6 +293,8 @@ class ShellService {
       this.ws = null;
     }
 
+    // Increment generation to invalidate any pending handlers
+    this.connectionGeneration++;
     this.isConnected = false;
     this.isConnecting = false;
     this.connectionId = null;

@@ -14,26 +14,28 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Track if we've ever successfully connected
-  const shellEverConnectedRef = useRef(false);
-  // Track if cleanup is in progress (prevent new connections during cleanup)
-  const isCleaningUpRef = useRef(false);
+  const isInitializedRef = useRef(false);
+
+  // Use refs for values needed in callbacks to avoid recreating callbacks
+  const isConnectedRef = useRef(false);
+  const connectionIdRef = useRef<string | null>(null);
 
   const [isConnected, setIsConnected] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [connectionId, setConnectionId] = useState<string | null>(null);
 
   const waitParentChanges = 300;
 
-  // Initialize terminal
+  // Initialize terminal and register event handlers
   const initTerminal = useCallback(() => {
-    if (!terminalRef.current) return;
+    if (isInitializedRef.current || !terminalRef.current) {
+      return;
+    }
 
     const terminal = new XTerm({
       cursorBlink: false,
       tabStopWidth: 8,
-      cols: 80 as number,
-      rows: 20 as number,
+      cols: 80,
+      rows: 20,
       focus: true,
       fontFamily: '"Courier New", monospace',
       fontSize: 14,
@@ -68,63 +70,40 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
 
-    xtermRef.current = terminal;
-    fitAddonRef.current = fitAddon;
+    // Register data handlers BEFORE opening terminal
+    terminal.onData((data) => {
+      shellService.send(data);
+    });
+
+    terminal.onBinary((data) => {
+      shellService.send(data);
+    });
 
     terminal.open(terminalRef.current);
     fitAddon.fit();
+
+    xtermRef.current = terminal;
+    fitAddonRef.current = fitAddon;
+    isInitializedRef.current = true;
   }, []);
 
-  // Handle terminal data input
-  const handleTerminalData = useCallback((data: string) => {
-    shellService.send(data);
-  }, []);
-
-  // Handle terminal binary input
-  const handleTerminalBinary = useCallback((data: string) => {
-    shellService.send(data);
-  }, []);
-
-  // Handle resize
+  // Handle resize - uses refs to avoid recreating callback when state changes
   const handleResize = useCallback(() => {
     if (resizeTimeoutRef.current) {
       clearTimeout(resizeTimeoutRef.current);
     }
 
     resizeTimeoutRef.current = setTimeout(() => {
-      if (fitAddonRef.current && xtermRef.current && isConnected) {
+      if (fitAddonRef.current && xtermRef.current && isConnectedRef.current) {
         fitAddonRef.current.fit();
         const size = fitAddonRef.current.proposeDimensions();
-        if (size && connectionId) {
+        if (size && connectionIdRef.current) {
           shellService.resize(size.cols, size.rows);
           xtermRef.current.focus();
         }
       }
     }, waitParentChanges);
-  }, [isConnected, connectionId]);
-
-  // Connect to shell
-  const connectShell = useCallback(async () => {
-    // Don't connect if we're in cleanup
-    if (isCleaningUpRef.current) {
-      return;
-    }
-
-    try {
-      // Get one-time token like webui does, then connect
-      const token = await authService.getOneTimeToken();
-      await shellService.connect(connectionData, token);
-    } catch (error) {
-      console.error('Failed to connect to shell:', error);
-    }
-  }, [connectionData]);
-
-  // Reconnect handler - called when user clicks reconnect button
-  const handleReconnect = useCallback(() => {
-    shellService.disconnectIfSessionActive();
-    setIsReconnecting(true);
-    connectShell();
-  }, [connectShell]);
+  }, []); // No dependencies - uses refs
 
   // Initialize on mount
   useEffect(() => {
@@ -139,26 +118,26 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
 
     // Subscribe to connection events
     const unsubConnected = shellService.onConnected((event) => {
+      // Update refs first to ensure handleResize uses latest values
+      isConnectedRef.current = event.connected;
+      connectionIdRef.current = event.id || null;
+      // Then update state (triggers re-render for UI)
       setIsConnected(event.connected);
-      setConnectionId(event.id || null);
       setIsReconnecting(false);
-      if (event.connected) {
-        shellEverConnectedRef.current = true;
-      }
-      // Note: reconnection is handled by shellService.scheduleReconnect()
-      // We don't trigger reconnection here to avoid duplicate reconnection attempts
     });
 
-    // Connect to shell
-    connectShell();
+    // Connect to shell - capture connectionData at effect creation time to avoid stale closure
+    const currentConnectionData = connectionData;
+    authService.getOneTimeToken().then((token) => {
+      shellService.connect(currentConnectionData, token);
+    }).catch((error) => {
+      console.error('Failed to connect to shell:', error);
+    });
 
     // Handle window resize
     window.addEventListener('resize', handleResize);
 
     return () => {
-      // Mark cleanup in progress FIRST - before any async operations
-      isCleaningUpRef.current = true;
-
       unsubOutput();
       unsubConnected();
       window.removeEventListener('resize', handleResize);
@@ -169,34 +148,28 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
 
       if (xtermRef.current) {
         xtermRef.current.dispose();
+        xtermRef.current = null;
       }
 
-      // Only disconnect if we've never successfully connected
-      // shellEverConnectedRef survives StrictMode remounts, so this prevents
-      // StrictMode's double-mount from killing an established connection
-      if (!shellEverConnectedRef.current) {
-        shellService.disconnectIfSessionActive();
-      }
-
-      // Reset cleanup flag after a delay to allow for StrictMode remount
-      setTimeout(() => {
-        isCleaningUpRef.current = false;
-      }, 100);
+      isInitializedRef.current = false;
+      shellService.disconnectIfSessionActive();
     };
-  }, [initTerminal, connectShell, handleResize]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - all dependencies captured via refs or stable refs
 
-  // Update terminal data handlers when xterm is ready
-  useEffect(() => {
-    const terminal = xtermRef.current;
-    if (terminal) {
-      const disposeData = terminal.onData(handleTerminalData);
-      const disposeBinary = terminal.onBinary(handleTerminalBinary);
-      return () => {
-        disposeData.dispose();
-        disposeBinary.dispose();
-      };
-    }
-  }, [handleTerminalData, handleTerminalBinary]);
+  // Reconnect handler - captures connectionData at creation time via ref
+  const handleReconnect = useCallback(() => {
+    const currentConnectionData = connectionData;
+    shellService.disconnectIfSessionActive();
+    setIsReconnecting(true);
+    authService.getOneTimeToken().then((token) => {
+      shellService.connect(currentConnectionData, token);
+    }).catch((error) => {
+      console.error('Failed to reconnect:', error);
+      setIsReconnecting(false);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - connectionData captured via const above
 
   return (
     <div style={{
