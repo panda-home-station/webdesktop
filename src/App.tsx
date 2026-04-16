@@ -14,12 +14,20 @@ import { useJobInit } from './shared/hooks/useJobInit'
 import SmoothWallpaper from './desktop/components/SmoothWallpaper'
 import { useWallpaper } from './shared/hooks/useWallpaper'
 import AppLoading from './desktop/components/AppLoading'
+import { useInactivityTimeout } from './shared/hooks/useInactivityTimeout'
+import { useSessionExpiry } from './shared/hooks/useSessionExpiry'
 
 export default function App() {
   // Initialize services
   const wsInitialized = useWebSocketInit()
   useAlertInit()
   useJobInit()
+
+  // Track inactivity timeout (15 minutes default)
+  useInactivityTimeout()
+
+  // Listen for session expiry events
+  useSessionExpiry()
 
   const wallpaper = useWallpaper()
 

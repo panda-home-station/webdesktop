@@ -60,7 +60,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       await authService.logout();
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Logout API error:', error);
+      // Don't throw - we still want to clear local auth state
+      // even if the server-side logout fails
     } finally {
       get().clearAuth();
     }

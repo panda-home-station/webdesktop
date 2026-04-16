@@ -5,7 +5,7 @@
  * Handles lock screen, desktop, and app lifecycle
  */
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuthStore } from '@truenas/stores/auth'
 import Desktop from './Desktop'
 import LockScreen from './LockScreen'
@@ -13,7 +13,7 @@ import SmoothWallpaper from './SmoothWallpaper'
 import { useWallpaper } from '../../shared/hooks/useWallpaper'
 import { setWallpaper } from '../state/desktop'
 import { ErrorBoundary } from './ErrorBoundary'
-import { lockScreen, showDesktop as showDesktopFn, openLauncher as openLauncherFn, openApp as openAppFn } from '../../shared/sdk/desktop'
+import { lockScreen, showDesktop as showDesktopFn, openLauncher as openLauncherFn, openApp as openAppFn, subscribeLockScreen } from '../../shared/sdk/desktop'
 
 interface DesktopShellProps {
   children?: React.ReactNode
@@ -30,6 +30,14 @@ export default function DesktopShell(_props: DesktopShellProps) {
   const [isLocked, setIsLocked] = useState(false)
   const { user } = useAuthStore()
 
+  // Subscribe to lock screen events
+  useEffect(() => {
+    const unsubscribe = subscribeLockScreen(() => {
+      setIsLocked(true)
+    })
+    return unsubscribe
+  }, [])
+
   /**
    * Handle unlock
    */
@@ -43,6 +51,8 @@ export default function DesktopShell(_props: DesktopShellProps) {
   const handleLogout = async () => {
     const authStore = useAuthStore.getState()
     await authStore.logout()
+    // clearAuth is called by logout, which will set isAuthenticated to false
+    // This will cause AuthGuard to show login screen instead of reloading
   }
 
   if (isLocked) {

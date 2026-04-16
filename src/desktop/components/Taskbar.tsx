@@ -510,7 +510,8 @@ export default function Taskbar({ wins, onFocus, onRestore, onMinimize, onOpenLa
                 onClick={async () => {
                   setAccountMenu(null)
                   await logout()
-                  window.location.reload()
+                  // Clear auth state to trigger showing login screen instead of page reload
+                  useAuthStore.getState().clearAuth()
                 }}
                 onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}

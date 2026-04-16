@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { User, LogOut, ArrowRight, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@truenas/stores/auth'
+import { truenasApi } from '../../truenas/api'
+import { LoginExMechanism } from '../../shared/types/auth.interface'
 
 interface LockScreenProps {
   onUnlock: () => void
@@ -29,10 +31,20 @@ export default function LockScreen({ onUnlock, onLogout, wallpaper, username }: 
     setLoading(true)
     setError('')
     try {
-      // For lock screen unlock, we can use a simple password check
-      // In production, this should call the appropriate TrueNAS API
-      onUnlock()
-      setPassword('')
+      // Verify password via TrueNAS API
+      const result = await truenasApi.call('auth.login_ex', {
+        mechanism: LoginExMechanism.PasswordPlain,
+        username: user?.username,
+        password: password,
+      }) as { response_type: string }
+
+      if (result.response_type === 'SUCCESS') {
+        onUnlock()
+        setPassword('')
+      } else {
+        setError('密码错误，请重试')
+        setPassword('')
+      }
     } catch {
       setError('密码错误，请重试')
       setPassword('')
