@@ -6,6 +6,7 @@
  */
 
 import { TrueNASWebSocketClient, ConnectionState } from './websocket-client'
+export { ConnectionState }
 import { Job } from '../../shared/types/job-types';
 
 let wsClient: TrueNASWebSocketClient | null = null

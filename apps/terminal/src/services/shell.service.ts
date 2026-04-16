@@ -112,7 +112,7 @@ class ShellService {
             this.handleMessage(event);
           };
 
-          this.ws.onclose = (event) => {
+          this.ws.onclose = () => {
             // Capture if this was the active connection before marking it inactive
             const wasActive = isThisConnectionActive;
             isThisConnectionActive = false;

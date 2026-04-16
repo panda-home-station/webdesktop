@@ -118,7 +118,7 @@ const Terminal: React.FC<TerminalProps> = ({ connectionData = {} }) => {
     } catch (error) {
       console.error('Failed to connect to shell:', error);
     }
-  }, []);
+  }, [connectionData]);
 
   // Reconnect handler - called when user clicks reconnect button
   const handleReconnect = useCallback(() => {
