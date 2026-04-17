@@ -1,10 +1,9 @@
 /**
  * App Store Application
- * Docker Apps management interface for WebDesktop
- * Semi Design inspired sidebar navigation
+ * Apple-inspired design with SF Pro aesthetics
  */
 
-import { useEffect, useState, CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { InstalledApps } from './components/InstalledApps';
 import { AvailableApps } from './components/AvailableApps';
 import { useDockerStore } from '@truenas/stores/docker';
@@ -13,7 +12,7 @@ import { openApp } from '@shared/sdk/desktop';
 import {
   LayoutGrid,
   PanelTopOpen,
-  Clapperboard,
+  Wrench,
   Container,
   Settings,
 } from 'lucide-react';
@@ -27,43 +26,38 @@ interface NavItemProps {
 }
 
 function NavItem({ item, isActive, onClick }: NavItemProps) {
-  const [isHovered, setIsHovered] = useState(false);
-
-  const baseStyle: CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '8px 12px',
-    borderRadius: 6,
-    cursor: 'pointer',
-    transition: 'all 0.2s',
-    background: isActive ? '#e5e7eb' : isHovered ? '#f3f4f6' : 'transparent',
-    color: isActive ? '#111827' : isHovered ? '#374151' : '#374151',
-    fontWeight: isActive ? 500 : 400,
-    fontSize: 14,
-  };
-
   return (
-    <div
-      style={baseStyle}
+    <button
       onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        ...styles.navItem,
+        ...(isActive ? styles.navItemActive : {}),
+      }}
+      onMouseEnter={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isActive) {
+          e.currentTarget.style.backgroundColor = 'transparent';
+        }
+      }}
     >
       <span style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        width: 24,
-        height: 24,
-        opacity: isActive ? 1 : 0.7,
+        ...styles.navItemIcon,
+        color: isActive ? '#0071e3' : '#86868b',
       }}>
         {item.icon}
       </span>
-      <span style={{ height: 24, display: 'flex', alignItems: 'center', flex: 1 }}>
+      <span style={{
+        ...styles.navItemLabel,
+        color: isActive ? '#1d1d1f' : '#1d1d1f',
+        fontWeight: isActive ? 600 : 500,
+      }}>
         {item.label}
       </span>
-    </div>
+    </button>
   );
 }
 
@@ -82,14 +76,17 @@ export default function AppStore() {
   }, [initDocker, subscribeToChanges]);
 
   const categories = [
-    { id: 'all' as CategoryType, label: '全部', icon: <LayoutGrid size={16} /> },
-    { id: 'installed' as CategoryType, label: '已安装', icon: <PanelTopOpen size={16} /> },
+    { id: 'all' as CategoryType, label: '全部应用', icon: <LayoutGrid size={18} /> },
+    { id: 'installed' as CategoryType, label: '已安装', icon: <PanelTopOpen size={18} /> },
   ];
 
   const categoryGroups = [
-    { label: '分类', items: [
-      { id: 'media' as CategoryType, label: '影音娱乐', icon: <Clapperboard size={16} /> },
-    ]},
+    {
+      label: '分类',
+      items: [
+        { id: 'tools' as CategoryType, label: '系统工具', icon: <Wrench size={18} /> },
+      ],
+    },
   ];
 
   return (
@@ -99,12 +96,13 @@ export default function AppStore() {
         {/* Search */}
         <div style={styles.searchContainer}>
           <div style={styles.searchWrapper}>
-            <svg style={styles.searchIcon} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <path fillRule="evenodd" clipRule="evenodd" d="M11 4a7 7 0 100 14 7 7 0 000-14zm-9 7a9 9 0 1116.032 5.618l3.675 3.675a1 1 0 01-1.414 1.414l-3.675-3.675A9 9 0 012 11z"/>
+            <svg style={styles.searchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="2">
+              <circle cx="11" cy="11" r="7"/>
+              <path d="M21 21l-4.35-4.35"/>
             </svg>
             <input
               type="text"
-              placeholder="搜索"
+              placeholder="搜索应用"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               style={styles.searchInput}
@@ -140,42 +138,34 @@ export default function AppStore() {
 
         {/* Docker Status */}
         <div style={styles.dockerStatusBar}>
-          <Container size={16} color="#1D63ED" />
-          <span style={styles.dockerLabel}>Docker</span>
-          <span style={{
-            ...styles.dockerValue,
-            color: dockerStatus.status === 'RUNNING' ? '#10b981' : '#ef4444',
-          }}>
-            {dockerStatus.status === 'RUNNING' ? '运行中' : '已停止'}
-          </span>
-          <div style={{
-            ...styles.statusDot,
-            backgroundColor: dockerStatus.status === 'RUNNING' ? '#10b981' : '#ef4444',
-          }} />
-          <button
-            onClick={() => openApp('docker')}
-            style={styles.dockerSettingsBtn}
-          >
-            <Settings size={14} />
-          </button>
+          <div style={styles.dockerStatusLeft}>
+            <Container size={16} color={dockerStatus.status === 'RUNNING' ? '#34c759' : '#ff3b30'} />
+            <span style={styles.dockerLabel}>Docker</span>
+          </div>
+          <div style={styles.dockerStatusRight}>
+            <span style={{
+              ...styles.dockerValue,
+              color: dockerStatus.status === 'RUNNING' ? '#34c759' : '#ff3b30',
+            }}>
+              {dockerStatus.status === 'RUNNING' ? '运行中' : '已停止'}
+            </span>
+            <button
+              onClick={() => openApp('docker')}
+              style={styles.dockerSettingsBtn}
+            >
+              <Settings size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div style={styles.mainContent}>
-        <div style={styles.contentHeader}>
-          <h1 style={styles.viewTitle}>
-            {activeTab === 'installed' ? '已安装的应用' : activeTab === 'all' ? '全部应用' : '分类应用'}
-          </h1>
-          <p style={styles.viewSubtitle}>
-            {activeTab === 'installed'
-              ? '管理已安装的应用程序'
-              : activeTab === 'all' ? '浏览所有可用应用' : '浏览该分类下的应用'}
-          </p>
-        </div>
-        <div style={styles.contentBody}>
+        {activeTab === 'installed' ? (
           <InstalledApps />
-        </div>
+        ) : (
+          <AvailableApps category={activeTab} searchQuery={searchValue} />
+        )}
       </div>
     </div>
   );
@@ -185,120 +175,118 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     height: '100%',
     display: 'flex',
-    backgroundColor: '#fafafa',
+    backgroundColor: '#f5f5f7',
     overflow: 'hidden',
   },
-  // Sidebar - Settings 风格
+  // Sidebar
   sidebar: {
-    width: 220,
+    width: 240,
     flexShrink: 0,
-    backgroundColor: '#f9fafb',
-    borderRight: '1px solid #e5e7eb',
+    backgroundColor: '#ffffff',
+    borderRight: '1px solid rgba(0, 0, 0, 0.06)',
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
   },
   // Search
   searchContainer: {
-    padding: '12px 10px',
-    borderBottom: '1px solid #e5e7eb',
+    padding: '16px',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
   },
   searchWrapper: {
     display: 'flex',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
-    border: '1px solid #e5e7eb',
-    borderRadius: 8,
-    padding: '0 10px',
-    transition: 'border-color 0.2s',
+    backgroundColor: '#f5f5f7',
+    borderRadius: 10,
+    padding: '8px 12px',
+    gap: 8,
   },
   searchIcon: {
-    color: '#9ca3af',
     flexShrink: 0,
   },
   searchInput: {
     flex: 1,
     border: 'none',
     background: 'transparent',
-    padding: '8px',
     fontSize: 14,
     outline: 'none',
-    color: '#374151',
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   // Navigation
   nav: {
     flex: 1,
-    padding: '8px 6px',
+    padding: '8px',
     display: 'flex',
     flexDirection: 'column',
     gap: 2,
     overflowY: 'auto',
   },
   navItem: {
-    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     gap: 10,
     padding: '8px 12px',
-    borderRadius: 6,
-    border: 'none',
-    backgroundColor: 'transparent',
+    borderRadius: 8,
     cursor: 'pointer',
-    transition: 'all 0.2s',
-    textAlign: 'left',
+    transition: 'background-color 0.2s ease',
+    backgroundColor: 'transparent',
+    border: 'none',
     width: '100%',
-  },
-  navItemHover: {
-    backgroundColor: '#f3f4f6',
+    textAlign: 'left',
   },
   navItemActive: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: 'rgba(0, 113, 227, 0.1)',
   },
-  navIcon: {
-    width: 20,
-    height: 20,
+  navItemIcon: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
-    opacity: 0.7,
+    width: 20,
+    height: 20,
   },
-  navLabel: {
+  navItemLabel: {
     fontSize: 14,
-    fontWeight: 400,
-    flex: 1,
-    color: '#374151',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   categoryLabel: {
-    padding: '12px 12px 6px',
-    fontSize: 12,
-    color: '#6b7280',
-    fontWeight: 700,
+    padding: '16px 12px 6px',
+    fontSize: 11,
+    color: '#86868b',
+    fontWeight: 600,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   // Docker Status Bar
   dockerStatusBar: {
-    padding: '12px',
-    borderTop: '1px solid #e5e7eb',
+    padding: '12px 16px',
+    borderTop: '1px solid rgba(0, 0, 0, 0.04)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#fafafa',
+  },
+  dockerStatusLeft: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#f3f4f6',
+  },
+  dockerStatusRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
   },
   dockerLabel: {
     fontSize: 13,
-    color: '#4b5563',
+    color: '#1d1d1f',
     fontWeight: 500,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   dockerValue: {
     fontSize: 12,
-    fontWeight: 600,
-    flex: 1,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    flexShrink: 0,
+    fontWeight: 500,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   dockerSettingsBtn: {
     display: 'flex',
@@ -309,9 +297,9 @@ const styles: Record<string, React.CSSProperties> = {
     border: 'none',
     background: 'transparent',
     cursor: 'pointer',
-    borderRadius: 4,
-    color: '#6b7280',
-    transition: 'all 0.2s',
+    borderRadius: 6,
+    color: '#86868b',
+    transition: 'all 0.2s ease',
   },
   // Main Content
   mainContent: {
@@ -319,28 +307,5 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-  },
-  contentHeader: {
-    padding: '28px 32px 20px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
-  },
-  viewTitle: {
-    fontSize: 24,
-    fontWeight: 600,
-    color: '#0f172a',
-    margin: '0 0 4px',
-    letterSpacing: '-0.02em',
-  },
-  viewSubtitle: {
-    fontSize: 14,
-    color: '#64748b',
-    margin: 0,
-  },
-  contentBody: {
-    flex: 1,
-    overflow: 'hidden',
-    display: 'flex',
-    flexDirection: 'column',
   },
 };

@@ -1,7 +1,6 @@
 /**
  * Installed Apps Component
- * Displays list of installed Docker apps
- * Apple-inspired minimalist design
+ * Apple-inspired minimalist design with SF Pro aesthetics
  */
 
 import { useEffect, useState } from 'react';
@@ -38,11 +37,11 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
 
   const getStatusColor = (state: string) => {
     switch (state) {
-      case 'RUNNING': return '#10b981';
-      case 'STOPPED': return '#94a3b8';
-      case 'DEPLOYING': return '#3b82f6';
-      case 'CRASHED': return '#ef4444';
-      default: return '#94a3b8';
+      case 'RUNNING': return '#34c759';
+      case 'STOPPED': return '#86868b';
+      case 'DEPLOYING': return '#0071e3';
+      case 'CRASHED': return '#ff3b30';
+      default: return '#86868b';
     }
   };
 
@@ -71,7 +70,7 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
   };
 
   const handleDeleteApp = async (name: string) => {
-    if (confirm(`Are you sure you want to delete ${name}?`)) {
+    if (confirm(`确定要删除 ${name} 吗？`)) {
       try {
         await deleteApp(name);
         if (selectedApp?.name === name) {
@@ -91,15 +90,15 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
   // Check if Docker is ready
   if (!dockerConfig?.pool) {
     return (
-      <div style={styles.emptyState}>
-        <div style={styles.emptyIcon}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
+      <div style={styles.centerState}>
+        <div style={styles.emptyStateIcon}>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" strokeWidth="1.5">
             <path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
           </svg>
         </div>
-        <h2 style={styles.emptyTitle}>No Pool Configured</h2>
-        <p style={styles.emptyText}>
-          Configure a pool for Apps in Settings to get started.
+        <h2 style={styles.emptyStateTitle}>尚未配置存储池</h2>
+        <p style={styles.emptyStateText}>
+          请在设置中为应用配置存储池
         </p>
       </div>
     );
@@ -107,16 +106,16 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
 
   if (dockerStatus.status !== 'RUNNING') {
     return (
-      <div style={styles.emptyState}>
-        <div style={styles.emptyIcon}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
+      <div style={styles.centerState}>
+        <div style={styles.emptyStateIcon}>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" strokeWidth="1.5">
             <circle cx="12" cy="12" r="10"/>
             <path d="M12 6v6l4 2"/>
           </svg>
         </div>
-        <h2 style={styles.emptyTitle}>Docker Not Running</h2>
-        <p style={styles.emptyText}>
-          Docker service is not running. Please start Docker to manage apps.
+        <h2 style={styles.emptyStateTitle}>Docker 服务未运行</h2>
+        <p style={styles.emptyStateText}>
+          请先启动 Docker 服务以管理应用
         </p>
       </div>
     );
@@ -124,27 +123,27 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
 
   if (installedAppsLoading) {
     return (
-      <div style={styles.loadingState}>
-        <div style={styles.spinner} />
-        <p style={styles.loadingText}>Loading installed apps...</p>
+      <div style={styles.centerState}>
+        <div style={styles.loadingSpinner} />
+        <p style={styles.loadingText}>正在加载已安装应用...</p>
       </div>
     );
   }
 
   if (installedApps.length === 0) {
     return (
-      <div style={styles.emptyState}>
-        <div style={styles.emptyIcon}>
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5">
-            <rect x="3" y="3" width="7" height="7" rx="1"/>
-            <rect x="14" y="3" width="7" height="7" rx="1"/>
-            <rect x="3" y="14" width="7" height="7" rx="1"/>
-            <rect x="14" y="14" width="7" height="7" rx="1"/>
+      <div style={styles.centerState}>
+        <div style={styles.emptyStateIcon}>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" strokeWidth="1.5">
+            <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+            <rect x="14" y="14" width="7" height="7" rx="1.5"/>
           </svg>
         </div>
-        <h2 style={styles.emptyTitle}>No Apps Installed</h2>
-        <p style={styles.emptyText}>
-          Visit the Discover tab to browse and install applications.
+        <h2 style={styles.emptyStateTitle}>暂无已安装应用</h2>
+        <p style={styles.emptyStateText}>
+          前往发现浏览安装更多应用
         </p>
       </div>
     );
@@ -154,16 +153,22 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
     <div style={styles.container}>
       {/* Left Panel - App List */}
       <div style={styles.listPanel}>
+        {/* Header */}
+        <div style={styles.listHeader}>
+          <h2 style={styles.listTitle}>已安装</h2>
+          <span style={styles.listCount}>{installedApps.length} 个应用</span>
+        </div>
+
         {/* Search */}
         <div style={styles.searchContainer}>
           <div style={styles.searchWrapper}>
-            <svg style={styles.searchIcon} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+            <svg style={styles.searchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="2">
               <circle cx="11" cy="11" r="7"/>
-              <path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
+              <path d="M21 21l-4.35-4.35"/>
             </svg>
             <input
               type="text"
-              placeholder="Search installed apps..."
+              placeholder="搜索已安装应用..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={styles.searchInput}
@@ -186,7 +191,7 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                 {app.metadata?.icon ? (
                   <img src={app.metadata.icon} alt="" style={styles.appIconImg} />
                 ) : (
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.5">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
                     <rect x="3" y="3" width="18" height="18" rx="4"/>
                     <path d="M8 12h8M12 8v8"/>
                   </svg>
@@ -206,7 +211,7 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                   }}
                 />
                 {app.upgrade_available && (
-                  <span style={styles.updateBadge}>Update</span>
+                  <span style={styles.updateBadge}>更新</span>
                 )}
               </div>
             </button>
@@ -224,7 +229,7 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                 {selectedApp.metadata?.icon ? (
                   <img src={selectedApp.metadata.icon} alt="" style={styles.detailIconImg} />
                 ) : (
-                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.5">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
                     <rect x="3" y="3" width="18" height="18" rx="4"/>
                     <path d="M8 12h8M12 8v8"/>
                   </svg>
@@ -233,56 +238,23 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
               <div style={styles.detailHeaderInfo}>
                 <h2 style={styles.detailTitle}>{selectedApp.name}</h2>
                 <p style={styles.detailVersion}>
-                  Version {selectedApp.metadata?.human_version || selectedApp.version}
+                  版本 {selectedApp.metadata?.human_version || selectedApp.version}
                 </p>
               </div>
-              <div style={styles.detailStatus}>
-                <span
-                  style={{
-                    ...styles.statusBadge,
-                    backgroundColor: getStatusColor(selectedApp.state),
-                  }}
-                >
-                  {selectedApp.state}
-                </span>
-                {selectedApp.upgrade_available && (
-                  <span style={styles.updateBadgeLarge}>Update Available</span>
-                )}
-              </div>
+              <span
+                style={{
+                  ...styles.statusBadge,
+                  backgroundColor: getStatusColor(selectedApp.state),
+                }}
+              >
+                {selectedApp.state === 'RUNNING' ? '运行中' :
+                 selectedApp.state === 'STOPPED' ? '已停止' :
+                 selectedApp.state === 'DEPLOYING' ? '部署中' :
+                 selectedApp.state === 'CRASHED' ? '已崩溃' : selectedApp.state}
+              </span>
             </div>
 
-            {/* App Description */}
-            <div style={styles.detailSection}>
-              <h3 style={styles.sectionTitle}>Description</h3>
-              <p style={styles.detailDescription}>
-                {selectedApp.metadata?.description || 'No description available'}
-              </p>
-            </div>
-
-            {/* App Info */}
-            <div style={styles.detailSection}>
-              <h3 style={styles.sectionTitle}>Information</h3>
-              <div style={styles.infoGrid}>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>Name</span>
-                  <span style={styles.infoValue}>{selectedApp.name}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>Version</span>
-                  <span style={styles.infoValue}>{selectedApp.version}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>Train</span>
-                  <span style={styles.infoValue}>{selectedApp.metadata?.train || 'N/A'}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>Catalog</span>
-                  <span style={styles.infoValue}>{selectedApp.metadata?.catalog || 'N/A'}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* App Actions */}
+            {/* Action Buttons */}
             <div style={styles.detailActions}>
               {selectedApp.state === 'RUNNING' ? (
                 <>
@@ -290,20 +262,20 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                     style={styles.actionButtonSecondary}
                     onClick={() => handleStopApp(selectedApp.name)}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <rect x="6" y="6" width="12" height="12" rx="1"/>
                     </svg>
-                    Stop
+                    停止
                   </button>
                   <button
                     style={styles.actionButtonSecondary}
                     onClick={() => handleRestartApp(selectedApp.name)}
                   >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M1 4v6h6M23 20v-6h-6"/>
                       <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
                     </svg>
-                    Restart
+                    重启
                   </button>
                 </>
               ) : (
@@ -311,30 +283,75 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                   style={styles.actionButtonPrimary}
                   onClick={() => handleStartApp(selectedApp.name)}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <polygon points="5,3 19,12 5,21"/>
                   </svg>
-                  Start
+                  启动
                 </button>
               )}
               <button
                 style={styles.actionButtonDanger}
                 onClick={() => handleDeleteApp(selectedApp.name)}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                 </svg>
-                Delete
+                删除
               </button>
             </div>
+
+            {/* App Description */}
+            {selectedApp.metadata?.description && (
+              <div style={styles.detailSection}>
+                <h3 style={styles.sectionTitle}>描述</h3>
+                <p style={styles.detailDescription}>
+                  {selectedApp.metadata.description}
+                </p>
+              </div>
+            )}
+
+            {/* App Info */}
+            <div style={styles.detailSection}>
+              <h3 style={styles.sectionTitle}>信息</h3>
+              <div style={styles.infoGrid}>
+                <div style={styles.infoItem}>
+                  <span style={styles.infoLabel}>名称</span>
+                  <span style={styles.infoValue}>{selectedApp.name}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span style={styles.infoLabel}>版本</span>
+                  <span style={styles.infoValue}>{selectedApp.version}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span style={styles.infoLabel}>来源</span>
+                  <span style={styles.infoValue}>{selectedApp.metadata?.train || 'N/A'}</span>
+                </div>
+                <div style={styles.infoItem}>
+                  <span style={styles.infoLabel}>目录</span>
+                  <span style={styles.infoValue}>{selectedApp.metadata?.catalog || 'N/A'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Update Available */}
+            {selectedApp.upgrade_available && (
+              <div style={styles.updateBanner}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff9f0a" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span style={styles.updateBannerText}>有可用更新</span>
+              </div>
+            )}
           </div>
         ) : (
-          <div style={styles.noSelection}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#e2e8f0" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="4"/>
-              <path d="M8 12h8M12 8v8"/>
-            </svg>
-            <p style={styles.noSelectionText}>Select an app to view details</p>
+          <div style={styles.centerState}>
+            <div style={styles.emptyStateIcon}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" strokeWidth="1.5">
+                <rect x="3" y="3" width="18" height="18" rx="4"/>
+                <path d="M8 12h8M12 8v8"/>
+              </svg>
+            </div>
+            <p style={styles.emptyStateText}>选择一个应用查看详情</p>
           </div>
         )}
       </div>
@@ -357,17 +374,35 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     backgroundColor: '#ffffff',
   },
+  listHeader: {
+    padding: '24px 20px 16px',
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+  },
+  listTitle: {
+    fontSize: 22,
+    fontWeight: 700,
+    color: '#1d1d1f',
+    margin: 0,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+    letterSpacing: '-0.02em',
+  },
+  listCount: {
+    fontSize: 13,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
   searchContainer: {
-    padding: '16px',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
+    padding: '0 16px 16px',
   },
   searchWrapper: {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
-    padding: '8px 12px',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 8,
+    padding: '10px 14px',
+    backgroundColor: '#f5f5f7',
+    borderRadius: 10,
   },
   searchIcon: {
     flexShrink: 0,
@@ -377,35 +412,36 @@ const styles: Record<string, React.CSSProperties> = {
     border: 'none',
     backgroundColor: 'transparent',
     fontSize: 14,
-    color: '#334155',
+    color: '#1d1d1f',
     outline: 'none',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   appsList: {
     flex: 1,
     overflow: 'auto',
-    padding: '8px',
+    padding: '0 8px 16px',
   },
   appItem: {
     width: '100%',
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    padding: '10px 12px',
+    padding: '12px 12px',
     border: 'none',
     borderRadius: 10,
     backgroundColor: 'transparent',
     cursor: 'pointer',
-    transition: 'all 150ms ease',
+    transition: 'all 0.2s ease',
     textAlign: 'left',
   },
   appItemSelected: {
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    backgroundColor: 'rgba(0, 113, 227, 0.1)',
   },
   appItemIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#f8fafc',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#f5f5f7',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -426,15 +462,17 @@ const styles: Record<string, React.CSSProperties> = {
   },
   appItemName: {
     fontSize: 14,
-    fontWeight: 500,
-    color: '#0f172a',
+    fontWeight: 600,
+    color: '#1d1d1f',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   appItemVersion: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   appItemStatus: {
     display: 'flex',
@@ -443,16 +481,15 @@ const styles: Record<string, React.CSSProperties> = {
     flexShrink: 0,
   },
   statusDot: {
-    width: 6,
-    height: 6,
+    width: 8,
+    height: 8,
     borderRadius: '50%',
   },
   updateBadge: {
     fontSize: 10,
     fontWeight: 600,
-    color: '#f59e0b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.02em',
+    color: '#ff9f0a',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   // Detail Panel
   detailPanel: {
@@ -460,7 +497,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     overflow: 'auto',
-    backgroundColor: '#fafafa',
+    backgroundColor: '#f5f5f7',
   },
   appDetail: {
     padding: 32,
@@ -469,20 +506,20 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 20,
-    marginBottom: 32,
+    marginBottom: 24,
     paddingBottom: 24,
     borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
   },
   detailIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
+    width: 80,
+    height: 80,
+    borderRadius: 18,
     backgroundColor: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
     overflow: 'hidden',
   },
   detailIconImg: {
@@ -495,100 +532,47 @@ const styles: Record<string, React.CSSProperties> = {
     paddingTop: 4,
   },
   detailTitle: {
-    fontSize: 22,
-    fontWeight: 600,
-    color: '#0f172a',
-    margin: '0 0 4px',
+    fontSize: 26,
+    fontWeight: 700,
+    color: '#1d1d1f',
+    margin: '0 0 6px',
     letterSpacing: '-0.02em',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
   },
   detailVersion: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#86868b',
     margin: 0,
-  },
-  detailStatus: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-end',
-    gap: 6,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   statusBadge: {
-    padding: '4px 10px',
-    borderRadius: 6,
-    fontSize: 11,
-    fontWeight: 600,
-    color: '#fff',
-    textTransform: 'uppercase',
-    letterSpacing: '0.03em',
-  },
-  updateBadgeLarge: {
-    fontSize: 11,
-    fontWeight: 600,
-    color: '#f59e0b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.02em',
-  },
-  detailSection: {
-    marginBottom: 28,
-  },
-  sectionTitle: {
+    padding: '6px 12px',
+    borderRadius: 8,
     fontSize: 12,
     fontWeight: 600,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-    margin: '0 0 12px',
+    color: '#ffffff',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
-  detailDescription: {
-    fontSize: 14,
-    color: '#475569',
-    lineHeight: 1.6,
-    margin: 0,
-  },
-  infoGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: 16,
-  },
-  infoItem: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 4,
-    padding: 12,
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-  },
-  infoLabel: {
-    fontSize: 11,
-    fontWeight: 500,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.03em',
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: 500,
-    color: '#0f172a',
-  },
+  // Actions
   detailActions: {
     display: 'flex',
-    gap: 12,
-    paddingTop: 24,
-    borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+    gap: 10,
+    marginBottom: 28,
   },
   actionButtonPrimary: {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    padding: '10px 20px',
-    backgroundColor: '#3b82f6',
+    padding: '10px 18px',
+    backgroundColor: '#0071e3',
     color: '#ffffff',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 10,
     fontSize: 14,
-    fontWeight: 500,
+    fontWeight: 600,
     cursor: 'pointer',
-    transition: 'all 150ms ease',
+    transition: 'all 0.2s ease',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   actionButtonSecondary: {
     display: 'flex',
@@ -596,31 +580,97 @@ const styles: Record<string, React.CSSProperties> = {
     gap: 6,
     padding: '10px 16px',
     backgroundColor: '#ffffff',
-    color: '#334155',
+    color: '#1d1d1f',
     border: '1px solid rgba(0, 0, 0, 0.1)',
-    borderRadius: 8,
+    borderRadius: 10,
     fontSize: 14,
-    fontWeight: 500,
+    fontWeight: 600,
     cursor: 'pointer',
-    transition: 'all 150ms ease',
+    transition: 'all 0.2s ease',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   actionButtonDanger: {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
     padding: '10px 16px',
-    backgroundColor: '#fef2f2',
-    color: '#ef4444',
-    border: '1px solid rgba(239, 68, 68, 0.15)',
-    borderRadius: 8,
+    backgroundColor: '#ffebe9',
+    color: '#ff3b30',
+    border: '1px solid rgba(255, 59, 48, 0.15)',
+    borderRadius: 10,
+    fontSize: 14,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    marginLeft: 'auto',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  // Sections
+  detailSection: {
+    marginBottom: 28,
+  },
+  sectionTitle: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#86868b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    margin: '0 0 14px',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  detailDescription: {
+    fontSize: 14,
+    color: '#1d1d1f',
+    lineHeight: 1.6,
+    margin: 0,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  infoGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 12,
+  },
+  infoItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    padding: 14,
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+  },
+  infoLabel: {
+    fontSize: 11,
+    fontWeight: 500,
+    color: '#86868b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.03em',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  infoValue: {
     fontSize: 14,
     fontWeight: 500,
-    cursor: 'pointer',
-    transition: 'all 150ms ease',
-    marginLeft: 'auto',
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
-  // Empty/Loading States
-  emptyState: {
+  // Update Banner
+  updateBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '14px 16px',
+    backgroundColor: '#fff9e6',
+    borderRadius: 10,
+    border: '1px solid rgba(255, 159, 10, 0.2)',
+  },
+  updateBannerText: {
+    fontSize: 14,
+    fontWeight: 500,
+    color: '#ff9f0a',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  // Center States
+  centerState: {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
@@ -629,53 +679,36 @@ const styles: Record<string, React.CSSProperties> = {
     padding: 40,
     textAlign: 'center',
   },
-  emptyIcon: {
+  emptyStateIcon: {
     marginBottom: 16,
   },
-  emptyTitle: {
-    fontSize: 18,
+  emptyStateTitle: {
+    fontSize: 20,
     fontWeight: 600,
-    color: '#0f172a',
+    color: '#1d1d1f',
     margin: '0 0 8px',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
   },
-  emptyText: {
+  emptyStateText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#86868b',
     margin: 0,
     maxWidth: 300,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
-  loadingState: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    gap: 16,
-  },
-  spinner: {
-    width: 32,
-    height: 32,
-    border: '2px solid #e2e8f0',
-    borderTopColor: '#3b82f6',
+  loadingSpinner: {
+    width: 28,
+    height: 28,
+    border: '2.5px solid rgba(0, 0, 0, 0.1)',
+    borderTopColor: '#0071e3',
     borderRadius: '50%',
-    animation: 'spin 1s linear infinite',
+    animation: 'spin 0.8s linear infinite',
+    marginBottom: 12,
   },
   loadingText: {
     fontSize: 14,
-    color: '#64748b',
+    color: '#86868b',
     margin: 0,
-  },
-  noSelection: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    height: '100%',
-    gap: 16,
-  },
-  noSelectionText: {
-    fontSize: 14,
-    color: '#94a3b8',
-    margin: 0,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
 };
