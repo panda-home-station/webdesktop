@@ -1,21 +1,77 @@
 /**
  * App Store Application
  * Docker Apps management interface for WebDesktop
- * Apple-inspired minimalist design with sidebar navigation
+ * Semi Design inspired sidebar navigation
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, CSSProperties } from 'react';
 import { InstalledApps } from './components/InstalledApps';
 import { AvailableApps } from './components/AvailableApps';
 import { useDockerStore } from '@truenas/stores/docker';
 import { useAppsStore } from '@truenas/stores/apps';
+import { openApp } from '@shared/sdk/desktop';
+import {
+  LayoutGrid,
+  PanelTopOpen,
+  Clapperboard,
+  Container,
+  Settings,
+} from 'lucide-react';
 
-type ViewType = 'installed' | 'discover';
+type CategoryType = 'all' | 'installed' | 'media' | 'photo' | 'download' | 'backup' | 'dev' | 'tools' | 'life' | 'game' | 'driver';
+
+interface NavItemProps {
+  item: { id: CategoryType; label: string; icon: React.ReactNode };
+  isActive: boolean;
+  onClick: () => void;
+}
+
+function NavItem({ item, isActive, onClick }: NavItemProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  const baseStyle: CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    padding: '8px 12px',
+    borderRadius: 6,
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    background: isActive ? '#e5e7eb' : isHovered ? '#f3f4f6' : 'transparent',
+    color: isActive ? '#111827' : isHovered ? '#374151' : '#374151',
+    fontWeight: isActive ? 500 : 400,
+    fontSize: 14,
+  };
+
+  return (
+    <div
+      style={baseStyle}
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <span style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        width: 24,
+        height: 24,
+        opacity: isActive ? 1 : 0.7,
+      }}>
+        {item.icon}
+      </span>
+      <span style={{ height: 24, display: 'flex', alignItems: 'center', flex: 1 }}>
+        {item.label}
+      </span>
+    </div>
+  );
+}
 
 export default function AppStore() {
   const { initialize: initDocker, status: dockerStatus, config: dockerConfig } = useDockerStore();
   const { subscribeToChanges } = useAppsStore();
-  const [activeView, setActiveView] = useState<ViewType>('installed');
+  const [activeTab, setActiveTab] = useState<CategoryType>('installed');
+  const [searchValue, setSearchValue] = useState('');
 
   useEffect(() => {
     initDocker();
@@ -25,80 +81,83 @@ export default function AppStore() {
     };
   }, [initDocker, subscribeToChanges]);
 
+  const categories = [
+    { id: 'all' as CategoryType, label: '全部', icon: <LayoutGrid size={16} /> },
+    { id: 'installed' as CategoryType, label: '已安装', icon: <PanelTopOpen size={16} /> },
+  ];
+
+  const categoryGroups = [
+    { label: '分类', items: [
+      { id: 'media' as CategoryType, label: '影音娱乐', icon: <Clapperboard size={16} /> },
+    ]},
+  ];
+
   return (
     <div style={styles.container}>
       {/* Sidebar */}
       <div style={styles.sidebar}>
-        {/* Logo/Title */}
-        <div style={styles.sidebarHeader}>
-          <div style={styles.appIcon}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <rect x="3" y="3" width="18" height="18" rx="4" fill="#3b82f6"/>
-              <path d="M12 6L7 18h1.8l.9-2.2h4.6l.9 2.2H18L12 6zm0 4.5l2.2 5.4h-4.4l2.2-5.4z" fill="white"/>
+        {/* Search */}
+        <div style={styles.searchContainer}>
+          <div style={styles.searchWrapper}>
+            <svg style={styles.searchIcon} width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path fillRule="evenodd" clipRule="evenodd" d="M11 4a7 7 0 100 14 7 7 0 000-14zm-9 7a9 9 0 1116.032 5.618l3.675 3.675a1 1 0 01-1.414 1.414l-3.675-3.675A9 9 0 012 11z"/>
             </svg>
-          </div>
-          <div style={styles.appTitle}>
-            <span style={styles.titleText}>App Store</span>
-            <span style={styles.subtitleText}>Applications</span>
+            <input
+              type="text"
+              placeholder="搜索"
+              value={searchValue}
+              onChange={(e) => setSearchValue(e.target.value)}
+              style={styles.searchInput}
+            />
           </div>
         </div>
 
         {/* Navigation */}
         <nav style={styles.nav}>
-          <button
-            style={{
-              ...styles.navItem,
-              ...(activeView === 'installed' ? styles.navItemActive : {}),
-            }}
-            onClick={() => setActiveView('installed')}
-          >
-            <div style={styles.navIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <rect x="3" y="3" width="7" height="7" rx="1.5"/>
-                <rect x="14" y="3" width="7" height="7" rx="1.5"/>
-                <rect x="3" y="14" width="7" height="7" rx="1.5"/>
-                <rect x="14" y="14" width="7" height="7" rx="1.5"/>
-              </svg>
-            </div>
-            <span style={styles.navLabel}>Installed</span>
-          </button>
+          {categories.map((item) => (
+            <NavItem
+              key={item.id}
+              item={item}
+              isActive={activeTab === item.id}
+              onClick={() => setActiveTab(item.id)}
+            />
+          ))}
 
-          <button
-            style={{
-              ...styles.navItem,
-              ...(activeView === 'discover' ? styles.navItemActive : {}),
-            }}
-            onClick={() => setActiveView('discover')}
-          >
-            <div style={styles.navIcon}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <circle cx="11" cy="11" r="7"/>
-                <path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
-              </svg>
+          {categoryGroups.map((group) => (
+            <div key={group.label}>
+              <div style={styles.categoryLabel}>{group.label}</div>
+              {group.items.map((item) => (
+                <NavItem
+                  key={item.id}
+                  item={item}
+                  isActive={activeTab === item.id}
+                  onClick={() => setActiveTab(item.id)}
+                />
+              ))}
             </div>
-            <span style={styles.navLabel}>Discover</span>
-          </button>
+          ))}
         </nav>
 
-        {/* Status Footer */}
-        <div style={styles.sidebarFooter}>
-          <div style={styles.dockerStatus}>
-            <div style={{
-              ...styles.statusDot,
-              backgroundColor: dockerStatus.status === 'RUNNING' ? '#10b981' : '#94a3b8',
-            }} />
-            <div style={styles.statusInfo}>
-              <span style={styles.statusLabel}>Docker</span>
-              <span style={styles.statusValue}>
-                {dockerStatus.status === 'RUNNING' ? 'Running' : 'Stopped'}
-              </span>
-            </div>
-          </div>
-          {dockerConfig?.pool && (
-            <div style={styles.poolInfo}>
-              Pool: <span style={styles.poolName}>{dockerConfig.pool}</span>
-            </div>
-          )}
+        {/* Docker Status */}
+        <div style={styles.dockerStatusBar}>
+          <Container size={16} color="#1D63ED" />
+          <span style={styles.dockerLabel}>Docker</span>
+          <span style={{
+            ...styles.dockerValue,
+            color: dockerStatus.status === 'RUNNING' ? '#10b981' : '#ef4444',
+          }}>
+            {dockerStatus.status === 'RUNNING' ? '运行中' : '已停止'}
+          </span>
+          <div style={{
+            ...styles.statusDot,
+            backgroundColor: dockerStatus.status === 'RUNNING' ? '#10b981' : '#ef4444',
+          }} />
+          <button
+            onClick={() => openApp('docker')}
+            style={styles.dockerSettingsBtn}
+          >
+            <Settings size={14} />
+          </button>
         </div>
       </div>
 
@@ -106,16 +165,16 @@ export default function AppStore() {
       <div style={styles.mainContent}>
         <div style={styles.contentHeader}>
           <h1 style={styles.viewTitle}>
-            {activeView === 'installed' ? 'Installed Apps' : 'Discover Apps'}
+            {activeTab === 'installed' ? '已安装的应用' : activeTab === 'all' ? '全部应用' : '分类应用'}
           </h1>
           <p style={styles.viewSubtitle}>
-            {activeView === 'installed'
-              ? 'Manage your installed applications'
-              : 'Browse and install new applications'}
+            {activeTab === 'installed'
+              ? '管理已安装的应用程序'
+              : activeTab === 'all' ? '浏览所有可用应用' : '浏览该分类下的应用'}
           </p>
         </div>
         <div style={styles.contentBody}>
-          {activeView === 'installed' ? <InstalledApps /> : <AvailableApps />}
+          <InstalledApps />
         </div>
       </div>
     </div>
@@ -129,125 +188,130 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#fafafa',
     overflow: 'hidden',
   },
-  // Sidebar
+  // Sidebar - Settings 风格
   sidebar: {
     width: 220,
     flexShrink: 0,
-    backgroundColor: '#ffffff',
-    borderRight: '1px solid rgba(0, 0, 0, 0.06)',
+    backgroundColor: '#f9fafb',
+    borderRight: '1px solid #e5e7eb',
     display: 'flex',
     flexDirection: 'column',
     height: '100%',
   },
-  sidebarHeader: {
+  // Search
+  searchContainer: {
+    padding: '12px 10px',
+    borderBottom: '1px solid #e5e7eb',
+  },
+  searchWrapper: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
-    padding: '20px 16px',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
+    backgroundColor: '#ffffff',
+    border: '1px solid #e5e7eb',
+    borderRadius: 8,
+    padding: '0 10px',
+    transition: 'border-color 0.2s',
   },
-  appIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+  searchIcon: {
+    color: '#9ca3af',
+    flexShrink: 0,
   },
-  appTitle: {
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  titleText: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: '#0f172a',
-    lineHeight: 1.2,
-  },
-  subtitleText: {
-    fontSize: 11,
-    color: '#94a3b8',
-    fontWeight: 500,
+  searchInput: {
+    flex: 1,
+    border: 'none',
+    background: 'transparent',
+    padding: '8px',
+    fontSize: 14,
+    outline: 'none',
+    color: '#374151',
   },
   // Navigation
   nav: {
     flex: 1,
-    padding: '12px 10px',
+    padding: '8px 6px',
     display: 'flex',
     flexDirection: 'column',
-    gap: 4,
+    gap: 2,
+    overflowY: 'auto',
   },
   navItem: {
+    position: 'relative',
     display: 'flex',
     alignItems: 'center',
     gap: 10,
-    padding: '10px 12px',
-    borderRadius: 10,
+    padding: '8px 12px',
+    borderRadius: 6,
     border: 'none',
     backgroundColor: 'transparent',
     cursor: 'pointer',
-    transition: 'all 150ms ease',
+    transition: 'all 0.2s',
     textAlign: 'left',
     width: '100%',
   },
+  navItemHover: {
+    backgroundColor: '#f3f4f6',
+  },
   navItemActive: {
-    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+    backgroundColor: '#e5e7eb',
   },
   navIcon: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#64748b',
+    flexShrink: 0,
+    opacity: 0.7,
   },
   navLabel: {
     fontSize: 14,
-    fontWeight: 500,
-    color: '#334155',
+    fontWeight: 400,
+    flex: 1,
+    color: '#374151',
   },
-  // Sidebar Footer
-  sidebarFooter: {
-    padding: '16px',
-    borderTop: '1px solid rgba(0, 0, 0, 0.04)',
-    backgroundColor: '#fafafa',
+  categoryLabel: {
+    padding: '12px 12px 6px',
+    fontSize: 12,
+    color: '#6b7280',
+    fontWeight: 700,
   },
-  dockerStatus: {
+  // Docker Status Bar
+  dockerStatusBar: {
+    padding: '12px',
+    borderTop: '1px solid #e5e7eb',
     display: 'flex',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    gap: 8,
+    backgroundColor: '#f3f4f6',
+  },
+  dockerLabel: {
+    fontSize: 13,
+    color: '#4b5563',
+    fontWeight: 500,
+  },
+  dockerValue: {
+    fontSize: 12,
+    fontWeight: 600,
+    flex: 1,
   },
   statusDot: {
     width: 8,
     height: 8,
     borderRadius: '50%',
+    flexShrink: 0,
   },
-  statusInfo: {
+  dockerSettingsBtn: {
     display: 'flex',
-    flexDirection: 'column',
-  },
-  statusLabel: {
-    fontSize: 11,
-    color: '#94a3b8',
-    fontWeight: 500,
-  },
-  statusValue: {
-    fontSize: 13,
-    color: '#334155',
-    fontWeight: 500,
-  },
-  poolInfo: {
-    fontSize: 11,
-    color: '#94a3b8',
-    padding: '6px 10px',
-    backgroundColor: '#f1f5f9',
-    borderRadius: 6,
-  },
-  poolName: {
-    fontWeight: 600,
-    color: '#475569',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 24,
+    height: 24,
+    border: 'none',
+    background: 'transparent',
+    cursor: 'pointer',
+    borderRadius: 4,
+    color: '#6b7280',
+    transition: 'all 0.2s',
   },
   // Main Content
   mainContent: {
