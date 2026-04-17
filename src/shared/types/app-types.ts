@@ -89,26 +89,19 @@ export interface AppContainer {
 // Available App (from catalog)
 export interface AvailableApp {
   name: string;
-  catalog: string;
-  train: string;
-  version: string;
-  categories: string[];
-  app: AvailableAppDetails;
-}
-
-export interface AvailableAppDetails {
   title: string;
   description: string;
-  comments: string;
+  catalog: string;
+  train: string;
+  categories: string[];
+  icon_url: string | null;
+  latest_human_version: string | null;
+  version: string;
+  recommended: boolean;
+  app_readme: string | null;
   maintainers: { name: string; email: string }[];
   tags: string[];
-  screenshos: string[];
   sources: string[];
-  icon: string | null;
-  recommended: boolean;
-  last_update: string;
-  human_version: string;
-  categories: string[];
 }
 
 // Container Image

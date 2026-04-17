@@ -28,7 +28,7 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
 
   const filteredApps = availableApps.filter((app) => {
     const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      app.app?.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      app.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = category === 'all' ||
       category === 'installed' ||
       app.categories?.includes(category);
@@ -41,8 +41,8 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
 
   // Icon URL from TrueNAS media server
   const getIconUrl = (app: AvailableApp): string | null => {
-    if (app.app?.icon) {
-      return `https://media.sys.truenas.net/apps/${app.app.icon}`;
+    if (app.icon_url) {
+      return app.icon_url;
     }
     return null;
   };
@@ -94,7 +94,7 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
             <div style={styles.detailHeaderInfo}>
               <h2 style={styles.detailTitle}>{selectedApp.name}</h2>
               <p style={styles.detailMeta}>
-                {selectedApp.app?.human_version || selectedApp.version}
+                {selectedApp.latest_human_version || selectedApp.version}
               </p>
             </div>
             <button
@@ -112,16 +112,16 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
           <div style={styles.detailSection}>
             <h3 style={styles.sectionTitle}>描述</h3>
             <p style={styles.detailDescription}>
-              {selectedApp.app?.description || '暂无描述'}
+              {selectedApp.description || '暂无描述'}
             </p>
           </div>
 
           {/* Categories */}
-          {selectedApp.app?.categories && selectedApp.app.categories.length > 0 && (
+          {selectedApp.categories && selectedApp.categories.length > 0 && (
             <div style={styles.detailSection}>
               <h3 style={styles.sectionTitle}>分类</h3>
               <div style={styles.tagsContainer}>
-                {selectedApp.app.categories.map((cat) => (
+                {selectedApp.categories.map((cat) => (
                   <span key={cat} style={styles.tag}>{cat}</span>
                 ))}
               </div>
@@ -148,11 +148,11 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
                 <span style={styles.infoLabel}>目录</span>
                 <span style={styles.infoValue}>{selectedApp.catalog}</span>
               </div>
-              {selectedApp.app?.maintainers && selectedApp.app.maintainers.length > 0 && (
+              {selectedApp.maintainers && selectedApp.maintainers.length > 0 && (
                 <div style={{ ...styles.infoItem, gridColumn: 'span 2' }}>
                   <span style={styles.infoLabel}>维护者</span>
                   <span style={styles.infoValue}>
-                    {selectedApp.app.maintainers.map((m) => m.name).join(', ')}
+                    {selectedApp.maintainers.map((m) => m.name).join(', ')}
                   </span>
                 </div>
               )}
@@ -160,7 +160,7 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
           </div>
 
           {/* Recommended Badge */}
-          {selectedApp.app?.recommended && (
+          {selectedApp.recommended && (
             <div style={styles.recommendedBanner}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
@@ -199,39 +199,40 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
                 style={styles.appCard}
                 onClick={() => setSelectedApp(app)}
               >
-                <div style={styles.cardIcon}>
-                  {getIconUrl(app) ? (
-                    <img
-                      src={getIconUrl(app)!}
-                      alt=""
-                      style={styles.cardIconImg}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="4"/>
-                      <path d="M8 12h8M12 8v8"/>
-                    </svg>
-                  )}
-                </div>
-                <div style={styles.cardContent}>
-                  <div style={styles.cardHeader}>
-                    <h3 style={styles.cardTitle}>{app.name}</h3>
-                    <span style={styles.trainBadge}>{app.train}</span>
-                  </div>
-                  <p style={styles.cardDescription}>
-                    {app.app?.description || '暂无描述'}
-                  </p>
-                  <div style={styles.cardFooter}>
-                    <span style={styles.cardVersion}>
-                      {app.app?.human_version || app.version}
-                    </span>
-                    {app.app?.recommended && (
-                      <span style={styles.recommendedBadge}>推荐</span>
+                {/* Left Column - Logo & Train */}
+                <div style={styles.cardLeft}>
+                  <div style={styles.cardLogo}>
+                    {getIconUrl(app) ? (
+                      <img
+                        src={getIconUrl(app)!}
+                        alt=""
+                        style={styles.cardLogoImg}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
+                        <rect x="3" y="3" width="18" height="18" rx="4"/>
+                        <path d="M8 12h8M12 8v8"/>
+                      </svg>
                     )}
                   </div>
+                  <div style={styles.cardTrain}>{app.train}</div>
+                </div>
+
+                {/* Right Column - Name, Version, Description */}
+                <div style={styles.cardRight}>
+                  <div style={styles.cardHeader}>
+                    <h3 style={styles.cardTitle}>{app.name}</h3>
+                    <span style={styles.cardVersion}>{app.latest_human_version || app.version}</span>
+                  </div>
+                  <p style={styles.cardDescription}>
+                    {app.description || '暂无描述'}
+                  </p>
+                  {app.recommended && (
+                    <span style={styles.recommendedBadge}>推荐</span>
+                  )}
                 </div>
               </button>
             ))}
@@ -279,67 +280,75 @@ const styles: Record<string, React.CSSProperties> = {
   },
   appCard: {
     display: 'flex',
-    gap: 16,
-    padding: 18,
+    padding: 16,
     backgroundColor: '#ffffff',
     border: 'none',
-    borderRadius: 14,
+    borderRadius: 12,
     boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     textAlign: 'left',
     width: '100%',
   },
-  cardIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
+  cardLeft: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 8,
+    marginRight: 16,
+    flexShrink: 0,
+  },
+  cardLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
     backgroundColor: '#f5f5f7',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    flexShrink: 0,
     overflow: 'hidden',
   },
-  cardIconImg: {
+  cardLogoImg: {
     width: '100%',
     height: '100%',
     objectFit: 'contain',
   },
-  cardContent: {
-    flex: 1,
-    minWidth: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-  },
-  cardHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: 600,
-    color: '#1d1d1f',
-    margin: 0,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  },
-  trainBadge: {
+  cardTrain: {
     fontSize: 10,
     fontWeight: 600,
     color: '#86868b',
     backgroundColor: '#f5f5f7',
-    padding: '3px 7px',
-    borderRadius: 5,
+    padding: '2px 6px',
+    borderRadius: 4,
     textTransform: 'uppercase',
     letterSpacing: '0.02em',
-    flexShrink: 0,
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  cardRight: {
+    flex: 1,
+    minWidth: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  cardHeader: {
+    display: 'flex',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: 600,
+    color: '#1d1d1f',
+    margin: 0,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  },
+  cardVersion: {
+    fontSize: 12,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    flexShrink: 0,
   },
   cardDescription: {
     fontSize: 13,
@@ -352,23 +361,12 @@ const styles: Record<string, React.CSSProperties> = {
     WebkitBoxOrient: 'vertical',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
-  cardFooter: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginTop: 'auto',
-  },
-  cardVersion: {
-    fontSize: 12,
-    color: '#86868b',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  },
   recommendedBadge: {
     fontSize: 10,
     fontWeight: 600,
     color: '#34c759',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    marginTop: 4,
   },
   // Detail View
   detailView: {

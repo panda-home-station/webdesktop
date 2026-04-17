@@ -242,7 +242,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   // Sidebar
   sidebar: {
-    width: 240,
+    width: 200,
     flexShrink: 0,
     backgroundColor: '#ffffff',
     borderRight: '1px solid rgba(0, 0, 0, 0.06)',
