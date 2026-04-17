@@ -12,12 +12,25 @@ import { openApp } from '@shared/sdk/desktop';
 import {
   LayoutGrid,
   PanelTopOpen,
-  Wrench,
   Container,
   Settings,
+  Monitor,
+  Shield,
+  Database,
+  Gamepad2,
+  Home,
+  Briefcase,
+  Brain,
+  Network,
+  FolderSync,
+  Camera,
+  Gauge,
+  Wallet,
+  Lock,
+  HardDrive,
 } from 'lucide-react';
 
-type CategoryType = 'all' | 'installed' | 'media' | 'photo' | 'download' | 'backup' | 'dev' | 'tools' | 'life' | 'game' | 'driver';
+type CategoryType = 'all' | 'installed' | string;
 
 interface NavItemProps {
   item: { id: CategoryType; label: string; icon: React.ReactNode };
@@ -61,31 +74,80 @@ function NavItem({ item, isActive, onClick }: NavItemProps) {
   );
 }
 
+// Category icon mapping
+const categoryIcons: Record<string, React.ReactNode> = {
+  ai: <Brain size={16} />,
+  authentication: <Lock size={16} />,
+  backup: <FolderSync size={16} />,
+  cameras: <Camera size={16} />,
+  custom: <Settings size={16} />,
+  database: <Database size={16} />,
+  development: <Monitor size={16} />,
+  financial: <Wallet size={16} />,
+  games: <Gamepad2 size={16} />,
+  health: <Gauge size={16} />,
+  'home-automation': <Home size={16} />,
+  management: <Briefcase size={16} />,
+  media: <Monitor size={16} />,
+  monitoring: <Gauge size={16} />,
+  networking: <Network size={16} />,
+  productivity: <Briefcase size={16} />,
+  security: <Shield size={16} />,
+  storage: <HardDrive size={16} />,
+};
+
+// Category label mapping (English -> Chinese)
+const categoryLabels: Record<string, string> = {
+  ai: '人工智能',
+  authentication: '身份认证',
+  backup: '备份',
+  cameras: '摄像头',
+  custom: '自定义',
+  database: '数据库',
+  development: '开发',
+  financial: '财务',
+  games: '游戏',
+  health: '健康',
+  'home-automation': '智能家居',
+  management: '管理',
+  media: '媒体',
+  monitoring: '监控',
+  networking: '网络',
+  productivity: '生产力',
+  security: '安全',
+  storage: '存储',
+};
+
 export default function AppStore() {
-  const { initialize: initDocker, status: dockerStatus, config: dockerConfig } = useDockerStore();
-  const { subscribeToChanges } = useAppsStore();
+  const { initialize: initDocker, status: dockerStatus } = useDockerStore();
+  const { subscribeToChanges, categories, loadCategories } = useAppsStore();
   const [activeTab, setActiveTab] = useState<CategoryType>('installed');
   const [searchValue, setSearchValue] = useState('');
 
   useEffect(() => {
     initDocker();
+    loadCategories();
     const unsubscribe = subscribeToChanges();
     return () => {
       unsubscribe();
     };
-  }, [initDocker, subscribeToChanges]);
+  }, [initDocker, subscribeToChanges, loadCategories]);
 
-  const categories = [
+  const categories_list = [
     { id: 'all' as CategoryType, label: '全部应用', icon: <LayoutGrid size={18} /> },
     { id: 'installed' as CategoryType, label: '已安装', icon: <PanelTopOpen size={18} /> },
   ];
 
+  const categoryGroupItems = categories.map((cat) => ({
+    id: cat as CategoryType,
+    label: categoryLabels[cat] || cat,
+    icon: categoryIcons[cat] || <FolderSync size={16} />,
+  }));
+
   const categoryGroups = [
     {
       label: '分类',
-      items: [
-        { id: 'tools' as CategoryType, label: '系统工具', icon: <Wrench size={18} /> },
-      ],
+      items: categoryGroupItems,
     },
   ];
 
@@ -112,7 +174,7 @@ export default function AppStore() {
 
         {/* Navigation */}
         <nav style={styles.nav}>
-          {categories.map((item) => (
+          {categories_list.map((item) => (
             <NavItem
               key={item.id}
               item={item}

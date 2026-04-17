@@ -92,6 +92,7 @@ export interface AvailableApp {
   catalog: string;
   train: string;
   version: string;
+  categories: string[];
   app: AvailableAppDetails;
 }
 

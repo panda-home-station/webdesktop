@@ -17,34 +17,21 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
   const {
     availableApps,
     availableAppsLoading,
-    categories,
     loadAvailableApps,
-    loadCategories,
   } = useAppsStore();
 
-  const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
-  const [selectedCategory, setSelectedCategory] = useState<string>(category);
   const [selectedApp, setSelectedApp] = useState<AvailableApp | null>(null);
 
   useEffect(() => {
-    loadCategories();
     loadAvailableApps();
-  }, [loadCategories, loadAvailableApps]);
-
-  useEffect(() => {
-    setSelectedCategory(category);
-  }, [category]);
-
-  useEffect(() => {
-    setLocalSearchQuery(searchQuery);
-  }, [searchQuery]);
+  }, [loadAvailableApps]);
 
   const filteredApps = availableApps.filter((app) => {
-    const matchesSearch = app.name.toLowerCase().includes(localSearchQuery.toLowerCase()) ||
-      app.app?.description?.toLowerCase().includes(localSearchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' ||
-      selectedCategory === 'installed' ||
-      app.app?.categories?.includes(selectedCategory);
+    const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      app.app?.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = category === 'all' ||
+      category === 'installed' ||
+      app.categories?.includes(category);
     return matchesSearch && matchesCategory;
   });
 
@@ -72,256 +59,185 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
 
   return (
     <div style={styles.container}>
-      {/* Left Panel - Categories & Search */}
-      <div style={styles.listPanel}>
-        {/* Header */}
-        <div style={styles.listHeader}>
-          <h2 style={styles.listTitle}>发现</h2>
-          <span style={styles.listCount}>{availableApps.length} 个应用</span>
-        </div>
-
-        {/* Search */}
-        <div style={styles.searchContainer}>
-          <div style={styles.searchWrapper}>
-            <svg style={styles.searchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="2">
-              <circle cx="11" cy="11" r="7"/>
-              <path d="M21 21l-4.35-4.35"/>
+      {selectedApp ? (
+        <div style={styles.detailView}>
+          {/* Back Button */}
+          <button
+            style={styles.backButton}
+            onClick={() => setSelectedApp(null)}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
-            <input
-              type="text"
-              placeholder="搜索应用..."
-              value={localSearchQuery}
-              onChange={(e) => setLocalSearchQuery(e.target.value)}
-              style={styles.searchInput}
-            />
-          </div>
-        </div>
+            返回
+          </button>
 
-        {/* Categories */}
-        <div style={styles.categoriesSection}>
-          <div style={styles.categoriesList}>
-            <button
-              style={{
-                ...styles.categoryItem,
-                ...(selectedCategory === 'all' ? styles.categoryItemActive : {}),
-              }}
-              onClick={() => setSelectedCategory('all')}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-              <span>全部应用</span>
-              <span style={styles.categoryCount}>
-                {availableApps.length}
-              </span>
-            </button>
-            {categories.map((cat) => {
-              const count = availableApps.filter((app) =>
-                app.app?.categories?.includes(cat)
-              ).length;
-              return (
-                <button
-                  key={cat}
-                  style={{
-                    ...styles.categoryItem,
-                    ...(selectedCategory === cat ? styles.categoryItemActive : {}),
+          {/* App Detail Header */}
+          <div style={styles.detailHeader}>
+            <div style={styles.detailIcon}>
+              {getIconUrl(selectedApp) ? (
+                <img
+                  src={getIconUrl(selectedApp)!}
+                  alt=""
+                  style={styles.detailIconImg}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
                   }}
-                  onClick={() => setSelectedCategory(cat)}
-                >
-                  <span>{cat}</span>
-                  <span style={styles.categoryCount}>{count}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Right Panel - Apps Grid / Detail */}
-      <div style={styles.contentPanel}>
-        {selectedApp ? (
-          <div style={styles.detailView}>
-            {/* Back Button */}
-            <button
-              style={styles.backButton}
-              onClick={() => setSelectedApp(null)}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7"/>
-              </svg>
-              返回
-            </button>
-
-            {/* App Detail Header */}
-            <div style={styles.detailHeader}>
-              <div style={styles.detailIcon}>
-                {getIconUrl(selectedApp) ? (
-                  <img
-                    src={getIconUrl(selectedApp)!}
-                    alt=""
-                    style={styles.detailIconImg}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
-                    <rect x="3" y="3" width="18" height="18" rx="4"/>
-                    <path d="M8 12h8M12 8v8"/>
-                  </svg>
-                )}
-              </div>
-              <div style={styles.detailHeaderInfo}>
-                <h2 style={styles.detailTitle}>{selectedApp.name}</h2>
-                <p style={styles.detailMeta}>
-                  {selectedApp.app?.human_version || selectedApp.version}
-                </p>
-              </div>
-              <button
-                style={styles.installButtonLarge}
-                onClick={() => handleInstall(selectedApp)}
-              >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <path d="M12 5v14M5 12h14"/>
+                />
+              ) : (
+                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="4"/>
+                  <path d="M8 12h8M12 8v8"/>
                 </svg>
-                安装
-              </button>
+              )}
             </div>
-
-            {/* Description */}
-            <div style={styles.detailSection}>
-              <h3 style={styles.sectionTitle}>描述</h3>
-              <p style={styles.detailDescription}>
-                {selectedApp.app?.description || '暂无描述'}
+            <div style={styles.detailHeaderInfo}>
+              <h2 style={styles.detailTitle}>{selectedApp.name}</h2>
+              <p style={styles.detailMeta}>
+                {selectedApp.app?.human_version || selectedApp.version}
               </p>
             </div>
-
-            {/* Categories */}
-            {selectedApp.app?.categories && selectedApp.app.categories.length > 0 && (
-              <div style={styles.detailSection}>
-                <h3 style={styles.sectionTitle}>分类</h3>
-                <div style={styles.tagsContainer}>
-                  {selectedApp.app.categories.map((cat) => (
-                    <span key={cat} style={styles.tag}>{cat}</span>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* App Info */}
-            <div style={styles.detailSection}>
-              <h3 style={styles.sectionTitle}>信息</h3>
-              <div style={styles.infoGrid}>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>名称</span>
-                  <span style={styles.infoValue}>{selectedApp.name}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>版本</span>
-                  <span style={styles.infoValue}>{selectedApp.version}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>来源</span>
-                  <span style={styles.infoValue}>{selectedApp.train}</span>
-                </div>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>目录</span>
-                  <span style={styles.infoValue}>{selectedApp.catalog}</span>
-                </div>
-                {selectedApp.app?.maintainers && selectedApp.app.maintainers.length > 0 && (
-                  <div style={{ ...styles.infoItem, gridColumn: 'span 2' }}>
-                    <span style={styles.infoLabel}>维护者</span>
-                    <span style={styles.infoValue}>
-                      {selectedApp.app.maintainers.map((m) => m.name).join(', ')}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Recommended Badge */}
-            {selectedApp.app?.recommended && (
-              <div style={styles.recommendedBanner}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2">
-                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-                </svg>
-                <span style={styles.recommendedText}>推荐应用</span>
-              </div>
-            )}
-          </div>
-        ) : filteredApps.length === 0 ? (
-          <div style={styles.centerState}>
-            <div style={styles.emptyStateIcon}>
-              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" strokeWidth="1.5">
-                <circle cx="11" cy="11" r="7"/>
-                <path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
+            <button
+              style={styles.installButtonLarge}
+              onClick={() => handleInstall(selectedApp)}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 5v14M5 12h14"/>
               </svg>
-            </div>
-            <h2 style={styles.emptyStateTitle}>未找到应用</h2>
-            <p style={styles.emptyStateText}>
-              {localSearchQuery
-                ? '没有应用符合搜索条件'
-                : '该分类下暂无应用'}
+              安装
+            </button>
+          </div>
+
+          {/* Description */}
+          <div style={styles.detailSection}>
+            <h3 style={styles.sectionTitle}>描述</h3>
+            <p style={styles.detailDescription}>
+              {selectedApp.app?.description || '暂无描述'}
             </p>
           </div>
-        ) : (
-          <>
-            <div style={styles.gridHeader}>
-              <h2 style={styles.gridTitle}>
-                {selectedCategory === 'all' ? '全部应用' : selectedCategory}
-              </h2>
-              <span style={styles.gridCount}>{filteredApps.length} 个应用</span>
+
+          {/* Categories */}
+          {selectedApp.app?.categories && selectedApp.app.categories.length > 0 && (
+            <div style={styles.detailSection}>
+              <h3 style={styles.sectionTitle}>分类</h3>
+              <div style={styles.tagsContainer}>
+                {selectedApp.app.categories.map((cat) => (
+                  <span key={cat} style={styles.tag}>{cat}</span>
+                ))}
+              </div>
             </div>
-            <div style={styles.appsGrid}>
-              {filteredApps.map((app) => (
-                <button
-                  key={`${app.catalog}-${app.train}-${app.name}`}
-                  style={styles.appCard}
-                  onClick={() => setSelectedApp(app)}
-                >
-                  <div style={styles.cardIcon}>
-                    {getIconUrl(app) ? (
-                      <img
-                        src={getIconUrl(app)!}
-                        alt=""
-                        style={styles.cardIconImg}
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
-                        <rect x="3" y="3" width="18" height="18" rx="4"/>
-                        <path d="M8 12h8M12 8v8"/>
-                      </svg>
+          )}
+
+          {/* App Info */}
+          <div style={styles.detailSection}>
+            <h3 style={styles.sectionTitle}>信息</h3>
+            <div style={styles.infoGrid}>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>名称</span>
+                <span style={styles.infoValue}>{selectedApp.name}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>版本</span>
+                <span style={styles.infoValue}>{selectedApp.version}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>来源</span>
+                <span style={styles.infoValue}>{selectedApp.train}</span>
+              </div>
+              <div style={styles.infoItem}>
+                <span style={styles.infoLabel}>目录</span>
+                <span style={styles.infoValue}>{selectedApp.catalog}</span>
+              </div>
+              {selectedApp.app?.maintainers && selectedApp.app.maintainers.length > 0 && (
+                <div style={{ ...styles.infoItem, gridColumn: 'span 2' }}>
+                  <span style={styles.infoLabel}>维护者</span>
+                  <span style={styles.infoValue}>
+                    {selectedApp.app.maintainers.map((m) => m.name).join(', ')}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Recommended Badge */}
+          {selectedApp.app?.recommended && (
+            <div style={styles.recommendedBanner}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+              </svg>
+              <span style={styles.recommendedText}>推荐应用</span>
+            </div>
+          )}
+        </div>
+      ) : filteredApps.length === 0 ? (
+        <div style={styles.centerState}>
+          <div style={styles.emptyStateIcon}>
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#c7c7cc" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="7"/>
+              <path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <h2 style={styles.emptyStateTitle}>未找到应用</h2>
+          <p style={styles.emptyStateText}>
+            {searchQuery
+              ? '没有应用符合搜索条件'
+              : '该分类下暂无应用'}
+          </p>
+        </div>
+      ) : (
+        <>
+          <div style={styles.gridHeader}>
+            <h2 style={styles.gridTitle}>
+              {category === 'all' ? '全部应用' : category}
+            </h2>
+            <span style={styles.gridCount}>{filteredApps.length} 个应用</span>
+          </div>
+          <div style={styles.appsGrid}>
+            {filteredApps.map((app) => (
+              <button
+                key={`${app.catalog}-${app.train}-${app.name}`}
+                style={styles.appCard}
+                onClick={() => setSelectedApp(app)}
+              >
+                <div style={styles.cardIcon}>
+                  {getIconUrl(app) ? (
+                    <img
+                      src={getIconUrl(app)!}
+                      alt=""
+                      style={styles.cardIconImg}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="4"/>
+                      <path d="M8 12h8M12 8v8"/>
+                    </svg>
+                  )}
+                </div>
+                <div style={styles.cardContent}>
+                  <div style={styles.cardHeader}>
+                    <h3 style={styles.cardTitle}>{app.name}</h3>
+                    <span style={styles.trainBadge}>{app.train}</span>
+                  </div>
+                  <p style={styles.cardDescription}>
+                    {app.app?.description || '暂无描述'}
+                  </p>
+                  <div style={styles.cardFooter}>
+                    <span style={styles.cardVersion}>
+                      {app.app?.human_version || app.version}
+                    </span>
+                    {app.app?.recommended && (
+                      <span style={styles.recommendedBadge}>推荐</span>
                     )}
                   </div>
-                  <div style={styles.cardContent}>
-                    <div style={styles.cardHeader}>
-                      <h3 style={styles.cardTitle}>{app.name}</h3>
-                      <span style={styles.trainBadge}>{app.train}</span>
-                    </div>
-                    <p style={styles.cardDescription}>
-                      {app.app?.description || '暂无描述'}
-                    </p>
-                    <div style={styles.cardFooter}>
-                      <span style={styles.cardVersion}>
-                        {app.app?.human_version || app.version}
-                      </span>
-                      {app.app?.recommended && (
-                        <span style={styles.recommendedBadge}>推荐</span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -330,100 +246,7 @@ const styles: Record<string, React.CSSProperties> = {
   container: {
     height: '100%',
     display: 'flex',
-    overflow: 'hidden',
-  },
-  // List Panel (Left Sidebar)
-  listPanel: {
-    width: 240,
-    flexShrink: 0,
-    borderRight: '1px solid rgba(0, 0, 0, 0.06)',
-    display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#ffffff',
-  },
-  listHeader: {
-    padding: '24px 16px 16px',
-    display: 'flex',
-    alignItems: 'baseline',
-    justifyContent: 'space-between',
-  },
-  listTitle: {
-    fontSize: 22,
-    fontWeight: 700,
-    color: '#1d1d1f',
-    margin: 0,
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
-    letterSpacing: '-0.02em',
-  },
-  listCount: {
-    fontSize: 12,
-    color: '#86868b',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  },
-  searchContainer: {
-    padding: '0 12px 16px',
-  },
-  searchWrapper: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '10px 14px',
-    backgroundColor: '#f5f5f7',
-    borderRadius: 10,
-  },
-  searchIcon: {
-    flexShrink: 0,
-  },
-  searchInput: {
-    flex: 1,
-    border: 'none',
-    backgroundColor: 'transparent',
-    fontSize: 14,
-    color: '#1d1d1f',
-    outline: 'none',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  },
-  categoriesSection: {
-    flex: 1,
-    overflow: 'auto',
-    padding: '0 8px',
-  },
-  categoriesList: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 2,
-  },
-  categoryItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    padding: '10px 12px',
-    border: 'none',
-    borderRadius: 8,
-    backgroundColor: 'transparent',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    fontSize: 13,
-    color: '#1d1d1f',
-    textAlign: 'left',
-    width: '100%',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  },
-  categoryItemActive: {
-    backgroundColor: 'rgba(0, 113, 227, 0.1)',
-    color: '#0071e3',
-    fontWeight: 600,
-  },
-  categoryCount: {
-    marginLeft: 'auto',
-    fontSize: 11,
-    color: '#86868b',
-    fontWeight: 500,
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  },
-  // Content Panel
-  contentPanel: {
-    flex: 1,
     overflow: 'auto',
     backgroundColor: '#f5f5f7',
   },
