@@ -95,6 +95,7 @@ export interface AvailableApp {
   train: string;
   categories: string[];
   icon_url: string | null;
+  latest_version: string | null;
   latest_human_version: string | null;
   version: string;
   recommended: boolean;

@@ -92,9 +92,9 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
               )}
             </div>
             <div style={styles.detailHeaderInfo}>
-              <h2 style={styles.detailTitle}>{selectedApp.name}</h2>
+              <h2 style={styles.detailTitle}>{selectedApp.title || selectedApp.name}</h2>
               <p style={styles.detailMeta}>
-                {selectedApp.latest_human_version || selectedApp.version}
+                {selectedApp.latest_version || selectedApp.version}
               </p>
             </div>
             <button
@@ -224,8 +224,8 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
                 {/* Right Column - Name, Version, Description */}
                 <div style={styles.cardRight}>
                   <div style={styles.cardHeader}>
-                    <h3 style={styles.cardTitle}>{app.name}</h3>
-                    <span style={styles.cardVersion}>{app.latest_human_version || app.version}</span>
+                    <h3 style={styles.cardTitle}>{app.title || app.name}</h3>
+                    <span style={styles.cardVersion}>{app.latest_version || app.version}</span>
                   </div>
                   <p style={styles.cardDescription}>
                     {app.description || '暂无描述'}
