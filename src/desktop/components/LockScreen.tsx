@@ -34,7 +34,7 @@ export default function LockScreen({ onUnlock, onLogout, wallpaper, username }: 
       // Verify password via TrueNAS API
       const result = await truenasApi.call('auth.login_ex', {
         mechanism: LoginExMechanism.PasswordPlain,
-        username: user?.username,
+        username: user?.pw_name,
         password: password,
       }) as { response_type: string }
 

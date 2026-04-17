@@ -17,6 +17,8 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
     installedApps,
     installedAppsLoading,
     loadInstalledApps,
+    loadAppStats,
+    appStats,
     startApp,
     stopApp,
     restartApp,
@@ -26,10 +28,29 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
   const { config: dockerConfig, status: dockerStatus } = useDockerStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState<App | null>(null);
+  const [showTechInfo, setShowTechInfo] = useState(false);
 
   useEffect(() => {
     loadInstalledApps();
   }, [loadInstalledApps]);
+
+  useEffect(() => {
+    if (selectedApp && selectedApp.state === 'RUNNING') {
+      loadAppStats(selectedApp.name);
+      const interval = setInterval(() => {
+        loadAppStats(selectedApp.name);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [selectedApp, loadAppStats]);
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
   const filteredApps = installedApps.filter((app) =>
     app.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -300,6 +321,42 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
               </button>
             </div>
 
+            {/* Resource Usage - Only for running apps */}
+            {selectedApp.state === 'RUNNING' && appStats[selectedApp.name] && (
+              <div style={styles.detailSection}>
+                <h3 style={styles.sectionTitle}>资源使用</h3>
+                <div style={styles.resourceGrid}>
+                  <div style={styles.resourceItem}>
+                    <div style={styles.resourceHeader}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" strokeWidth="2">
+                        <rect x="4" y="4" width="16" height="16" rx="2"/>
+                        <rect x="9" y="9" width="6" height="6"/>
+                        <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/>
+                      </svg>
+                      <span style={styles.resourceLabel}>CPU</span>
+                    </div>
+                    <span style={styles.resourceValue}>{appStats[selectedApp.name].cpu.toFixed(1)}%</span>
+                    <div style={styles.resourceBar}>
+                      <div style={{ ...styles.resourceBarFill, width: `${Math.min(appStats[selectedApp.name].cpu, 100)}%`, backgroundColor: '#0071e3' }} />
+                    </div>
+                  </div>
+                  <div style={styles.resourceItem}>
+                    <div style={styles.resourceHeader}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2">
+                        <rect x="2" y="6" width="20" height="12" rx="2"/>
+                        <path d="M6 12h4M14 12h4"/>
+                      </svg>
+                      <span style={styles.resourceLabel}>内存</span>
+                    </div>
+                    <span style={styles.resourceValue}>{formatBytes(appStats[selectedApp.name].memory)}</span>
+                    <div style={styles.resourceBar}>
+                      <div style={{ ...styles.resourceBarFill, width: `${Math.min((appStats[selectedApp.name].memory / (4 * 1024 * 1024 * 1024)) * 100, 100)}%`, backgroundColor: '#34c759' }} />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* App Description */}
             {selectedApp.metadata?.description && (
               <div style={styles.detailSection}>
@@ -310,27 +367,98 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
               </div>
             )}
 
+            {/* Tags/Keywords */}
+            {selectedApp.metadata?.tags && selectedApp.metadata.tags.length > 0 && (
+              <div style={styles.detailSection}>
+                <h3 style={styles.sectionTitle}>关键词</h3>
+                <div style={styles.tagsContainer}>
+                  {selectedApp.metadata.tags.map((tag) => (
+                    <span key={tag} style={styles.tag}>{tag}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* App Info */}
             <div style={styles.detailSection}>
               <h3 style={styles.sectionTitle}>信息</h3>
               <div style={styles.infoGrid}>
-                <div style={styles.infoItem}>
-                  <span style={styles.infoLabel}>名称</span>
-                  <span style={styles.infoValue}>{selectedApp.name}</span>
-                </div>
-                <div style={styles.infoItem}>
+                <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
                   <span style={styles.infoLabel}>版本</span>
-                  <span style={styles.infoValue}>{selectedApp.version}</span>
+                  <span style={styles.infoValue}>{selectedApp.metadata?.human_version || selectedApp.version}</span>
                 </div>
-                <div style={styles.infoItem}>
+                <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
                   <span style={styles.infoLabel}>来源</span>
                   <span style={styles.infoValue}>{selectedApp.metadata?.train || 'N/A'}</span>
                 </div>
-                <div style={styles.infoItem}>
+                <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
                   <span style={styles.infoLabel}>目录</span>
                   <span style={styles.infoValue}>{selectedApp.metadata?.catalog || 'N/A'}</span>
                 </div>
+                <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
+                  <span style={styles.infoLabel}>存储池</span>
+                  <span style={styles.infoValue}>{dockerConfig?.pool || 'N/A'}</span>
+                </div>
+                {selectedApp.metadata?.sources && selectedApp.metadata.sources.length > 0 && (
+                  <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
+                    <span style={styles.infoLabel}>源代码</span>
+                    <a href={selectedApp.metadata.sources[0]} target="_blank" rel="noopener noreferrer" style={styles.infoLink}>
+                      {selectedApp.metadata.sources[0]}
+                    </a>
+                  </div>
+                )}
+                {selectedApp.metadata?.last_update && (
+                  <div style={styles.infoItem}>
+                    <span style={styles.infoLabel}>最后更新</span>
+                    <span style={styles.infoValue}>
+                      {new Date(selectedApp.metadata.last_update).toLocaleString('zh-CN')}
+                    </span>
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* Technical Info - Collapsible */}
+            <div style={styles.detailSection}>
+              <button
+                style={styles.collapsibleHeader}
+                onClick={() => setShowTechInfo(!showTechInfo)}
+              >
+                <h3 style={styles.sectionTitle}>技术信息</h3>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#86868b"
+                  strokeWidth="2"
+                  style={{ transform: showTechInfo ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}
+                >
+                  <path d="M6 9l6 6 6-6"/>
+                </svg>
+              </button>
+              {showTechInfo && (
+                <div style={styles.techInfoContent}>
+                  <div style={styles.infoGrid}>
+                    <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
+                      <span style={styles.infoLabel}>用户名</span>
+                      <span style={styles.infoValue}>apps</span>
+                    </div>
+                    <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
+                      <span style={styles.infoLabel}>UID</span>
+                      <span style={styles.infoValue}>568</span>
+                    </div>
+                    <div style={{ ...styles.infoItem, ...styles.infoItemBorder }}>
+                      <span style={styles.infoLabel}>组名</span>
+                      <span style={styles.infoValue}>Host group</span>
+                    </div>
+                    <div style={styles.infoItem}>
+                      <span style={styles.infoLabel}>GID</span>
+                      <span style={styles.infoValue}>568</span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Update Available */}
@@ -339,7 +467,7 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ff9f0a" strokeWidth="2">
                   <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
                 </svg>
-                <span style={styles.updateBannerText}>有可用更新</span>
+                <span style={styles.updateBannerText}>有可用更新：v{selectedApp.latest_version}</span>
               </div>
             )}
           </div>
@@ -626,32 +754,119 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   infoGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
   },
   infoItem: {
     display: 'flex',
-    flexDirection: 'column',
-    gap: 6,
-    padding: 14,
-    backgroundColor: '#ffffff',
-    borderRadius: 10,
-    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '14px 16px',
+  },
+  infoItemBorder: {
+    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
   },
   infoLabel: {
-    fontSize: 11,
-    fontWeight: 500,
-    color: '#86868b',
-    textTransform: 'uppercase',
-    letterSpacing: '0.03em',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
-  },
-  infoValue: {
     fontSize: 14,
     fontWeight: 500,
     color: '#1d1d1f',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  infoValue: {
+    fontSize: 14,
+    fontWeight: 400,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    textAlign: 'right',
+  },
+  infoLink: {
+    fontSize: 14,
+    fontWeight: 400,
+    color: '#0071e3',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    textDecoration: 'none',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+    maxWidth: 200,
+  },
+  // Resource Usage
+  resourceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, 1fr)',
+    gap: 12,
+  },
+  resourceItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 8,
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+  },
+  resourceHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+  },
+  resourceLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  resourceValue: {
+    fontSize: 20,
+    fontWeight: 600,
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  },
+  resourceBar: {
+    height: 4,
+    backgroundColor: '#f5f5f7',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  resourceBarFill: {
+    height: '100%',
+    borderRadius: 2,
+    transition: 'width 0.3s ease',
+  },
+  // Tags
+  tagsContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    padding: '6px 12px',
+    backgroundColor: '#ffffff',
+    color: '#1d1d1f',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+    border: '1px solid rgba(0, 0, 0, 0.04)',
+  },
+  // Collapsible
+  collapsibleHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    border: 'none',
+    background: 'none',
+    cursor: 'pointer',
+    padding: 0,
+    marginBottom: 0,
+  },
+  techInfoContent: {
+    marginTop: 16,
   },
   // Update Banner
   updateBanner: {
