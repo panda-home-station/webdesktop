@@ -699,6 +699,8 @@ export class TrueNASWebSocketClient {
         params: params || [],
       }
 
+      console.log('[WebSocket] Sending message:', JSON.stringify(message, null, 2));
+
       try {
         this.ws.send(JSON.stringify(message))
       } catch (error) {

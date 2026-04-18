@@ -7,7 +7,9 @@ import { truenasApi } from '../api';
 import {
   App,
   AppStats,
+  AppCreate,
   AvailableApp,
+  CatalogApp,
   ContainerImage,
   DockerConfig,
   DockerRegistry,
@@ -76,7 +78,22 @@ export class AppService {
    * Get catalog app details
    */
   async getCatalogDetails(name: string, train: string): Promise<unknown> {
-    return truenasApi.call('catalog.get_app_details', [name, { train }]) as Promise<unknown>;
+    return truenasApi.call('catalog.get_app_details', name, { train }) as Promise<unknown>;
+  }
+
+  /**
+   * Get catalog app details (typed version)
+   */
+  async getCatalogAppDetails(name: string, train: string): Promise<CatalogApp> {
+    return truenasApi.call('catalog.get_app_details', name, { train }) as Promise<CatalogApp>;
+  }
+
+  /**
+   * Create (install) an app
+   */
+  create(params: AppCreate): Promise<Job<void>> {
+    console.log('[AppService] app.create params:', JSON.stringify(params, null, 2));
+    return truenasApi.job<void>('app.create', [params]) as Promise<Job<void>>;
   }
 
   /**

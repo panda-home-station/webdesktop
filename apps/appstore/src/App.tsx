@@ -6,9 +6,11 @@
 import { useEffect, useState } from 'react';
 import { InstalledApps } from './components/InstalledApps';
 import { AvailableApps } from './components/AvailableApps';
+import { AppWizard } from './components/AppWizard';
 import { useDockerStore } from '@truenas/stores/docker';
 import { useAppsStore } from '@truenas/stores/apps';
 import { openApp } from '@shared/sdk/desktop';
+import { AvailableApp } from '@truenas/types/app-types';
 import {
   LayoutGrid,
   PanelTopOpen,
@@ -120,9 +122,31 @@ const categoryLabels: Record<string, string> = {
 
 export default function AppStore() {
   const { initialize: initDocker, status: dockerStatus } = useDockerStore();
-  const { subscribeToChanges, categories, loadCategories } = useAppsStore();
+  const { subscribeToChanges, categories, loadCategories, loadInstalledApps } = useAppsStore();
   const [activeTab, setActiveTab] = useState<CategoryType>('installed');
   const [searchValue, setSearchValue] = useState('');
+  const [installingApp, setInstallingApp] = useState<AvailableApp | null>(null);
+
+  const handleAppInstall = (appName: string, train: string) => {
+    console.log('[AppStore] handleAppInstall called:');
+    console.log('[AppStore] - appName:', JSON.stringify(appName));
+    console.log('[AppStore] - train:', JSON.stringify(train));
+    // Find the app from availableApps
+    const availableApps = useAppsStore.getState().availableApps;
+    console.log('[AppStore] availableApps count:', availableApps.length);
+    const app = availableApps.find((a) => a.name === appName && a.train === train);
+    console.log('[AppStore] found app:', app);
+    if (app) {
+      setInstallingApp(app);
+    }
+  };
+
+  const handleInstallSuccess = () => {
+    // Refresh installed apps
+    loadInstalledApps();
+    // Switch to installed tab
+    setActiveTab('installed');
+  };
 
   useEffect(() => {
     initDocker();
@@ -226,9 +250,18 @@ export default function AppStore() {
         {activeTab === 'installed' ? (
           <InstalledApps />
         ) : (
-          <AvailableApps category={activeTab} searchQuery={searchValue} />
+          <AvailableApps category={activeTab} searchQuery={searchValue} onAppInstall={handleAppInstall} />
         )}
       </div>
+
+      {/* App Wizard Modal */}
+      {installingApp && (
+        <AppWizard
+          app={installingApp}
+          onClose={() => setInstallingApp(null)}
+          onSuccess={handleInstallSuccess}
+        />
+      )}
     </div>
   );
 }

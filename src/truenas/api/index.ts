@@ -68,6 +68,7 @@ export const truenasApi = {
     const client = getTrueNASClient()
     // params is already an array from the rest params (...params)
     const paramsArray = params || []
+    console.log(`[truenasApi.job] method: ${method}, params:`, JSON.stringify(paramsArray, null, 2));
     return client.job<T>(method, paramsArray, onProgress)
   },
 

@@ -186,3 +186,77 @@ export interface QueryParams {
     extra?: Record<string, unknown>;
   };
 }
+
+// Chart Schema Types
+export interface ChartSchemaNodeConf {
+  type: string;
+  required?: boolean;
+  default?: unknown;
+  enum?: { value: string; description: string }[];
+  max_length?: number;
+  min_length?: number;
+  min?: number;
+  max?: number;
+  editable?: boolean;
+  immutable?: boolean;
+  hidden?: boolean;
+  show_if?: string[][];
+  subquestions?: ChartSchemaNode[];
+  items?: ChartSchemaNode[];
+}
+
+export interface ChartSchemaNode {
+  group?: string;
+  label: string;
+  description?: string;
+  schema: ChartSchemaNodeConf;
+  variable: string;
+}
+
+export interface ChartSchemaGroup {
+  name: string;
+  description: string;
+}
+
+export interface ChartSchema {
+  app_metadata?: Record<string, unknown>;
+  readme?: string;
+  changelog?: string;
+  schema: {
+    groups: ChartSchemaGroup[];
+    questions: ChartSchemaNode[];
+  };
+  values?: Record<string, ChartFormValue>;
+}
+
+export type ChartFormValue = string | number | boolean | Record<string, unknown> | ChartFormValue[] | null;
+
+// App Create
+export interface AppCreate {
+  values?: Record<string, ChartFormValue>;
+  app_name: string;
+  catalog_app: string;
+  train: string;
+  version?: string;
+  custom_compose_config_string?: string;
+  custom_app?: boolean;
+}
+
+// Catalog App (from catalog.get_app_details)
+export interface CatalogApp {
+  name: string;
+  title?: string;
+  description?: string;
+  categories: string[];
+  icon_url?: string;
+  app_readme?: string;
+  maintainers: { name: string; email: string }[];
+  tags: string[];
+  recommended: boolean;
+  versions: Record<string, {
+    healthy: boolean;
+    schema: ChartSchema;
+  }>;
+  latest_version?: string;
+  schema?: ChartSchema;  // Top-level schema used by webui
+}

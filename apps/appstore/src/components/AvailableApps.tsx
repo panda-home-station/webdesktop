@@ -58,6 +58,10 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
   });
 
   const handleInstall = (app: AvailableApp) => {
+    console.log('[AvailableApps] handleInstall called:');
+    console.log('[AvailableApps] - app.name:', JSON.stringify(app.name));
+    console.log('[AvailableApps] - app.train:', JSON.stringify(app.train));
+    console.log('[AvailableApps] - app.title:', JSON.stringify(app.title));
     onAppInstall?.(app.name, app.train);
   };
 

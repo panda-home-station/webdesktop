@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { appService } from '../../truenas/services/app';
-import { App, AvailableApp, AppStats, ContainerImage, DockerRegistry } from '../types/app-types';
+import { App, AppCreate, AppStats, AvailableApp, ContainerImage, DockerRegistry } from '../types/app-types';
 
 interface AppsState {
   // Installed Apps
@@ -43,6 +43,7 @@ interface AppsState {
   stopApp: (name: string) => Promise<void>;
   restartApp: (name: string) => Promise<void>;
   deleteApp: (name: string, options?: { remove_images?: boolean; remove_ix_volumes?: boolean }) => Promise<void>;
+  installApp: (params: AppCreate) => Promise<Job<void>>;
 
   pullImage: (
     registry: string,
@@ -180,6 +181,12 @@ export const useAppsStore = create<AppsState>((set, get) => ({
     get().loadInstalledApps();
   },
 
+  // Actions - Install App
+  installApp: async (params) => {
+    const job = await appService.create(params);
+    return job;
+  },
+
   // Actions - Pull Image
   pullImage: async (registry, imageName, tag, onProgress) => {
     await appService.pullImage(registry, imageName, tag, onProgress);
@@ -221,11 +228,11 @@ export const useAppsStore = create<AppsState>((set, get) => ({
 
     const unsubscribeJobs = appService.subscribeJobs(
       (event) => {
-        if (['app.start', 'app.stop', 'app.redeploy', 'app.delete', 'app.upgrade'].includes(event.fields.method)) {
+        if (['app.start', 'app.stop', 'app.redeploy', 'app.delete', 'app.upgrade', 'app.create'].includes(event.fields.method)) {
           get().loadInstalledApps();
         }
       },
-      ['app.start', 'app.stop', 'app.redeploy', 'app.delete', 'app.upgrade']
+      ['app.start', 'app.stop', 'app.redeploy', 'app.delete', 'app.upgrade', 'app.create']
     );
 
     return () => {
