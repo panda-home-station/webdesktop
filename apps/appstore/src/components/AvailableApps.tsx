@@ -32,7 +32,7 @@ const categoryLabels: Record<string, string> = {
 interface AvailableAppsProps {
   category?: string;
   searchQuery?: string;
-  onAppInstall?: (appName: string, train: string) => void;
+  onAppInstall?: (app: AvailableApp) => void;
 }
 
 export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall }: AvailableAppsProps) {
@@ -62,7 +62,7 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
     console.log('[AvailableApps] - app.name:', JSON.stringify(app.name));
     console.log('[AvailableApps] - app.train:', JSON.stringify(app.train));
     console.log('[AvailableApps] - app.title:', JSON.stringify(app.title));
-    onAppInstall?.(app.name, app.train);
+    onAppInstall?.(app);
   };
 
   // Icon URL from TrueNAS media server

@@ -6,7 +6,7 @@
 import { useEffect, useState } from 'react';
 import { InstalledApps } from './components/InstalledApps';
 import { AvailableApps } from './components/AvailableApps';
-import { AppWizard } from './components/AppWizard';
+import { AppInstallPage } from './components/AppInstallPage';
 import { useDockerStore } from '@truenas/stores/docker';
 import { useAppsStore } from '@truenas/stores/apps';
 import { openApp } from '@shared/sdk/desktop';
@@ -120,32 +120,30 @@ const categoryLabels: Record<string, string> = {
   storage: '存储',
 };
 
+type PageType = 'list' | 'install';
+
 export default function AppStore() {
   const { initialize: initDocker, status: dockerStatus } = useDockerStore();
   const { subscribeToChanges, categories, loadCategories, loadInstalledApps } = useAppsStore();
   const [activeTab, setActiveTab] = useState<CategoryType>('installed');
   const [searchValue, setSearchValue] = useState('');
+  const [currentPage, setCurrentPage] = useState<PageType>('list');
   const [installingApp, setInstallingApp] = useState<AvailableApp | null>(null);
 
-  const handleAppInstall = (appName: string, train: string) => {
-    console.log('[AppStore] handleAppInstall called:');
-    console.log('[AppStore] - appName:', JSON.stringify(appName));
-    console.log('[AppStore] - train:', JSON.stringify(train));
-    // Find the app from availableApps
-    const availableApps = useAppsStore.getState().availableApps;
-    console.log('[AppStore] availableApps count:', availableApps.length);
-    const app = availableApps.find((a) => a.name === appName && a.train === train);
-    console.log('[AppStore] found app:', app);
-    if (app) {
-      setInstallingApp(app);
-    }
+  const handleAppInstall = (app: AvailableApp) => {
+    setInstallingApp(app);
+    setCurrentPage('install');
+  };
+
+  const handleInstallClose = () => {
+    setInstallingApp(null);
+    setCurrentPage('list');
   };
 
   const handleInstallSuccess = () => {
-    // Refresh installed apps
     loadInstalledApps();
-    // Switch to installed tab
-    setActiveTab('installed');
+    setInstallingApp(null);
+    setCurrentPage('list');
   };
 
   useEffect(() => {
@@ -247,21 +245,18 @@ export default function AppStore() {
 
       {/* Main Content */}
       <div style={styles.mainContent}>
-        {activeTab === 'installed' ? (
+        {currentPage === 'install' && installingApp ? (
+          <AppInstallPage
+            app={installingApp}
+            onBack={handleInstallClose}
+            onSuccess={handleInstallSuccess}
+          />
+        ) : activeTab === 'installed' ? (
           <InstalledApps />
         ) : (
           <AvailableApps category={activeTab} searchQuery={searchValue} onAppInstall={handleAppInstall} />
         )}
       </div>
-
-      {/* App Wizard Modal */}
-      {installingApp && (
-        <AppWizard
-          app={installingApp}
-          onClose={() => setInstallingApp(null)}
-          onSuccess={handleInstallSuccess}
-        />
-      )}
     </div>
   );
 }

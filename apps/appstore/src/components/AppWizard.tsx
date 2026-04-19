@@ -16,6 +16,8 @@ interface AppWizardProps {
   editingApp?: App;
   onClose: () => void;
   onSuccess: () => void;
+  isPage?: boolean;
+  showHeader?: boolean;
 }
 
 interface DynamicSection {
@@ -29,7 +31,201 @@ type FormValues = Record<string, ChartFormValue>;
 
 const customApp = 'ix-custom';
 
-export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProps) {
+// Page mode styles
+const pageStyles = {
+  container: {
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column' as const,
+    backgroundColor: '#f5f5f7',
+  },
+  header: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    padding: '24px 24px 20px',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
+    backgroundColor: '#ffffff',
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  title: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 10,
+    fontSize: 20,
+    fontWeight: 700,
+    color: '#1d1d1f',
+    margin: 0,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  },
+  subtitle: {
+    fontSize: 13,
+    color: '#86868b',
+    margin: '6px 0 0 30px',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  progressContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '12px 24px',
+    backgroundColor: '#f5f5f7',
+  },
+  progressBar: {
+    flex: 1,
+    height: 6,
+    backgroundColor: 'rgba(0, 113, 227, 0.2)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#0071e3',
+    borderRadius: 3,
+    transition: 'width 0.3s ease',
+  },
+  progressText: {
+    fontSize: 12,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    minWidth: 80,
+    textAlign: 'right' as const,
+  },
+  form: {
+    flex: 1,
+    overflow: 'auto',
+    padding: 24,
+  },
+  loadingState: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 48,
+    color: '#86868b',
+  },
+  spinner: {
+    width: 32,
+    height: 32,
+    border: '3px solid rgba(0, 0, 0, 0.1)',
+    borderTopColor: '#0071e3',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+    marginBottom: 12,
+  },
+  errorState: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    alignItems: 'center',
+    gap: 12,
+    padding: 32,
+    color: '#ff3b30',
+    textAlign: 'center' as const,
+  },
+  appInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 16,
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    marginBottom: 24,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+  },
+  appIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: '#f5f5f7',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  appIconImg: {
+    width: '100%',
+    height: '100%',
+    objectFit: 'contain' as const,
+  },
+  appMeta: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 4,
+  },
+  appVersion: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  },
+  appTrain: {
+    fontSize: 13,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  searchContainer: {
+    marginBottom: 20,
+  },
+  searchWrapper: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: '#ffffff',
+    borderRadius: 10,
+    padding: '10px 14px',
+    gap: 10,
+    border: '1px solid rgba(0, 0, 0, 0.08)',
+  },
+  searchIcon: {
+    flexShrink: 0,
+  },
+  searchInput: {
+    flex: 1,
+    border: 'none',
+    background: 'transparent',
+    fontSize: 14,
+    outline: 'none',
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  submitContainer: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    padding: '16px 0',
+    marginTop: 24,
+    borderTop: '1px solid rgba(0, 0, 0, 0.08)',
+  },
+  submitButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '12px 32px',
+    fontSize: 15,
+    fontWeight: 600,
+    color: '#ffffff',
+    backgroundColor: '#0071e3',
+    border: 'none',
+    borderRadius: 10,
+    cursor: 'pointer',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    transition: 'all 0.2s ease',
+    boxShadow: '0 4px 12px rgba(0, 113, 227, 0.3)',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+    cursor: 'not-allowed',
+  },
+  buttonSpinner: {
+    width: 14,
+    height: 14,
+    border: '2px solid rgba(255, 255, 255, 0.3)',
+    borderTopColor: '#ffffff',
+    borderRadius: '50%',
+    animation: 'spin 0.8s linear infinite',
+  },
+};
+
+export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false, showHeader = true }: AppWizardProps) {
   const isNew = !editingApp;
   const { installApp, loadInstalledApps } = useAppsStore();
   const { selectedPool } = useDockerStore();
@@ -890,6 +1086,242 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
 
   const searchOptions = getSearchOptions();
 
+  // Page mode - render full page without overlay/modal
+  if (isPage) {
+    return (
+      <div style={pageStyles.container}>
+        {/* Header - only show if showHeader is true */}
+        {showHeader && (
+          <div style={pageStyles.header}>
+            <div style={pageStyles.headerInfo}>
+              <h2 style={pageStyles.title}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0071e3" strokeWidth="2">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                {isNew ? '安装' : '编辑'} {catalogApp?.title || app?.title || editingApp?.metadata?.title || ''}
+              </h2>
+              <p style={pageStyles.subtitle}>
+                {catalogApp?.description || (isNew ? `从 ${app?.train} 目录安装` : '更新应用配置')}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Progress bar */}
+        {jobProgress && (
+          <div style={pageStyles.progressContainer}>
+            <div style={pageStyles.progressBar}>
+              <div
+                style={{
+                  ...pageStyles.progressFill,
+                  width: `${jobProgress.percent}%`,
+                }}
+              />
+            </div>
+            <span style={pageStyles.progressText}>
+              {jobProgress.description || `${jobProgress.percent}%`}
+            </span>
+          </div>
+        )}
+
+        {/* Content */}
+        <form onSubmit={handleSubmit} style={pageStyles.form}>
+          {loading && (
+            <div style={pageStyles.loadingState}>
+              <div style={pageStyles.spinner} />
+              <p>正在加载应用配置...</p>
+            </div>
+          )}
+
+          {error && !loading && (
+            <div style={pageStyles.errorState}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ff3b30" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v4M12 16h.01"/>
+              </svg>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {!loading && !error && catalogApp && (
+            <>
+              {/* Search */}
+              {dynamicSection.length > 3 && (
+                <div style={pageStyles.searchContainer}>
+                  <div style={pageStyles.searchWrapper}>
+                    <svg style={pageStyles.searchIcon} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="2">
+                      <circle cx="11" cy="11" r="7"/>
+                      <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <input
+                      type="text"
+                      placeholder="搜索配置项..."
+                      value={searchValue}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      style={pageStyles.searchInput}
+                      list="wizard-search-options-page"
+                    />
+                    <datalist id="wizard-search-options-page">
+                      {searchOptions.map((opt) => (
+                        <option key={opt.value} value={opt.label} />
+                      ))}
+                    </datalist>
+                  </div>
+                </div>
+              )}
+
+              {/* App Info */}
+              <div style={pageStyles.appInfo}>
+                <div style={pageStyles.appIcon}>
+                  {app?.icon_url ? (
+                    <img
+                      src={app.icon_url}
+                      alt=""
+                      style={pageStyles.appIconImg}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
+                      <rect x="3" y="3" width="18" height="18" rx="4"/>
+                      <path d="M8 12h8M12 8v8"/>
+                    </svg>
+                  )}
+                </div>
+                <div style={pageStyles.appMeta}>
+                  <span style={pageStyles.appVersion}>
+                    {catalogApp.title || app?.title || editingApp?.metadata?.title || ''}
+                  </span>
+                  <span style={pageStyles.appTrain}>
+                    {app?.train || editingApp?.train || ''}
+                  </span>
+                </div>
+              </div>
+
+              {/* Release Name */}
+              <div style={styles.formGroup}>
+                <label style={styles.label}>
+                  应用名称 <span style={styles.required}>*</span>
+                </label>
+                <input
+                  type="text"
+                  value={releaseName}
+                  onChange={(e) => setReleaseName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                  style={{
+                    ...styles.input,
+                    ...(editingApp ? styles.inputDisabled : {}),
+                  }}
+                  placeholder="my-app"
+                  title="只能使用小写字母、数字和连字符，以字母开头"
+                  required
+                  disabled={!!editingApp}
+                />
+                <p style={styles.fieldHint}>
+                  只能使用小写字母、数字和连字符，以字母开头
+                </p>
+              </div>
+
+              {/* Version Selector */}
+              {rootDynamicSection[0]?.schema.find((f) => f.variable === 'version') && !editingApp && (
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>
+                    版本 <span style={styles.required}>*</span>
+                  </label>
+                  <select
+                    value={selectedVersion}
+                    onChange={(e) => handleVersionChange(e.target.value)}
+                    style={styles.select}
+                  >
+                    {Object.keys(catalogApp.versions || {})
+                      .filter((v) => catalogApp.versions[v].healthy)
+                      .map((version) => (
+                        <option key={version} value={version}>
+                          {version}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Dynamic Form Sections */}
+              {visibleSections.map((section) => (
+                <div
+                  key={section.name}
+                  ref={(el) => { sectionRefs.current[section.name] = el; }}
+                  style={styles.section}
+                >
+                  {section.schema.map((field) => {
+                    return (
+                      <div key={field.variable} style={styles.formGroup}>
+                        <label style={styles.label}>
+                          {field.label || field.variable}
+                          {isFieldRequired(field) && !field.schema.default && (
+                            <span style={styles.required}>*</span>
+                          )}
+                        </label>
+                        {field.description && (
+                          <p style={styles.fieldDescription}>{field.description}</p>
+                        )}
+                        {renderFormField(field)}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+
+              {visibleAdvancedFields.length > 0 && (
+                visibleAdvancedFields.map((field) => {
+                  return (
+                    <div key={field.variable} style={styles.formGroup}>
+                      <label style={styles.label}>
+                        {field.label || field.variable}
+                        {isFieldRequired(field) && !field.schema.default && (
+                          <span style={styles.required}>*</span>
+                        )}
+                      </label>
+                      {field.description && (
+                        <p style={styles.fieldDescription}>{field.description}</p>
+                      )}
+                      {renderFormField(field)}
+                    </div>
+                  );
+                })
+              )}
+
+              {/* Submit */}
+              <div style={pageStyles.submitContainer}>
+                <button
+                  type="submit"
+                  style={{
+                    ...pageStyles.submitButton,
+                    ...(submitting ? pageStyles.submitButtonDisabled : {}),
+                  }}
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <div style={pageStyles.buttonSpinner} />
+                      {isNew ? '安装中...' : '保存中...'}
+                    </>
+                  ) : (
+                    <>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
+                      {isNew ? '开始安装' : '保存更新'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </>
+          )}
+        </form>
+      </div>
+    );
+  }
+
+  // Modal mode (default)
   return (
     <div style={styles.overlay} onClick={onClose}>
       <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
