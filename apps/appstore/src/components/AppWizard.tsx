@@ -500,7 +500,21 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
       if (groupQuestions.length === 1 && groupQuestions[0].schema.type === 'dict') {
         const dictField = groupQuestions[0];
         const attrs = dictField.schema.attrs || [];
-        // Add all attrs as fields with the dict's variable as prefix for nested values
+
+        // Pre-build mappings for all attrs in this dict (including nested attrs)
+        const buildNestedAttrsMappings = (attrList: ChartSchemaNode[], parentPath: string) => {
+          attrList.forEach((attr) => {
+            const attrControlName = `${parentPath}.${attr.variable}`;
+            variableToControlName[attr.variable] = attrControlName;
+            // Recursively handle nested attrs (e.g., dict within dict)
+            if (attr.schema.type === 'dict' && attr.schema.attrs) {
+              buildNestedAttrsMappings(attr.schema.attrs, attrControlName);
+            }
+          });
+        };
+        buildNestedAttrsMappings(attrs, dictField.variable);
+
+        // Now add attrs to section with transformed show_if
         attrs.forEach((attr) => {
           const attrControlName = `${dictField.variable}.${attr.variable}`;
 
