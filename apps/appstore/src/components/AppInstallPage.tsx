@@ -156,6 +156,9 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   wizardSection: {
-    padding: '24px 32px',
+    padding: '32px 40px',
+    maxWidth: 1200,
+    marginLeft: 'auto',
+    marginRight: 'auto',
   },
 };

@@ -503,7 +503,9 @@ const styles: Record<string, React.CSSProperties> = {
   // Content Section
   detailContent: {
     padding: '28px 40px',
-    maxWidth: 740,
+    maxWidth: 1200,
+    marginLeft: 'auto',
+    marginRight: 'auto',
   },
   detailSection: {
     marginBottom: 32,

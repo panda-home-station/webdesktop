@@ -5,6 +5,6 @@
   "icons": {
     "default": "./icon.svg"
   },
-  "minWidth": 920,
-  "minHeight": 600
+  "minWidth": 1100,
+  "minHeight": 640
 }
