@@ -48,6 +48,11 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
     loadAvailableApps();
   }, [loadAvailableApps]);
 
+  // Reset selected app when category changes
+  useEffect(() => {
+    setSelectedApp(null);
+  }, [category]);
+
   const filteredApps = availableApps.filter((app) => {
     const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       app.description?.toLowerCase().includes(searchQuery.toLowerCase());
