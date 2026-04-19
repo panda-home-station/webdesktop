@@ -92,7 +92,6 @@ export class AppService {
    * Create (install) an app
    */
   create(params: AppCreate): Promise<Job<void>> {
-    console.log('[AppService] app.create params:', JSON.stringify(params, null, 2));
     return truenasApi.job<void>('app.create', [params]) as Promise<Job<void>>;
   }
 

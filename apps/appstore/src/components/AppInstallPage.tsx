@@ -3,7 +3,7 @@
  * Full page for installing apps with header navigation
  */
 
-import { useEffect, useState } from 'react';
+import React from 'react';
 import { AppWizard } from './AppWizard';
 import { AvailableApp } from '@truenas/types/app-types';
 

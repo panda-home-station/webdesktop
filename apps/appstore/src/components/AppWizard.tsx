@@ -284,7 +284,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     } finally {
       setLoading(false);
     }
-  }, [app]);
+  }, [app]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load app for editing
   const loadApplicationForEdit = useCallback(async () => {
@@ -317,7 +317,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     } finally {
       setLoading(false);
     }
-  }, [editingApp]);
+  }, [editingApp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Set up app for creation
   // Note: webui constructs schema from versions[latest_version].schema
@@ -421,20 +421,12 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     // Separate basic and advanced fields
     const advanced: (ChartSchemaNode & { controlName: string })[] = [];
 
+    // Collect all questions first, then post-process sections
+    const questionsByGroup: Record<string, (ChartSchemaNode & { controlName: string })[]> = {};
+
     // Add questions to their groups
     schema.questions?.forEach((question) => {
       const groupName = question.group || '';
-      let section = sections.find((s) => s.name === groupName);
-
-      if (!section) {
-        section = {
-          name: groupName,
-          description: '',
-          help: '',
-          schema: [],
-        };
-        sections.push(section);
-      }
 
       // Transform question to include controlName
       const transformedQuestion = {
@@ -448,7 +440,32 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
       if (isAdvancedField) {
         advanced.push(transformedQuestion);
       } else {
-        section.schema.push(transformedQuestion);
+        if (!questionsByGroup[groupName]) {
+          questionsByGroup[groupName] = [];
+        }
+        questionsByGroup[groupName].push(transformedQuestion);
+      }
+    });
+
+    // Process sections: expand single dict fields
+    sections.forEach((section) => {
+      const groupQuestions = questionsByGroup[section.name] || [];
+
+      // If section has only one dict field, expand its attrs
+      if (groupQuestions.length === 1 && groupQuestions[0].schema.type === 'dict') {
+        const dictField = groupQuestions[0];
+        const attrs = dictField.schema.attrs || [];
+        // Add all attrs as fields with the dict's variable as prefix for nested values
+        attrs.forEach((attr) => {
+          section.schema.push({
+            ...attr,
+            controlName: `${dictField.variable}.${attr.variable}`,
+            // Store original variable for nested rendering
+            originalVariable: attr.variable,
+          } as ChartSchemaNode & { controlName: string });
+        });
+      } else {
+        section.schema.push(...groupQuestions);
       }
     });
 
@@ -475,12 +492,57 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     }
   };
 
-  // Handle field change
+  // Get nested value from formValues using dot notation path (e.g., "openclaw.trusted_proxies")
+  const getNestedValue = (path: string, fallback: ChartFormValue = ''): ChartFormValue => {
+    if (!path.includes('.')) {
+      return formValues[path] ?? fallback;
+    }
+    const parts = path.split('.');
+    let current: ChartFormValue = formValues[parts[0]];
+    for (let i = 1; i < parts.length; i++) {
+      if (current === null || current === undefined || typeof current !== 'object') {
+        return fallback;
+      }
+      current = (current as Record<string, ChartFormValue>)[parts[i]];
+    }
+    return current ?? fallback;
+  };
+
+  // Handle field change with nested path support (e.g., "openclaw.trusted_proxies")
   const handleFieldChange = (name: string, value: ChartFormValue) => {
-    setFormValues((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormValues((prev) => {
+      const newValues = { ...prev };
+
+      if (name.includes('.')) {
+        const parts = name.split('.');
+        const root = parts[0];
+        const rest = parts.slice(1).join('.');
+
+        // Initialize root if needed
+        if (!(root in newValues) || typeof newValues[root] !== 'object') {
+          newValues[root] = {};
+        }
+
+        // Create nested path
+        const setNested = (obj: Record<string, ChartFormValue>, path: string[], val: ChartFormValue) => {
+          if (path.length === 1) {
+            obj[path[0]] = val;
+            return;
+          }
+          const key = path[0];
+          if (!(key in obj) || typeof obj[key] !== 'object') {
+            obj[key] = {};
+          }
+          setNested(obj[key] as Record<string, ChartFormValue>, path.slice(1), val);
+        };
+
+        setNested(newValues[root] as Record<string, ChartFormValue>, rest.split('.'), value);
+      } else {
+        newValues[name] = value;
+      }
+
+      return newValues;
+    });
   };
 
   // Subscribe to job updates
@@ -601,7 +663,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
 
   // Render list field (ix-list equivalent)
   const renderListField = (field: ChartSchemaNode & { controlName: string }) => {
-    const items = (formValues[field.variable] as ChartFormValue[]) || [];
+    const items = (getNestedValue(field.controlName) as ChartFormValue[]) || [];
     const itemsSchema = field.schema.items || [];
 
     const handleAddItem = () => {
@@ -621,18 +683,18 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
       } else {
         newItems.push('');
       }
-      handleFieldChange(field.variable, newItems);
+      handleFieldChange(field.controlName, newItems);
     };
 
     const handleRemoveItem = (index: number) => {
       const newItems = items.filter((_, i) => i !== index);
-      handleFieldChange(field.variable, newItems);
+      handleFieldChange(field.controlName, newItems);
     };
 
     const handleItemChange = (index: number, value: ChartFormValue) => {
       const newItems = [...items];
       newItems[index] = value;
-      handleFieldChange(field.variable, newItems);
+      handleFieldChange(field.controlName, newItems);
     };
 
     return (
@@ -659,7 +721,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
                         const newItem = { ...(newItems[index] as Record<string, ChartFormValue>) };
                         newItem[attr.variable] = val;
                         newItems[index] = newItem;
-                        handleFieldChange(field.variable, newItems);
+                        handleFieldChange(field.controlName, newItems);
                       })}
                     </div>
                   );
@@ -911,14 +973,14 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
 
   // Render form field based on schema type
   const renderFormField = (field: ChartSchemaNode & { controlName: string }) => {
-    const value = formValues[field.variable] ?? field.schema.default ?? '';
+    const value = getNestedValue(field.controlName, field.schema.default ?? '');
 
     // String type with enum should render as select dropdown
     if (field.schema.type === 'string' && field.schema.enum) {
       return (
         <select
           value={value as string}
-          onChange={(e) => handleFieldChange(field.variable, e.target.value)}
+          onChange={(e) => handleFieldChange(field.controlName, e.target.value)}
           style={styles.select}
         >
           <option value="">选择...</option>
@@ -940,7 +1002,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <input
             type={field.schema.private ? 'password' : 'text'}
             value={value as string}
-            onChange={(e) => handleFieldChange(field.variable, e.target.value)}
+            onChange={(e) => handleFieldChange(field.controlName, e.target.value)}
             style={styles.input}
             placeholder={field.label}
           />
@@ -952,7 +1014,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <input
             type="number"
             value={value as number}
-            onChange={(e) => handleFieldChange(field.variable, parseInt(e.target.value) || 0)}
+            onChange={(e) => handleFieldChange(field.controlName, parseInt(e.target.value) || 0)}
             style={styles.input}
             min={field.schema.min as number}
             max={field.schema.max as number}
@@ -966,7 +1028,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             <input
               type="checkbox"
               checked={value as boolean}
-              onChange={(e) => handleFieldChange(field.variable, e.target.checked)}
+              onChange={(e) => handleFieldChange(field.controlName, e.target.checked)}
               style={styles.checkbox}
             />
             <span>{field.description || field.label}</span>
@@ -977,7 +1039,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         return (
           <select
             value={value as string}
-            onChange={(e) => handleFieldChange(field.variable, e.target.value)}
+            onChange={(e) => handleFieldChange(field.controlName, e.target.value)}
             style={styles.select}
           >
             <option value="">选择...</option>
@@ -1018,7 +1080,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <input
             type="text"
             value={value as string}
-            onChange={(e) => handleFieldChange(field.variable, e.target.value)}
+            onChange={(e) => handleFieldChange(field.controlName, e.target.value)}
             style={styles.input}
             placeholder={field.label}
           />
@@ -1027,7 +1089,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
   };
 
   // Check if field should be shown (based on show_if conditions)
-  const isFieldHidden = (field: ChartSchemaNode): boolean => {
+  const isFieldHidden = useCallback((field: ChartSchemaNode): boolean => {
     // Hidden field is always hidden
     if (field.schema.hidden) return true;
 
@@ -1047,7 +1109,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     }
 
     return false;
-  };
+  }, [formValues]);
 
   // Check if field is required
   const isFieldRequired = (field: ChartSchemaNode): boolean => {
@@ -1077,10 +1139,12 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         schema: section.schema.filter((field) => !isFieldHidden(field)),
       }))
       .filter((section) => section.schema.length > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dynamicSection, formValues]);
 
   const visibleAdvancedFields = useMemo(() => {
     return advancedFields.filter((field) => !isFieldHidden(field));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [advancedFields, formValues]);
 
   const searchOptions = getSearchOptions();
@@ -1216,28 +1280,31 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
 
               {/* Dynamic Form Sections */}
               {visibleSections.map((section) => (
-                <div
-                  key={section.name}
-                  ref={(el) => { sectionRefs.current[section.name] = el; }}
-                  style={styles.section}
-                >
-                  {section.schema.map((field) => {
-                    return (
-                      <div key={field.variable} style={styles.formGroup}>
-                        <label style={styles.label}>
-                          {field.label || field.variable}
-                          {isFieldRequired(field) && !field.schema.default && (
-                            <span style={styles.required}>*</span>
+                <>
+                  <div style={styles.sectionTitleOutside}>{section.name}</div>
+                  <div
+                    key={section.name}
+                    ref={(el) => { sectionRefs.current[section.name] = el; }}
+                    style={styles.sectionFields}
+                  >
+                    {section.schema.map((field) => {
+                      return (
+                        <div key={field.variable} style={styles.formGroup}>
+                          <label style={styles.label}>
+                            {field.label || field.variable}
+                            {isFieldRequired(field) && !field.schema.default && (
+                              <span style={styles.required}>*</span>
+                            )}
+                          </label>
+                          {field.description && (
+                            <p style={styles.fieldDescription}>{field.description}</p>
                           )}
-                        </label>
-                        {field.description && (
-                          <p style={styles.fieldDescription}>{field.description}</p>
-                        )}
-                        {renderFormField(field)}
-                      </div>
-                    );
-                  })}
-                </div>
+                          {renderFormField(field)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               ))}
 
               {visibleAdvancedFields.length > 0 && (
@@ -1447,28 +1514,31 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
 
               {/* Dynamic Form Sections */}
               {visibleSections.map((section) => (
-                <div
-                  key={section.name}
-                  ref={(el) => { sectionRefs.current[section.name] = el; }}
-                  style={styles.section}
-                >
-                  {section.schema.map((field) => {
-                    return (
-                      <div key={field.variable} style={styles.formGroup}>
-                        <label style={styles.label}>
-                          {field.label || field.variable}
-                          {isFieldRequired(field) && !field.schema.default && (
-                            <span style={styles.required}>*</span>
+                <>
+                  <div style={styles.sectionTitleOutside}>{section.name}</div>
+                  <div
+                    key={section.name}
+                    ref={(el) => { sectionRefs.current[section.name] = el; }}
+                    style={styles.sectionFields}
+                  >
+                    {section.schema.map((field) => {
+                      return (
+                        <div key={field.variable} style={styles.formGroup}>
+                          <label style={styles.label}>
+                            {field.label || field.variable}
+                            {isFieldRequired(field) && !field.schema.default && (
+                              <span style={styles.required}>*</span>
+                            )}
+                          </label>
+                          {field.description && (
+                            <p style={styles.fieldDescription}>{field.description}</p>
                           )}
-                        </label>
-                        {field.description && (
-                          <p style={styles.fieldDescription}>{field.description}</p>
-                        )}
-                        {renderFormField(field)}
-                      </div>
-                    );
-                  })}
-                </div>
+                          {renderFormField(field)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               ))}
 
               {visibleAdvancedFields.length > 0 && (
@@ -1794,6 +1864,30 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#fafafa',
     borderRadius: 12,
   },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: 600,
+    color: '#1d1d1f',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  },
+  sectionFields: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 16,
+    padding: 16,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+  },
+  sectionTitleOutside: {
+    fontSize: 15,
+    fontWeight: 700,
+    color: '#1d1d1f',
+    marginBottom: 8,
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  },
   sectionHeader: {
     display: 'flex',
     alignItems: 'center',
@@ -1801,12 +1895,6 @@ const styles: Record<string, React.CSSProperties> = {
     marginBottom: 16,
     paddingBottom: 12,
     borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: 700,
-    color: '#1d1d1f',
-    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
   },
   advancedToggle: {
     display: 'flex',
