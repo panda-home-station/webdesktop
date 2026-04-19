@@ -94,7 +94,6 @@ const pageStyles = {
   },
   form: {
     flex: 1,
-    overflow: 'auto',
     padding: 24,
   },
   loadingState: {
@@ -1169,35 +1168,6 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
                   </div>
                 </div>
               )}
-
-              {/* App Info */}
-              <div style={pageStyles.appInfo}>
-                <div style={pageStyles.appIcon}>
-                  {app?.icon_url ? (
-                    <img
-                      src={app.icon_url}
-                      alt=""
-                      style={pageStyles.appIconImg}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
-                      <rect x="3" y="3" width="18" height="18" rx="4"/>
-                      <path d="M8 12h8M12 8v8"/>
-                    </svg>
-                  )}
-                </div>
-                <div style={pageStyles.appMeta}>
-                  <span style={pageStyles.appVersion}>
-                    {catalogApp.title || app?.title || editingApp?.metadata?.title || ''}
-                  </span>
-                  <span style={pageStyles.appTrain}>
-                    {app?.train || editingApp?.train || ''}
-                  </span>
-                </div>
-              </div>
 
               {/* Release Name */}
               <div style={styles.formGroup}>

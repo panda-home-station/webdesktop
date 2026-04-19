@@ -89,12 +89,13 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     backgroundColor: '#f5f5f7',
-    overflow: 'hidden',
+    overflow: 'auto',
   },
   header: {
     padding: '16px 24px',
     backgroundColor: '#ffffff',
     borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+    flexShrink: 0,
   },
   backButton: {
     display: 'inline-flex',
@@ -118,6 +119,7 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '24px 32px',
     background: 'linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%)',
     borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
+    flexShrink: 0,
   },
   appIcon: {
     width: 80,
@@ -154,8 +156,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   wizardSection: {
-    flex: 1,
-    overflow: 'auto',
     padding: '24px 32px',
   },
 };
