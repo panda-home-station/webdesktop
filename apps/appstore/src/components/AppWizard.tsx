@@ -4,7 +4,7 @@
  * Handles app installation and editing with dynamic form generation
  */
 
-import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo, Fragment } from 'react';
 import { useAppsStore } from '@truenas/stores/apps';
 import { useDockerStore } from '@truenas/stores/docker';
 import { appService } from '@truenas/services/app';
@@ -424,14 +424,59 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     // Collect all questions first, then post-process sections
     const questionsByGroup: Record<string, (ChartSchemaNode & { controlName: string })[]> = {};
 
-    // Add questions to their groups
+    // Build a mapping from variable to controlName for show_if resolution
+    // This is done in TWO PASSES to ensure all mappings are available before transforming show_if
+
+    // First pass: collect all top-level questions
+    const topLevelVariables: string[] = [];
+    schema.questions?.forEach((question) => {
+      topLevelVariables.push(question.variable);
+    });
+
+    // First pass: build initial mapping for top-level questions
+    const variableToControlName: Record<string, string> = {};
+    topLevelVariables.forEach((variable) => {
+      variableToControlName[variable] = variable;
+    });
+
+    // First pass: identify dict fields and their attrs
+    const dictFields: { dictField: ChartSchemaNode; attrs: ChartSchemaNode[] }[] = [];
+    schema.questions?.forEach((question) => {
+      if (question.schema.type === 'dict' && question.schema.attrs) {
+        dictFields.push({ dictField: question, attrs: question.schema.attrs });
+        // Add dict attrs to mapping
+        question.schema.attrs.forEach((attr) => {
+          variableToControlName[attr.variable] = `${question.variable}.${attr.variable}`;
+        });
+      }
+    });
+
+    // Helper to transform show_if to use controlName paths
+    const transformShowIf = (showIf: string[][] | undefined): string[][] | undefined => {
+      if (!showIf) return undefined;
+      return showIf.map((condition: string[]) => {
+        if (Array.isArray(condition) && condition.length >= 3) {
+          const [fieldName, operator, value] = condition;
+          // Use the controlName path if available, otherwise use the original fieldName
+          const resolvedFieldName = variableToControlName[fieldName] || fieldName;
+          return [resolvedFieldName, operator, value];
+        }
+        return condition;
+      });
+    };
+
+    // Second pass: add questions to groups with transformed show_if
     schema.questions?.forEach((question) => {
       const groupName = question.group || '';
+      const controlName = variableToControlName[question.variable];
 
-      // Transform question to include controlName
       const transformedQuestion = {
         ...question,
-        controlName: question.variable,
+        controlName,
+        schema: {
+          ...question.schema,
+          show_if: transformShowIf(question.schema.show_if),
+        },
       };
 
       // Check if field should be in advanced settings
@@ -457,11 +502,17 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         const attrs = dictField.schema.attrs || [];
         // Add all attrs as fields with the dict's variable as prefix for nested values
         attrs.forEach((attr) => {
+          const attrControlName = `${dictField.variable}.${attr.variable}`;
+
           section.schema.push({
             ...attr,
-            controlName: `${dictField.variable}.${attr.variable}`,
+            controlName: attrControlName,
             // Store original variable for nested rendering
             originalVariable: attr.variable,
+            schema: {
+              ...attr.schema,
+              show_if: transformShowIf(attr.schema.show_if),
+            },
           } as ChartSchemaNode & { controlName: string });
         });
       } else {
@@ -474,13 +525,38 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     setDynamicSection(filteredSections);
     setAdvancedFields(advanced);
 
-    // Initialize form values from schema defaults
+    // Initialize form values from schema defaults (including nested dict defaults)
     const initialValues: FormValues = {};
-    schema.questions?.forEach((q) => {
-      if (q.schema.default !== undefined) {
-        initialValues[q.variable] = q.schema.default as ChartFormValue;
-      }
-    });
+
+    // Helper to recursively extract defaults from questions
+    const extractDefaults = (questions: ChartSchemaNode[], parentPath: string = '') => {
+      questions.forEach((q) => {
+        const fullPath = parentPath ? `${parentPath}.${q.variable}` : q.variable;
+
+        if (q.schema.type === 'dict' && q.schema.attrs) {
+          // For dict type, recursively extract defaults from attrs
+          extractDefaults(q.schema.attrs, fullPath);
+        } else if (q.schema.default !== undefined) {
+          // Set the default value using nested path
+          if (!fullPath.includes('.')) {
+            initialValues[fullPath] = q.schema.default as ChartFormValue;
+          } else {
+            // Handle nested path like "openclaw.auth_mode"
+            const parts = fullPath.split('.');
+            let current: Record<string, ChartFormValue> = initialValues;
+            for (let i = 0; i < parts.length - 1; i++) {
+              if (!(parts[i] in current)) {
+                current[parts[i]] = {};
+              }
+              current = current[parts[i]] as Record<string, ChartFormValue>;
+            }
+            current[parts[parts.length - 1]] = q.schema.default as ChartFormValue;
+          }
+        }
+      });
+    };
+
+    extractDefaults(schema.questions || []);
     setFormValues((prev) => ({ ...prev, ...initialValues }));
   };
 
@@ -1098,7 +1174,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
       for (const condition of field.schema.show_if) {
         if (Array.isArray(condition) && condition.length >= 3) {
           const [fieldName, operator, value] = condition;
-          const currentValue = formValues[fieldName as string];
+          const currentValue = getNestedValue(fieldName as string);
           if (operator === '=') {
             if (currentValue !== value) return true;
           } else if (operator === '!=') {
@@ -1109,6 +1185,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
     }
 
     return false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formValues]);
 
   // Check if field is required
@@ -1280,10 +1357,9 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
 
               {/* Dynamic Form Sections */}
               {visibleSections.map((section) => (
-                <>
+                <Fragment key={section.name}>
                   <div style={styles.sectionTitleOutside}>{section.name}</div>
                   <div
-                    key={section.name}
                     ref={(el) => { sectionRefs.current[section.name] = el; }}
                     style={styles.sectionFields}
                   >
@@ -1304,7 +1380,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
                       );
                     })}
                   </div>
-                </>
+                </Fragment>
               ))}
 
               {visibleAdvancedFields.length > 0 && (
@@ -1514,10 +1590,9 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
 
               {/* Dynamic Form Sections */}
               {visibleSections.map((section) => (
-                <>
+                <Fragment key={section.name}>
                   <div style={styles.sectionTitleOutside}>{section.name}</div>
                   <div
-                    key={section.name}
                     ref={(el) => { sectionRefs.current[section.name] = el; }}
                     style={styles.sectionFields}
                   >
@@ -1538,7 +1613,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
                       );
                     })}
                   </div>
-                </>
+                </Fragment>
               ))}
 
               {visibleAdvancedFields.length > 0 && (
