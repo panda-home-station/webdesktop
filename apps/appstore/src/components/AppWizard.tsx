@@ -4,7 +4,7 @@
  * Handles app installation and editing with dynamic form generation
  */
 
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { useAppsStore } from '@truenas/stores/apps';
 import { useDockerStore } from '@truenas/stores/docker';
 import { appService } from '@truenas/services/app';
@@ -69,7 +69,6 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
     setLoading(true);
     try {
       const details = await appService.getCatalogAppDetails(app.name, app.train);
-      console.log('[AppWizard] API returned catalog details:', JSON.stringify(details, null, 2));
       setCatalogApp(details);
 
       // Get all installed app names for forbidden validation
@@ -212,8 +211,6 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
 
   // Build dynamic form from schema
   const buildDynamicForm = (schema: { groups: { name: string; description: string }[]; questions: ChartSchemaNode[] }) => {
-    console.log('[AppWizard] buildDynamicForm called with schema:', JSON.stringify(schema, null, 2));
-
     const sections: DynamicSection[] = [];
 
     // Add groups
@@ -261,7 +258,8 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
     });
 
     // Filter out empty sections
-    setDynamicSection(sections.filter((s) => s.schema.length > 0));
+    const filteredSections = sections.filter((s) => s.schema.length > 0);
+    setDynamicSection(filteredSections);
     setAdvancedFields(advanced);
 
     // Initialize form values from schema defaults
@@ -406,9 +404,221 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
     return options;
   };
 
+  // Render list field (ix-list equivalent)
+  const renderListField = (field: ChartSchemaNode & { controlName: string }) => {
+    const items = (formValues[field.variable] as ChartFormValue[]) || [];
+    const itemsSchema = field.schema.items || [];
+
+    const handleAddItem = () => {
+      const newItems = [...items];
+      // For simple types, add empty string. For dict types, add empty object.
+      if (itemsSchema.length > 0) {
+        const firstItem = itemsSchema[0];
+        if (firstItem.schema.type === 'dict') {
+          const emptyObj: Record<string, ChartFormValue> = {};
+          (firstItem.schema.attrs || []).forEach((attr: ChartSchemaNode) => {
+            emptyObj[attr.variable] = attr.schema.default ?? '';
+          });
+          newItems.push(emptyObj);
+        } else {
+          newItems.push('');
+        }
+      } else {
+        newItems.push('');
+      }
+      handleFieldChange(field.variable, newItems);
+    };
+
+    const handleRemoveItem = (index: number) => {
+      const newItems = items.filter((_, i) => i !== index);
+      handleFieldChange(field.variable, newItems);
+    };
+
+    const handleItemChange = (index: number, value: ChartFormValue) => {
+      const newItems = [...items];
+      newItems[index] = value;
+      handleFieldChange(field.variable, newItems);
+    };
+
+    return (
+      <div style={styles.listContainer}>
+        {items.length === 0 && (
+          <span style={styles.listEmpty}>尚未添加任何项目。</span>
+        )}
+        {items.map((item, index) => (
+          <div key={index} style={styles.listItem}>
+            {itemsSchema.length > 0 && itemsSchema[0].schema.type === 'dict' ? (
+              // Dict type items
+              <div style={styles.listItemContent}>
+                {(itemsSchema[0].schema.attrs || []).map((attr: ChartSchemaNode) => {
+                  const itemObj = item as Record<string, ChartFormValue>;
+                  const attrValue = itemObj[attr.variable] ?? attr.schema.default ?? '';
+                  return (
+                    <div key={attr.variable} style={styles.listItemField}>
+                      <label style={styles.listItemLabel}>
+                        {attr.label || attr.variable}
+                        {attr.schema.required && <span style={styles.required}>*</span>}
+                      </label>
+                      {renderListItemField(attr, attrValue, (val) => {
+                        const newItems = [...items];
+                        const newItem = { ...(newItems[index] as Record<string, ChartFormValue>) };
+                        newItem[attr.variable] = val;
+                        newItems[index] = newItem;
+                        handleFieldChange(field.variable, newItems);
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              // Simple type items (string, number, etc.)
+              <div style={styles.listItemSimple}>
+                <input
+                  type="text"
+                  value={item as string}
+                  onChange={(e) => handleItemChange(index, e.target.value)}
+                  style={styles.listItemInput}
+                  placeholder={field.label}
+                />
+              </div>
+            )}
+            <button
+              type="button"
+              style={styles.listItemDelete}
+              onClick={() => handleRemoveItem(index)}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          style={styles.listAddButton}
+          onClick={handleAddItem}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          添加 {field.label}
+        </button>
+      </div>
+    );
+  };
+
+  // Render field for list item
+  const renderListItemField = (
+    schema: ChartSchemaNode,
+    value: ChartFormValue,
+    onChange: (value: ChartFormValue) => void
+  ) => {
+    // String type with enum should render as select dropdown
+    if (schema.schema.type === 'string' && schema.schema.enum) {
+      return (
+        <select
+          value={value as string}
+          onChange={(e) => onChange(e.target.value)}
+          style={styles.select}
+        >
+          <option value="">选择...</option>
+          {schema.schema.enum.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.description || opt.value}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    switch (schema.schema.type) {
+      case 'string':
+      case 'hostname':
+      case 'ipaddr':
+      case 'cidr':
+        return (
+          <input
+            type={schema.schema.private ? 'password' : 'text'}
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            style={styles.input}
+            placeholder={schema.label}
+          />
+        );
+      case 'int':
+      case 'number':
+        return (
+          <input
+            type="number"
+            value={value as number}
+            onChange={(e) => onChange(parseInt(e.target.value) || 0)}
+            style={styles.input}
+            min={schema.schema.min as number}
+            max={schema.schema.max as number}
+            placeholder={schema.label}
+          />
+        );
+      case 'boolean':
+        return (
+          <label style={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={value as boolean}
+              onChange={(e) => onChange(e.target.checked)}
+              style={styles.checkbox}
+            />
+            <span>{schema.description || schema.label}</span>
+          </label>
+        );
+      case 'select':
+        return (
+          <select
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            style={styles.select}
+          >
+            <option value="">选择...</option>
+            {schema.schema.enum?.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.description || opt.value}
+              </option>
+            ))}
+          </select>
+        );
+      default:
+        return (
+          <input
+            type="text"
+            value={value as string}
+            onChange={(e) => onChange(e.target.value)}
+            style={styles.input}
+            placeholder={schema.label}
+          />
+        );
+    }
+  };
+
   // Render nested form fields (for dict attrs)
   const renderNestedField = (nestedField: ChartSchemaNode) => {
     const value = formValues[nestedField.variable] ?? nestedField.schema.default ?? '';
+
+    // String type with enum should render as select dropdown
+    if (nestedField.schema.type === 'string' && nestedField.schema.enum) {
+      return (
+        <select
+          value={value as string}
+          onChange={(e) => handleFieldChange(nestedField.variable, e.target.value)}
+          style={styles.select}
+        >
+          <option value="">选择...</option>
+          {nestedField.schema.enum.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.description || opt.value}
+            </option>
+          ))}
+        </select>
+      );
+    }
 
     switch (nestedField.schema.type) {
       case 'string':
@@ -417,7 +627,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
       case 'cidr':
         return (
           <input
-            type="text"
+            type={nestedField.schema.private ? 'password' : 'text'}
             value={value as string}
             onChange={(e) => handleFieldChange(nestedField.variable, e.target.value)}
             style={styles.input}
@@ -468,6 +678,29 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
           </select>
         );
 
+      case 'list':
+        return renderListField({ ...nestedField, controlName: nestedField.variable } as ChartSchemaNode & { controlName: string });
+
+      case 'dict':
+        return (
+          <div style={styles.dictContainer}>
+            {(nestedField.schema.attrs || []).map((attr: ChartSchemaNode) => (
+              <div key={attr.variable} style={styles.nestedFormGroup}>
+                <label style={styles.nestedLabel}>
+                  {attr.label || attr.variable}
+                  {(attr.schema.required || (attr.schema.empty !== undefined && !attr.schema.empty)) && (
+                    <span style={styles.required}>*</span>
+                  )}
+                </label>
+                {attr.description && (
+                  <p style={styles.nestedDescription}>{attr.description}</p>
+                )}
+                {renderNestedField(attr)}
+              </div>
+            ))}
+          </div>
+        );
+
       default:
         return (
           <input
@@ -485,6 +718,24 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
   const renderFormField = (field: ChartSchemaNode & { controlName: string }) => {
     const value = formValues[field.variable] ?? field.schema.default ?? '';
 
+    // String type with enum should render as select dropdown
+    if (field.schema.type === 'string' && field.schema.enum) {
+      return (
+        <select
+          value={value as string}
+          onChange={(e) => handleFieldChange(field.variable, e.target.value)}
+          style={styles.select}
+        >
+          <option value="">选择...</option>
+          {field.schema.enum.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.description || opt.value}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
     switch (field.schema.type) {
       case 'string':
       case 'hostname':
@@ -492,7 +743,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
       case 'cidr':
         return (
           <input
-            type="text"
+            type={field.schema.private ? 'password' : 'text'}
             value={value as string}
             onChange={(e) => handleFieldChange(field.variable, e.target.value)}
             style={styles.input}
@@ -565,11 +816,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
         );
 
       case 'list':
-        return (
-          <div style={styles.listField}>
-            <p style={styles.listFieldHint}>列表类型字段 - 暂未实现</p>
-          </div>
-        );
+        return renderListField(field);
 
       default:
         return (
@@ -584,9 +831,27 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
     }
   };
 
-  // Check if field should be shown
+  // Check if field should be shown (based on show_if conditions)
   const isFieldHidden = (field: ChartSchemaNode): boolean => {
-    return field.schema.hidden || false;
+    // Hidden field is always hidden
+    if (field.schema.hidden) return true;
+
+    // Check show_if conditions
+    if (field.schema.show_if && Array.isArray(field.schema.show_if)) {
+      for (const condition of field.schema.show_if) {
+        if (Array.isArray(condition) && condition.length >= 3) {
+          const [fieldName, operator, value] = condition;
+          const currentValue = formValues[fieldName as string];
+          if (operator === '=') {
+            if (currentValue !== value) return true;
+          } else if (operator === '!=') {
+            if (currentValue === value) return true;
+          }
+        }
+      }
+    }
+
+    return false;
   };
 
   // Check if field is required
@@ -594,10 +859,12 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
     return field.schema.required || (field.schema.empty !== undefined && !field.schema.empty);
   };
 
-  // Check if field should be in advanced settings (has default or not strictly required)
+  // Check if field should be in advanced settings
   const isFieldAdvanced = (field: ChartSchemaNode): boolean => {
     // Hidden fields go to advanced
     if (field.schema.hidden) return true;
+    // dict and list types are NOT advanced - they render their children
+    if (field.schema.type === 'dict' || field.schema.type === 'list') return false;
     // Fields with defaults go to advanced
     if (field.schema.default !== undefined) return true;
     // Fields that are not required go to advanced
@@ -606,6 +873,20 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
     if (field.schema.empty !== undefined && field.schema.empty) return true;
     return false;
   };
+
+  // Memoize visible fields based on formValues (for show_if support)
+  const visibleSections = useMemo(() => {
+    return dynamicSection
+      .map((section) => ({
+        ...section,
+        schema: section.schema.filter((field) => !isFieldHidden(field)),
+      }))
+      .filter((section) => section.schema.length > 0);
+  }, [dynamicSection, formValues]);
+
+  const visibleAdvancedFields = useMemo(() => {
+    return advancedFields.filter((field) => !isFieldHidden(field));
+  }, [advancedFields, formValues]);
 
   const searchOptions = getSearchOptions();
 
@@ -763,19 +1044,13 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
               )}
 
               {/* Dynamic Form Sections */}
-              {dynamicSection.map((section) => (
+              {visibleSections.map((section) => (
                 <div
                   key={section.name}
                   ref={(el) => { sectionRefs.current[section.name] = el; }}
                   style={styles.section}
                 >
-                  <div style={styles.sectionHeader}>
-                    <span style={styles.sectionTitle}>{section.name}</span>
-                  </div>
-
                   {section.schema.map((field) => {
-                    if (isFieldHidden(field)) return null;
-
                     return (
                       <div key={field.variable} style={styles.formGroup}>
                         <label style={styles.label}>
@@ -794,31 +1069,23 @@ export function AppWizard({ app, editingApp, onClose, onSuccess }: AppWizardProp
                 </div>
               ))}
 
-              {advancedFields.length > 0 && (
-                <div style={styles.advancedSection}>
-                  <div style={styles.section}>
-                    <div style={styles.sectionHeader}>
-                      <span style={styles.sectionTitle}>高级配置</span>
+              {visibleAdvancedFields.length > 0 && (
+                visibleAdvancedFields.map((field) => {
+                  return (
+                    <div key={field.variable} style={styles.formGroup}>
+                      <label style={styles.label}>
+                        {field.label || field.variable}
+                        {isFieldRequired(field) && !field.schema.default && (
+                          <span style={styles.required}>*</span>
+                        )}
+                      </label>
+                      {field.description && (
+                        <p style={styles.fieldDescription}>{field.description}</p>
+                      )}
+                      {renderFormField(field)}
                     </div>
-                    {advancedFields.map((field) => {
-                      if (isFieldHidden(field)) return null;
-                      return (
-                        <div key={field.variable} style={styles.formGroup}>
-                          <label style={styles.label}>
-                            {field.label || field.variable}
-                            {isFieldRequired(field) && !field.schema.default && (
-                              <span style={styles.required}>*</span>
-                            )}
-                          </label>
-                          {field.description && (
-                            <p style={styles.fieldDescription}>{field.description}</p>
-                          )}
-                          {renderFormField(field)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                  );
+                })
               )}
             </>
           )}
@@ -1168,6 +1435,86 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 12,
     color: '#86868b',
     margin: 0,
+  },
+  listContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  listEmpty: {
+    fontSize: 13,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  listItem: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    gap: 8,
+    padding: 12,
+    backgroundColor: '#f5f5f7',
+    borderRadius: 8,
+  },
+  listItemContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 12,
+  },
+  listItemField: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+  },
+  listItemLabel: {
+    fontSize: 12,
+    fontWeight: 600,
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  listItemSimple: {
+    flex: 1,
+  },
+  listItemInput: {
+    width: '100%',
+    padding: '8px 12px',
+    fontSize: 14,
+    border: '1px solid rgba(0, 0, 0, 0.12)',
+    borderRadius: 6,
+    backgroundColor: '#ffffff',
+    color: '#1d1d1f',
+    outline: 'none',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    boxSizing: 'border-box',
+  },
+  listItemDelete: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    border: 'none',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderRadius: 6,
+    cursor: 'pointer',
+    color: '#86868b',
+    transition: 'all 0.2s ease',
+    flexShrink: 0,
+  },
+  listAddButton: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    padding: '8px 14px',
+    fontSize: 13,
+    fontWeight: 500,
+    color: '#0071e3',
+    backgroundColor: 'rgba(0, 113, 227, 0.08)',
+    border: 'none',
+    borderRadius: 6,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   dictField: {
     padding: 12,
