@@ -515,10 +515,11 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         const attrs = dictField.schema.attrs || [];
 
         // Pre-build mappings for all attrs in this dict (including nested attrs)
+        // NOTE: Don't overwrite variableToControlName[attr.variable] because it's already set by buildAllNestedAttrsMappings
         const buildNestedAttrsMappings = (attrList: ChartSchemaNode[], parentPath: string) => {
           attrList.forEach((attr) => {
             const attrControlName = `${parentPath}.${attr.variable}`;
-            // Store mapping with full path key for show_if resolution
+            // Only store full path -> full path mapping
             variableToControlName[attrControlName] = attrControlName;
             // Recursively handle nested attrs (e.g., dict within dict)
             if (attr.schema.type === 'dict' && attr.schema.attrs) {
@@ -1044,22 +1045,52 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         return renderListField({ ...nestedField, controlName: fieldControlName } as ChartSchemaNode & { controlName: string });
 
       case 'dict':
+        // Render dict attrs with hidden and show_if checks
+        // show_if for attrs should be relative to THIS dict (fieldControlName), not parent
         return (
           <div style={styles.dictContainer}>
-            {(nestedField.schema.attrs || []).map((attr: ChartSchemaNode) => (
-              <div key={attr.variable} style={styles.nestedFormGroup}>
-                <label style={styles.nestedLabel}>
-                  {attr.label || attr.variable}
-                  {(attr.schema.required || (attr.schema.empty !== undefined && !attr.schema.empty)) && (
-                    <span style={styles.required}>*</span>
+            {(nestedField.schema.attrs || []).map((attr: ChartSchemaNode) => {
+              const attrControlName = `${fieldControlName}.${attr.variable}`;
+              // Transform show_if to use full paths for correct show_if resolution
+              // attr's show_if should be relative to THIS dict (fieldControlName), not parent
+              const transformedShowIf = attr.schema.show_if?.map((condition: string[]) => {
+                if (Array.isArray(condition) && condition.length >= 3) {
+                  const [fieldName, operator, value] = condition;
+                  let fullPath = fieldName;
+                  if (!fieldName.includes('.')) {
+                    // Use fieldControlName (current dict's path) to build the path for show_if resolution
+                    fullPath = `${fieldControlName}.${fieldName}`;
+                  }
+                  return [fullPath, operator, value];
+                }
+                return condition;
+              });
+              const attrFieldWithControl = {
+                ...attr,
+                controlName: attrControlName,
+                schema: {
+                  ...attr.schema,
+                  show_if: transformedShowIf,
+                },
+              } as ChartSchemaNode & { controlName: string };
+              if (isFieldHidden(attrFieldWithControl)) {
+                return null;
+              }
+              return (
+                <div key={attr.variable} style={styles.nestedFormGroup}>
+                  <label style={styles.nestedLabel}>
+                    {attr.label || attr.variable}
+                    {(attr.schema.required || (attr.schema.empty !== undefined && !attr.schema.empty)) && (
+                      <span style={styles.required}>*</span>
+                    )}
+                  </label>
+                  {attr.description && (
+                    <p style={styles.nestedDescription}>{attr.description}</p>
                   )}
-                </label>
-                {attr.description && (
-                  <p style={styles.nestedDescription}>{attr.description}</p>
-                )}
-                {renderNestedField(attr, fieldControlName)}
-              </div>
-            ))}
+                  {renderNestedField(attr, fieldControlName)}
+                </div>
+              );
+            })}
           </div>
         );
 
@@ -1163,12 +1194,16 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             {(field.schema.attrs || []).map((nestedField) => {
               const nestedControlName = `${field.controlName}.${nestedField.variable}`;
               // Transform show_if to use full paths for correct show_if resolution
+              // NOTE: nestedField.schema.show_if may already be transformed from buildDynamicForm
+              // If show_if field names already contain '.', they're already full paths
               const transformedShowIf = nestedField.schema.show_if?.map((condition: string[]) => {
                 if (Array.isArray(condition) && condition.length >= 3) {
                   const [fieldName, operator, value] = condition;
-                  // Build full path for the show_if field reference
+                  // If fieldName already contains '.', it's already a full path from buildDynamicForm
+                  // Just use it as-is
                   let fullPath = fieldName;
                   if (!fieldName.includes('.')) {
+                    // Only transform if it's a short name (no '.')
                     fullPath = `${field.controlName}.${fieldName}`;
                   }
                   return [fullPath, operator, value];
