@@ -255,6 +255,9 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
   // Forbidden app names for validation
   const [forbiddenAppNames, setForbiddenAppNames] = useState<string[]>([]);
 
+  // Validation errors (controlNames of fields with errors)
+  const [validationErrors, setValidationErrors] = useState<Set<string>>(new Set());
+
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
 
   // Load catalog app details for new installation
@@ -714,6 +717,16 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
       return;
     }
 
+    // Validate required fields
+    const validation = validateRequiredFields();
+    if (!validation.valid) {
+      setValidationErrors(new Set(validation.errorControlNames));
+      useToastStore.getState().error(`请填写必填项: ${validation.missingFields.join(', ')}`);
+      return;
+    } else {
+      setValidationErrors(new Set());
+    }
+
     setSubmitting(true);
     setJobProgress({ percent: 0, description: isNew ? '正在安装...' : '正在更新...' });
 
@@ -971,7 +984,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         <select
           value={value as string}
           onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
-          style={styles.select}
+          style={hasValidationError(fieldControlName) ? styles.selectError : styles.select}
         >
           <option value="">选择...</option>
           {nestedField.schema.enum.map((opt) => (
@@ -993,7 +1006,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             type={nestedField.schema.private ? 'password' : 'text'}
             value={value as string}
             onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
-            style={styles.input}
+            style={hasValidationError(fieldControlName) ? styles.inputError : styles.input}
             placeholder={nestedField.label}
           />
         );
@@ -1005,7 +1018,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             type="number"
             value={value as number}
             onChange={(e) => handleFieldChange(fieldControlName, parseInt(e.target.value) || 0)}
-            style={styles.input}
+            style={hasValidationError(fieldControlName) ? styles.inputError : styles.input}
             min={nestedField.schema.min as number}
             max={nestedField.schema.max as number}
             placeholder={nestedField.label}
@@ -1030,7 +1043,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <select
             value={value as string}
             onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
-            style={styles.select}
+            style={hasValidationError(fieldControlName) ? styles.selectError : styles.select}
           >
             <option value="">选择...</option>
             {nestedField.schema.enum?.map((opt) => (
@@ -1077,7 +1090,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
                 return null;
               }
               return (
-                <div key={attr.variable} style={styles.nestedFormGroup}>
+                <div key={attr.variable} style={hasValidationError(attrControlName) ? styles.nestedFormGroupError : styles.nestedFormGroup}>
                   <label style={styles.nestedLabel}>
                     {attr.label || attr.variable}
                     {(attr.schema.required || (attr.schema.empty !== undefined && !attr.schema.empty)) && (
@@ -1100,7 +1113,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             type="text"
             value={value as string}
             onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
-            style={styles.input}
+            style={hasValidationError(fieldControlName) ? styles.inputError : styles.input}
             placeholder={nestedField.label}
           />
         );
@@ -1117,7 +1130,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         <select
           value={value as string}
           onChange={(e) => handleFieldChange(field.controlName, e.target.value)}
-          style={styles.select}
+          style={hasValidationError(field.controlName) ? styles.selectError : styles.select}
         >
           <option value="">选择...</option>
           {field.schema.enum.map((opt) => (
@@ -1139,7 +1152,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             type={field.schema.private ? 'password' : 'text'}
             value={value as string}
             onChange={(e) => handleFieldChange(field.controlName, e.target.value)}
-            style={styles.input}
+            style={hasValidationError(field.controlName) ? styles.inputError : styles.input}
             placeholder={field.label}
           />
         );
@@ -1151,7 +1164,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             type="number"
             value={value as number}
             onChange={(e) => handleFieldChange(field.controlName, parseInt(e.target.value) || 0)}
-            style={styles.input}
+            style={hasValidationError(field.controlName) ? styles.inputError : styles.input}
             min={field.schema.min as number}
             max={field.schema.max as number}
             placeholder={field.label}
@@ -1176,7 +1189,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <select
             value={value as string}
             onChange={(e) => handleFieldChange(field.controlName, e.target.value)}
-            style={styles.select}
+            style={hasValidationError(field.controlName) ? styles.selectError : styles.select}
           >
             <option value="">选择...</option>
             {field.schema.enum?.map((opt) => (
@@ -1283,6 +1296,72 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
   // Check if field is required
   const isFieldRequired = (field: ChartSchemaNode): boolean => {
     return field.schema.required || (field.schema.empty !== undefined && !field.schema.empty);
+  };
+
+  // Validate all visible required fields have values
+  const validateRequiredFields = (): { valid: boolean; missingFields: string[]; errorControlNames: string[] } => {
+    const missingFields: string[] = [];
+    const errorControlNames: string[] = [];
+
+    // Helper to check if a value is empty
+    const isEmpty = (value: ChartFormValue): boolean => {
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'string' && value.trim() === '') return true;
+      if (Array.isArray(value) && value.length === 0) return true;
+      if (typeof value === 'object' && Object.keys(value).length === 0) return true;
+      return false;
+    };
+
+    // Helper to check a single field
+    const checkField = (field: ChartSchemaNode & { controlName?: string }) => {
+      // Skip hidden fields
+      if (isFieldHidden(field)) return;
+
+      // For dict type, recursively check attrs
+      if (field.schema.type === 'dict' && field.schema.attrs) {
+        field.schema.attrs.forEach((attr) => {
+          checkField({ ...attr, controlName: field.controlName ? `${field.controlName}.${attr.variable}` : attr.variable });
+        });
+        return;
+      }
+
+      // For list type, skip validation (lists can be empty)
+      if (field.schema.type === 'list') return;
+
+      // Check if required field has a value
+      if (isFieldRequired(field)) {
+        const value = field.controlName ? getNestedValue(field.controlName) : formValues[field.variable];
+        if (isEmpty(value)) {
+          missingFields.push(field.label || field.variable);
+          if (field.controlName) {
+            errorControlNames.push(field.controlName);
+          }
+        }
+      }
+    };
+
+    // Check all visible sections
+    visibleSections.forEach((section) => {
+      section.schema.forEach((field) => {
+        checkField(field);
+      });
+    });
+
+    // Check visible advanced fields
+    visibleAdvancedFields.forEach((field) => {
+      checkField(field);
+    });
+
+    return {
+      valid: missingFields.length === 0,
+      missingFields,
+      errorControlNames,
+    };
+  };
+
+  // Check if a field has validation error
+  const hasValidationError = (controlName: string): boolean => {
+    return validationErrors.has(controlName);
   };
 
   // Check if field should be in advanced settings
@@ -1998,11 +2077,37 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#f5f5f7',
     cursor: 'not-allowed',
   },
+  inputError: {
+    width: '100%',
+    padding: '10px 14px',
+    fontSize: 15,
+    border: '1px solid #ff3b30',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    color: '#1d1d1f',
+    outline: 'none',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    boxSizing: 'border-box',
+    transition: 'border-color 0.2s ease',
+  },
   select: {
     width: '100%',
     padding: '10px 14px',
     fontSize: 15,
     border: '1px solid rgba(0, 0, 0, 0.12)',
+    borderRadius: 8,
+    backgroundColor: '#ffffff',
+    color: '#1d1d1f',
+    outline: 'none',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    boxSizing: 'border-box',
+    cursor: 'pointer',
+  },
+  selectError: {
+    width: '100%',
+    padding: '10px 14px',
+    fontSize: 15,
+    border: '1px solid #ff3b30',
     borderRadius: 8,
     backgroundColor: '#ffffff',
     color: '#1d1d1f',
@@ -2196,6 +2301,15 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
     gap: 4,
+  },
+  nestedFormGroupError: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    padding: 8,
+    borderRadius: 6,
+    border: '1px solid #ff3b30',
+    backgroundColor: 'rgba(255, 59, 48, 0.05)',
   },
   nestedLabel: {
     display: 'block',
