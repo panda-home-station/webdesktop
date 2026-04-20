@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { AppWizard } from './AppWizard';
+import { AppWizard } from './AppWizard/AppWizard';
 import { AvailableApp } from '@truenas/types/app-types';
 
 interface AppInstallPageProps {

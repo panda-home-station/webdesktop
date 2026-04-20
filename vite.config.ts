@@ -53,6 +53,7 @@ export default defineConfig(({ mode }) => {
         '@truenas/utils/dataset': path.resolve(__dirname, 'src/shared/utils/dataset.utils'),
         '@shared/stores': path.resolve(__dirname, 'src/shared/stores'),
         '@shared/types': path.resolve(__dirname, 'src/shared/types'),
+        '@shared/constants': path.resolve(__dirname, 'src/shared/constants'),
         // App styles
         '@apps/system-settings/styles': path.resolve(__dirname, 'apps/system-settings/src/styles'),
       },

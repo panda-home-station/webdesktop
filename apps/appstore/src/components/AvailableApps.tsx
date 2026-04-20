@@ -7,27 +7,7 @@ import { useEffect, useState } from 'react';
 import { useAppsStore } from '@truenas/stores/apps';
 import { AvailableApp } from '@truenas/types/app-types';
 
-// Category label mapping (English -> Chinese)
-const categoryLabels: Record<string, string> = {
-  ai: '人工智能',
-  authentication: '身份认证',
-  backup: '备份',
-  cameras: '摄像头',
-  custom: '自定义',
-  database: '数据库',
-  development: '开发',
-  financial: '财务',
-  games: '游戏',
-  health: '健康',
-  'home-automation': '智能家居',
-  management: '管理',
-  media: '媒体',
-  monitoring: '监控',
-  networking: '网络',
-  productivity: '生产力',
-  security: '安全',
-  storage: '存储',
-};
+import { categoryLabels } from '@shared/constants/appCategories';
 
 interface AvailableAppsProps {
   category?: string;
