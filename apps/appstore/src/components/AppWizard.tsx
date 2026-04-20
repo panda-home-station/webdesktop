@@ -439,15 +439,28 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
       variableToControlName[variable] = variable;
     });
 
-    // First pass: identify dict fields and their attrs
+    // First pass: identify dict fields and their attrs and BUILD ALL MAPPINGS
     const dictFields: { dictField: ChartSchemaNode; attrs: ChartSchemaNode[] }[] = [];
+
+    // Recursive helper to build mappings for all nested attrs
+    const buildAllNestedAttrsMappings = (attrList: ChartSchemaNode[], parentPath: string) => {
+      attrList.forEach((attr) => {
+        const attrControlName = `${parentPath}.${attr.variable}`;
+        // Store mapping with full path key for show_if resolution
+        variableToControlName[attr.variable] = attrControlName; // Short name -> full path
+        variableToControlName[attrControlName] = attrControlName; // Full path -> full path
+        // Recursively handle nested attrs (e.g., dict within dict)
+        if (attr.schema.type === 'dict' && attr.schema.attrs) {
+          buildAllNestedAttrsMappings(attr.schema.attrs, attrControlName);
+        }
+      });
+    };
+
     schema.questions?.forEach((question) => {
       if (question.schema.type === 'dict' && question.schema.attrs) {
         dictFields.push({ dictField: question, attrs: question.schema.attrs });
-        // Add dict attrs to mapping
-        question.schema.attrs.forEach((attr) => {
-          variableToControlName[attr.variable] = `${question.variable}.${attr.variable}`;
-        });
+        // Build all nested mappings for this dict's attrs
+        buildAllNestedAttrsMappings(question.schema.attrs, question.variable);
       }
     });
 
@@ -505,7 +518,8 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         const buildNestedAttrsMappings = (attrList: ChartSchemaNode[], parentPath: string) => {
           attrList.forEach((attr) => {
             const attrControlName = `${parentPath}.${attr.variable}`;
-            variableToControlName[attr.variable] = attrControlName;
+            // Store mapping with full path key for show_if resolution
+            variableToControlName[attrControlName] = attrControlName;
             // Recursively handle nested attrs (e.g., dict within dict)
             if (attr.schema.type === 'dict' && attr.schema.attrs) {
               buildNestedAttrsMappings(attr.schema.attrs, attrControlName);
@@ -946,15 +960,16 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
   };
 
   // Render nested form fields (for dict attrs)
-  const renderNestedField = (nestedField: ChartSchemaNode) => {
-    const value = formValues[nestedField.variable] ?? nestedField.schema.default ?? '';
+  const renderNestedField = (nestedField: ChartSchemaNode, parentControlName?: string) => {
+    const fieldControlName = parentControlName ? `${parentControlName}.${nestedField.variable}` : nestedField.variable;
+    const value = getNestedValue(fieldControlName, nestedField.schema.default ?? '');
 
     // String type with enum should render as select dropdown
     if (nestedField.schema.type === 'string' && nestedField.schema.enum) {
       return (
         <select
           value={value as string}
-          onChange={(e) => handleFieldChange(nestedField.variable, e.target.value)}
+          onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
           style={styles.select}
         >
           <option value="">选择...</option>
@@ -976,7 +991,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <input
             type={nestedField.schema.private ? 'password' : 'text'}
             value={value as string}
-            onChange={(e) => handleFieldChange(nestedField.variable, e.target.value)}
+            onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
             style={styles.input}
             placeholder={nestedField.label}
           />
@@ -988,7 +1003,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <input
             type="number"
             value={value as number}
-            onChange={(e) => handleFieldChange(nestedField.variable, parseInt(e.target.value) || 0)}
+            onChange={(e) => handleFieldChange(fieldControlName, parseInt(e.target.value) || 0)}
             style={styles.input}
             min={nestedField.schema.min as number}
             max={nestedField.schema.max as number}
@@ -1002,7 +1017,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
             <input
               type="checkbox"
               checked={value as boolean}
-              onChange={(e) => handleFieldChange(nestedField.variable, e.target.checked)}
+              onChange={(e) => handleFieldChange(fieldControlName, e.target.checked)}
               style={styles.checkbox}
             />
             <span>{nestedField.description || nestedField.label}</span>
@@ -1013,7 +1028,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         return (
           <select
             value={value as string}
-            onChange={(e) => handleFieldChange(nestedField.variable, e.target.value)}
+            onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
             style={styles.select}
           >
             <option value="">选择...</option>
@@ -1026,7 +1041,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         );
 
       case 'list':
-        return renderListField({ ...nestedField, controlName: nestedField.variable } as ChartSchemaNode & { controlName: string });
+        return renderListField({ ...nestedField, controlName: fieldControlName } as ChartSchemaNode & { controlName: string });
 
       case 'dict':
         return (
@@ -1042,7 +1057,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
                 {attr.description && (
                   <p style={styles.nestedDescription}>{attr.description}</p>
                 )}
-                {renderNestedField(attr)}
+                {renderNestedField(attr, fieldControlName)}
               </div>
             ))}
           </div>
@@ -1053,7 +1068,7 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
           <input
             type="text"
             value={value as string}
-            onChange={(e) => handleFieldChange(nestedField.variable, e.target.value)}
+            onChange={(e) => handleFieldChange(fieldControlName, e.target.value)}
             style={styles.input}
             placeholder={nestedField.label}
           />
@@ -1142,23 +1157,51 @@ export function AppWizard({ app, editingApp, onClose, onSuccess, isPage = false,
         );
 
       case 'dict':
-        // Render dict's attrs as nested fields
+        // Render dict's attrs as nested fields (filter by isFieldHidden like webui)
         return (
           <div style={styles.dictContainer}>
-            {(field.schema.attrs || []).map((nestedField) => (
-              <div key={nestedField.variable} style={styles.nestedFormGroup}>
-                <label style={styles.nestedLabel}>
-                  {nestedField.label || nestedField.variable}
-                  {(nestedField.schema.required || (nestedField.schema.empty !== undefined && !nestedField.schema.empty)) && (
-                    <span style={styles.required}>*</span>
+            {(field.schema.attrs || []).map((nestedField) => {
+              const nestedControlName = `${field.controlName}.${nestedField.variable}`;
+              // Transform show_if to use full paths for correct show_if resolution
+              const transformedShowIf = nestedField.schema.show_if?.map((condition: string[]) => {
+                if (Array.isArray(condition) && condition.length >= 3) {
+                  const [fieldName, operator, value] = condition;
+                  // Build full path for the show_if field reference
+                  let fullPath = fieldName;
+                  if (!fieldName.includes('.')) {
+                    fullPath = `${field.controlName}.${fieldName}`;
+                  }
+                  return [fullPath, operator, value];
+                }
+                return condition;
+              });
+              // Create a field-like object for isFieldHidden to check show_if
+              const nestedFieldWithControl = {
+                ...nestedField,
+                controlName: nestedControlName,
+                schema: {
+                  ...nestedField.schema,
+                  show_if: transformedShowIf,
+                },
+              } as ChartSchemaNode & { controlName: string };
+              if (isFieldHidden(nestedFieldWithControl)) {
+                return null;
+              }
+              return (
+                <div key={nestedField.variable} style={styles.nestedFormGroup}>
+                  <label style={styles.nestedLabel}>
+                    {nestedField.label || nestedField.variable}
+                    {(nestedField.schema.required || (nestedField.schema.empty !== undefined && !nestedField.schema.empty)) && (
+                      <span style={styles.required}>*</span>
+                    )}
+                  </label>
+                  {nestedField.description && (
+                    <p style={styles.nestedDescription}>{nestedField.description}</p>
                   )}
-                </label>
-                {nestedField.description && (
-                  <p style={styles.nestedDescription}>{nestedField.description}</p>
-                )}
-                {renderNestedField(nestedField)}
-              </div>
-            ))}
+                  {renderNestedField(nestedField, field.controlName)}
+                </div>
+              );
+            })}
           </div>
         );
 
