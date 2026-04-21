@@ -191,7 +191,9 @@ export const useWindowsStore = create<WindowsStore>()(
         } else {
           // Restore
           const p = win.prev ?? { x: 60, y: 60, w: 600, h: 400 }
-          const restored = clampWindow({ ...win, x: p.x, y: p.y, w: p.w, h: p.h }, W, H, 300, 200)
+          // Must set maximized: false before clampWindow to prevent
+          // clampWindow's maximize handler from overriding restore position
+          const restored = clampWindow({ ...win, maximized: false, x: p.x, y: p.y, w: p.w, h: p.h }, W, H, 300, 200)
           get().updateWindow(id, { ...restored, maximized: false, prev: undefined })
         }
 
