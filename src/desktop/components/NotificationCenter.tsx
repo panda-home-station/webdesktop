@@ -1,8 +1,8 @@
 import { useMemo, memo, useState } from 'react'
 import {
-  Clock, AlertTriangle, X, Bell, Trash2,
-  HardDrive, RefreshCw, Folder, Monitor, Download, Settings, Wifi, Cpu, Database,
-  Globe, Shield, Cloud
+  Clock, X, Bell, Trash2,
+  HardDrive, RefreshCw, Folder, Monitor, Download, Settings, Wifi,
+  Globe
 } from 'lucide-react'
 import useAlertStore from '@truenas/stores/alert'
 import { useJobStore } from '@truenas/stores/job'
@@ -79,43 +79,8 @@ const colors = {
 // App source icon mapping
 const getAppIcon = (item: NotificationItem) => {
   if (item.type === 'alert') {
-    const alert = item.data as Alert
-    const source = (alert.source || alert.klass || '').toLowerCase()
-
-    // Storage related
-    if (source.includes('pool') || source.includes('disk') || source.includes('volume') || source.includes('storage')) {
-      return { icon: HardDrive, category: 'storage' }
-    }
-    // Network related
-    if (source.includes('network') || source.includes('interface') || source.includes('ethernet') || source.includes('wifi') || source.includes('bridge')) {
-      return { icon: Wifi, category: 'network' }
-    }
-    // System/CPU related
-    if (source.includes('cpu') || source.includes('memory') || source.includes('system') || source.includes('hardware')) {
-      return { icon: Cpu, category: 'system' }
-    }
-    // Update related
-    if (source.includes('update') || source.includes('upgrade') || source.includes('download')) {
-      return { icon: Download, category: 'update' }
-    }
-    // Security related
-    if (source.includes('security') || source.includes('ssl') || source.includes('certificate') || source.includes('ssh')) {
-      return { icon: Shield, category: 'security' }
-    }
-    // Service related
-    if (source.includes('service') || source.includes('smb') || source.includes('nfs') || source.includes('iscsi') || source.includes('ftp')) {
-      return { icon: Globe, category: 'service' }
-    }
-    // Database related
-    if (source.includes('database') || source.includes('postgres') || source.includes('sql')) {
-      return { icon: Database, category: 'database' }
-    }
-    // Cloud/Sync related
-    if (source.includes('cloud') || source.includes('sync') || source.includes('snapshot')) {
-      return { icon: Cloud, category: 'cloud' }
-    }
-    // Default alert icon
-    return { icon: AlertTriangle, category: 'alert' }
+    // alert 类型统一显示通知图标（Bell）
+    return { icon: Bell, category: 'alert' }
   } else {
     const job = item.data as Job
     const method = (job.method || '').toLowerCase()
@@ -510,8 +475,12 @@ export function NotificationCenter({ open, onClose, anchorEl }: NotificationCent
     dismissAlert(alertId)
   }
 
-  const handleItemClick = (_item: NotificationItem) => {
-    openApp('notifications')
+  const handleItemClick = (item: NotificationItem) => {
+    if (item.type === 'job') {
+      openApp('jobs', { jobId: (item.data as Job).id })
+    } else {
+      openApp('notifications')
+    }
     onClose()
   }
 

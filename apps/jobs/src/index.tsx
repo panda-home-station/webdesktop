@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { useJobStore } from '@truenas/stores/job'
 import { truenasApi } from '@truenas/api'
 import type { Tab, ExtendedJob } from './types'
@@ -11,13 +11,37 @@ import EmptyState from './components/EmptyState'
 import LoadingState from './components/LoadingState'
 import Pagination from './components/Pagination'
 
-export default function JobsApp() {
+export default function JobsApp({ jobId }: { jobId?: number }) {
   const { jobs, loadJobs, isLoading } = useJobStore()
   const [tab, setTab] = useState<Tab>('all')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
+  const scrollTargetRef = useRef<number | null>(null)
+
+  // Auto-expand the job passed via args
+  useEffect(() => {
+    if (jobId) {
+      setExpandedId(jobId)
+      scrollTargetRef.current = jobId
+    }
+  }, [jobId])
+
+  // Scroll to target job after render
+  useEffect(() => {
+    if (scrollTargetRef.current !== null) {
+      // Use setTimeout to ensure DOM has rendered
+      const timer = setTimeout(() => {
+        const el = document.querySelector(`[data-job-id="${scrollTargetRef.current}"]`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+        scrollTargetRef.current = null
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [expandedId, currentPage])
 
   const filteredJobs = useMemo(() => {
     // Filter out transient jobs (same as webui)

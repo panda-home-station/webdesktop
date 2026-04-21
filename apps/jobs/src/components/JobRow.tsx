@@ -31,6 +31,7 @@ const JobRow = memo(({ job, isExpanded, onToggle, onAbort, isEven }: JobRowProps
   return (
     <div style={{ marginBottom: 8 }}>
       <div
+        data-job-id={job.id}
         style={{
           display: 'grid',
           gridTemplateColumns: '1fr 140px 160px 160px 80px',
