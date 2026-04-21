@@ -76,15 +76,28 @@ export function buildDynamicForm(
   });
 
   // Transform show_if to use controlName paths
+  // parentPath is needed to correctly resolve bare variable names within nested dicts
+  // because sibling dict attrs can have attrs with the same variable name (e.g., acl_enable)
+  // which would overwrite each other in the global variableToControlName mapping
   const transformShowIf = (
-    showIf: string[][] | undefined
+    showIf: string[][] | undefined,
+    parentPath?: string
   ): string[][] | undefined => {
     if (!showIf) return undefined;
     return showIf.map((condition: string[]) => {
       if (Array.isArray(condition) && condition.length >= 3) {
         const [fieldName, operator, value] = condition;
-        const resolvedFieldName =
-          variableToControlName[fieldName] || fieldName;
+        let resolvedFieldName: string;
+        if (fieldName.includes('.')) {
+          // Already a full path, use as-is
+          resolvedFieldName = fieldName;
+        } else if (parentPath) {
+          // Bare variable name within a nested dict: construct full path relative to parent
+          resolvedFieldName = `${parentPath}.${fieldName}`;
+        } else {
+          // Fallback to global mapping for top-level
+          resolvedFieldName = variableToControlName[fieldName] || fieldName;
+        }
         return [resolvedFieldName, operator, value];
       }
       return condition;
@@ -136,13 +149,14 @@ export function buildDynamicForm(
           const hasShowIf = attr.schema.show_if && attr.schema.show_if.length > 0;
           if (hasShowIf) {
             // Dict attr WITH show_if: add as-is to section (FormField.render handles visibility)
+            // Dict attr's own show_if references sibling/parent fields, so use parentPath
             section.schema.push({
               ...attr,
               controlName: attrControlName,
               originalVariable: attr.variable,
               schema: {
                 ...attr.schema,
-                show_if: transformShowIf(attr.schema.show_if),
+                show_if: transformShowIf(attr.schema.show_if, parentPath),
               },
             } as ChartSchemaNode & { controlName: string });
           } else {
@@ -157,7 +171,7 @@ export function buildDynamicForm(
             originalVariable: attr.variable,
             schema: {
               ...attr.schema,
-              show_if: transformShowIf(attr.schema.show_if),
+              show_if: transformShowIf(attr.schema.show_if, parentPath),
             },
           } as ChartSchemaNode & { controlName: string });
         }
