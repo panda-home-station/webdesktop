@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAppsStore } from '@truenas/stores/apps';
-import { useDockerStore } from '@truenas/stores/docker';
+import { useDockerStore, selectSelectedPool } from '@truenas/stores/docker';
 import { appService } from '@truenas/services/app';
 import { ChartFormValue, ChartSchemaNode } from '@truenas/types/app-types';
 import { useToastStore } from '@truenas/stores/toast';
@@ -31,7 +31,7 @@ const customApp = 'ix-custom';
 export function useWizard({ app, editingApp, onClose, onSuccess }: WizardProps) {
   const isNew = !editingApp;
   const { installApp, loadInstalledApps } = useAppsStore();
-  const { selectedPool } = useDockerStore();
+  const selectedPool = useDockerStore(selectSelectedPool);
 
   const [catalogApp, setCatalogApp] = useState<CatalogApp | null>(null);
   const [loading, setLoading] = useState(true);
@@ -295,27 +295,37 @@ export function useWizard({ app, editingApp, onClose, onSuccess }: WizardProps) 
     async (e: React.FormEvent) => {
       e.preventDefault();
 
-      if (!catalogApp) return;
+      if (!catalogApp) {
+        return;
+      }
 
       const namePattern = /^[a-z]([a-z0-9-]*[a-z0-9])?$/;
       if (!namePattern.test(releaseName)) {
-        useToastStore.getState().error(
+        useToastStore.getState().showError(
           '应用名称格式不正确，请使用小写字母、数字和连字符，以字母开头'
         );
         return;
       }
 
       if (!selectedPool) {
-        useToastStore.getState().error('请先配置应用池');
+        useToastStore.getState().showError('请先配置应用池');
         return;
       }
 
       const validation = validateRequiredFields();
       if (!validation.valid) {
         setValidationErrors(new Set(validation.errorControlNames));
-        useToastStore.getState().error(
+        useToastStore.getState().showError(
           `请填写必填项: ${validation.missingFields.join(', ')}`
         );
+        // Scroll to first error field
+        const firstErrorControlName = validation.errorControlNames[0];
+        setTimeout(() => {
+          const errorEl = document.querySelector(`[data-control-name="${firstErrorControlName}"]`);
+          if (errorEl) {
+            errorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 100);
         return;
       }
       setValidationErrors(new Set());
@@ -338,7 +348,7 @@ export function useWizard({ app, editingApp, onClose, onSuccess }: WizardProps) 
             values: formValues,
           } as AppCreate);
         } else {
-          useToastStore.getState().error('更新功能尚未实现');
+          useToastStore.getState().showError('更新功能尚未实现');
           setSubmitting(false);
           setJobProgress(null);
         }
@@ -346,7 +356,7 @@ export function useWizard({ app, editingApp, onClose, onSuccess }: WizardProps) 
         setError((err as Error).message);
         setSubmitting(false);
         setJobProgress(null);
-        useToastStore.getState().error(`安装失败: ${(err as Error).message}`);
+        useToastStore.getState().showError(`安装失败: ${(err as Error).message}`);
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -388,7 +398,7 @@ export function useWizard({ app, editingApp, onClose, onSuccess }: WizardProps) 
 
             if (result.state === 'SUCCESS') {
               setJobProgress({ percent: 100, description: '安装完成' });
-              useToastStore.getState().success(
+              useToastStore.getState().showSuccess(
                 isNew ? '应用安装成功' : '应用更新成功'
               );
               setTimeout(() => {

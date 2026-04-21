@@ -7,6 +7,8 @@
 
 import { Fragment } from 'react';
 import { ChartFormValue, ChartSchemaNode } from '@truenas/types/app-types';
+import { openApp } from '@shared/sdk/desktop';
+import { useDockerStore, selectSelectedPool } from '@truenas/stores/docker';
 
 import { useWizardContext } from './context';
 import { fieldStyles, baseStyles } from './styles';
@@ -426,6 +428,8 @@ export function WizardFormBody({ ctx }: WizardFormBodyProps) {
     sectionRefs,
   } = ctx;
 
+  const selectedPool = useDockerStore(selectSelectedPool);
+
   if (loading) {
     return (
       <div style={baseStyles.loadingState}>
@@ -509,6 +513,24 @@ export function WizardFormBody({ ctx }: WizardFormBodyProps) {
         </div>
       </div>
 
+      {/* Pool Status Banner */}
+      {!selectedPool && (
+        <div style={fieldStyles.poolWarningBanner} data-pool-warning onClick={() => openApp('docker')}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <div style={fieldStyles.poolWarningContent}>
+            <strong>未配置应用池</strong>
+            <span style={fieldStyles.poolWarningHint}>点击此处前往 Docker 设置配置应用池</span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2">
+            <path d="M9 18l6-6-6-6"/>
+          </svg>
+        </div>
+      )}
+
       {/* Release Name */}
       <div style={fieldStyles.formGroup}>
         <label style={fieldStyles.label}>
@@ -563,7 +585,16 @@ export function WizardFormBody({ ctx }: WizardFormBodyProps) {
             style={fieldStyles.sectionFields}
           >
             {section.schema.map((field) => (
-              <div key={field.controlName || field.variable} style={fieldStyles.formGroup}>
+              <div
+                key={field.controlName || field.variable}
+                style={fieldStyles.formGroup}
+                ref={(el) => {
+                  if (el && field.controlName) {
+                    sectionRefs.current[field.controlName] = el;
+                  }
+                }}
+                data-control-name={field.controlName}
+              >
                 <label style={fieldStyles.label}>
                   {field.label || field.variable}
                   {(field.schema.required || (field.schema.empty !== undefined && !field.schema.empty)) && !field.schema.default && (

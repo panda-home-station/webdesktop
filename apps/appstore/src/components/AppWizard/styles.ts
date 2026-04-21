@@ -614,4 +614,28 @@ export const fieldStyles = {
   nestedFormGroupError: baseStyles.nestedFormGroupError,
   nestedLabel: baseStyles.nestedLabel,
   nestedDescription: baseStyles.nestedDescription,
+  // Pool warning banner
+  poolWarningBanner: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 12,
+    padding: '14px 16px',
+    backgroundColor: '#fff8e6',
+    border: '1px solid #ffcc00',
+    borderRadius: 10,
+    marginBottom: 20,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+  poolWarningContent: {
+    flex: 1,
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 2,
+  },
+  poolWarningHint: {
+    fontSize: 12,
+    color: '#86868b',
+    fontFamily: SF_PRO_TEXT,
+  },
 };
