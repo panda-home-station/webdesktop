@@ -138,9 +138,35 @@ export default function LockScreen({ onUnlock, onLogout, wallpaper, username }: 
             <User size={48} strokeWidth={1.5} color="#fff" />
           </div>
 
-          {/* Username */}
-          <div style={{ fontSize: 20, fontWeight: 500, letterSpacing: 0.5 }}>
-            {user?.pw_name || username || 'User'}
+          {/* Username with Logout */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 20, fontWeight: 500, letterSpacing: 0.5 }}>
+            <span>{user?.pw_name || username || 'User'}</span>
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(255,255,255,0.7)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: 4,
+                  borderRadius: 6,
+                  transition: 'all 0.2s',
+                }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.color = '#fff'
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.1)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.color = 'rgba(255,255,255,0.7)'
+                  e.currentTarget.style.background = 'transparent'
+                }}
+              >
+                <LogOut size={18} />
+              </button>
+            )}
           </div>
 
           {/* Password Input */}
@@ -177,14 +203,6 @@ export default function LockScreen({ onUnlock, onLogout, wallpaper, username }: 
           >
             {error}
           </div>
-
-          {/* Logout Button */}
-          {onLogout && (
-            <button onClick={onLogout} className="logout-button">
-              <LogOut size={16} />
-              <span>退出登录</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -265,28 +283,6 @@ export default function LockScreen({ onUnlock, onLogout, wallpaper, username }: 
           cursor: default;
           opacity: 0.5;
           background: transparent;
-        }
-
-        .logout-button {
-          margin-top: 10px;
-          background: rgba(255,255,255,0.1);
-          border: 1px solid rgba(255,255,255,0.1);
-          color: #fff;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          cursor: pointer;
-          padding: 8px 20px;
-          border-radius: 20px;
-          font-size: 14px;
-          transition: all 0.2s;
-          backdrop-filter: blur(10px);
-          outline: none;
-          box-shadow: none !important;
-        }
-
-        .logout-button:hover {
-          background: rgba(255,255,255,0.2);
         }
       `}</style>
     </div>
