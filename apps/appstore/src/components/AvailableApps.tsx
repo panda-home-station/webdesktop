@@ -67,9 +67,10 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
   return (
     <div style={styles.container}>
       {selectedApp ? (
-        <div style={styles.detailView}>
-          {/* Hero Section */}
-          <div style={styles.detailHero}>
+        <div style={styles.detailWrapper}>
+          <div style={styles.detailBody}>
+            {/* Hero Section */}
+            <div style={styles.detailHero}>
             {/* Back Button */}
             <button
               style={styles.backButton}
@@ -196,6 +197,7 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
                 <span style={styles.recommendedText}>精选推荐应用</span>
               </div>
             )}
+          </div>
           </div>
         </div>
       ) : filteredApps.length === 0 ? (
@@ -398,15 +400,21 @@ const styles: Record<string, React.CSSProperties> = {
     marginTop: 4,
   },
   // Detail View - Apple App Store Style
-  detailView: {
+  detailWrapper: {
     height: '100%',
     overflow: 'auto',
     backgroundColor: '#f5f5f7',
-    padding: '0 0 48px',
   },
-  // Hero Section with gradient
+  detailBody: {
+    maxWidth: 1200,
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    boxSizing: 'border-box',
+    width: '100%',
+  },
+  // Hero Section
   detailHero: {
-    background: 'linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%)',
+    backgroundColor: '#f5f5f7',
     padding: '32px 40px 28px',
     borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
   },
@@ -488,9 +496,6 @@ const styles: Record<string, React.CSSProperties> = {
   // Content Section
   detailContent: {
     padding: '28px 40px',
-    maxWidth: 1200,
-    marginLeft: 'auto',
-    marginRight: 'auto',
   },
   detailSection: {
     marginBottom: 32,

@@ -23,51 +23,52 @@ export function AppInstallPage({ app, onBack, onSuccess }: AppInstallPageProps) 
 
   return (
     <div style={styles.container}>
-      {/* Page Header */}
-      <div style={styles.header}>
-        <button
-          style={styles.backButton}
-          onClick={onBack}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.08)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <path d="M19 12H5M12 19l-7-7 7-7"/>
-          </svg>
-          返回
-        </button>
-      </div>
-
-      {/* App Info Section */}
-      <div style={styles.appInfoSection}>
-        <div style={styles.appIcon}>
-          {getIconUrl(app) ? (
-            <img
-              src={getIconUrl(app)!}
-              alt=""
-              style={styles.appIconImg}
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
-          ) : (
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
-              <rect x="3" y="3" width="18" height="18" rx="4"/>
-              <path d="M8 12h8M12 8v8"/>
+      <div style={styles.body}>
+        {/* App Header - Back Button + App Info */}
+        <div style={styles.appHeader}>
+          <button
+            style={styles.backButton}
+            onClick={onBack}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(0, 0, 0, 0.04)';
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
-          )}
+            返回
+          </button>
+
+          {/* App Info */}
+          <div style={styles.appInfoSection}>
+            <div style={styles.appIcon}>
+              {getIconUrl(app) ? (
+                <img
+                  src={getIconUrl(app)!}
+                  alt=""
+                  style={styles.appIconImg}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#86868b" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="4"/>
+                  <path d="M8 12h8M12 8v8"/>
+                </svg>
+              )}
+            </div>
+            <div style={styles.appInfo}>
+              <h2 style={styles.appTitle}>{app.title || app.name}</h2>
+              <p style={styles.appMeta}>
+                {app.latest_version || app.version} · {app.train}
+              </p>
+            </div>
+          </div>
         </div>
-        <div style={styles.appInfo}>
-          <h2 style={styles.appTitle}>{app.title || app.name}</h2>
-          <p style={styles.appMeta}>
-            {app.latest_version || app.version} · {app.train}
-          </p>
-        </div>
-      </div>
 
       {/* Wizard Section */}
       <div style={styles.wizardSection}>
@@ -78,6 +79,7 @@ export function AppInstallPage({ app, onBack, onSuccess }: AppInstallPageProps) 
           isPage={true}
           showHeader={false}
         />
+      </div>
       </div>
     </div>
   );
@@ -91,22 +93,28 @@ const styles: Record<string, React.CSSProperties> = {
     backgroundColor: '#f5f5f7',
     overflow: 'auto',
   },
-  header: {
-    padding: '16px 24px',
-    backgroundColor: '#ffffff',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+  body: {
+    maxWidth: 1200,
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    boxSizing: 'border-box',
+    width: '100%',
+  },
+  appHeader: {
+    backgroundColor: '#f5f5f7',
     flexShrink: 0,
   },
   backButton: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
-    padding: '8px 14px',
+    padding: '6px 12px',
+    margin: '32px 40px 20px',
     border: 'none',
-    borderRadius: 8,
+    borderRadius: 6,
     backgroundColor: 'rgba(0, 0, 0, 0.04)',
     color: '#0071e3',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: 500,
     cursor: 'pointer',
     transition: 'all 0.2s ease',
@@ -114,23 +122,22 @@ const styles: Record<string, React.CSSProperties> = {
   },
   appInfoSection: {
     display: 'flex',
-    alignItems: 'center',
-    gap: 20,
-    padding: '24px 32px',
-    background: 'linear-gradient(180deg, #ffffff 0%, #f5f5f7 100%)',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
+    alignItems: 'flex-start',
+    gap: 24,
+    padding: '0 40px 28px',
+    backgroundColor: '#f5f5f7',
     flexShrink: 0,
   },
   appIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: 18,
+    width: 100,
+    height: 100,
+    borderRadius: 22,
     backgroundColor: '#ffffff',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.08)',
     overflow: 'hidden',
   },
   appIconImg: {
@@ -140,13 +147,15 @@ const styles: Record<string, React.CSSProperties> = {
   },
   appInfo: {
     flex: 1,
+    paddingTop: 4,
+    paddingRight: 120,
   },
   appTitle: {
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: 700,
     color: '#1d1d1f',
     margin: '0 0 4px',
-    letterSpacing: '-0.02em',
+    letterSpacing: '-0.03em',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
   },
   appMeta: {
@@ -157,8 +166,5 @@ const styles: Record<string, React.CSSProperties> = {
   },
   wizardSection: {
     padding: '32px 40px',
-    maxWidth: 1200,
-    marginLeft: 'auto',
-    marginRight: 'auto',
   },
 };
