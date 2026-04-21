@@ -24,6 +24,7 @@ export default function App() {
   useJobInit()
 
   // Track inactivity timeout (15 minutes default)
+  // Timeout always triggers logout, pauses when screen is locked
   useInactivityTimeout()
 
   // Listen for session expiry events

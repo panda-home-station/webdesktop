@@ -91,5 +91,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Clear session and persistent storage
     loginBannerDismissedStore.remove();
     tokenStore.remove();
+
+    // Clear lock screen state - ensure next login goes to desktop, not lock screen
+    sessionStorage.removeItem('phs:isLocked');
   },
 }));

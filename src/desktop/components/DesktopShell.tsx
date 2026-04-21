@@ -27,12 +27,15 @@ interface DesktopShellProps {
  */
 export default function DesktopShell(_props: DesktopShellProps) {
   const wallpaper = useWallpaper()
-  const [isLocked, setIsLocked] = useState(false)
+  const [isLocked, setIsLocked] = useState(() => {
+    return sessionStorage.getItem('phs:isLocked') === 'true'
+  })
   const { user } = useAuthStore()
 
   // Subscribe to lock screen events
   useEffect(() => {
     const unsubscribe = subscribeLockScreen(() => {
+      sessionStorage.setItem('phs:isLocked', 'true')
       setIsLocked(true)
     })
     return unsubscribe
@@ -42,6 +45,7 @@ export default function DesktopShell(_props: DesktopShellProps) {
    * Handle unlock
    */
   const handleUnlock = () => {
+    sessionStorage.removeItem('phs:isLocked')
     setIsLocked(false)
   }
 
@@ -53,6 +57,8 @@ export default function DesktopShell(_props: DesktopShellProps) {
     await authStore.logout()
     // clearAuth is called by logout, which will set isAuthenticated to false
     // This will cause AuthGuard to show login screen instead of reloading
+    // Also clear lock state so next login goes to desktop, not lock screen
+    sessionStorage.removeItem('phs:isLocked')
   }
 
   if (isLocked) {
