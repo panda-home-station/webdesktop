@@ -3,10 +3,19 @@
  * Apple-inspired design with card grid layout
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts';
 import { useAppsStore } from '@truenas/stores/apps';
 import { useDockerStore } from '@truenas/stores/docker';
 import { App } from '@truenas/types/app-types';
+
+interface ChartDataPoint {
+  time: number;
+  read: number;
+  write: number;
+  rx: number;
+  tx: number;
+}
 
 interface InstalledAppsProps {
   onAppSelect?: (app: App) => void;
@@ -28,10 +37,40 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedApp, setSelectedApp] = useState<App | null>(null);
   const [showTechInfo, setShowTechInfo] = useState(false);
+  const [ioChartData, setIoChartData] = useState<ChartDataPoint[]>([]);
+  const [networkChartData, setNetworkChartData] = useState<ChartDataPoint[]>([]);
+  const chartTimeRef = useRef(0);
 
   useEffect(() => {
     loadInstalledApps();
   }, [loadInstalledApps]);
+
+  // Update chart data when stats change
+  useEffect(() => {
+    if (!selectedApp || selectedApp.state !== 'RUNNING' || !appStats[selectedApp.name]) {
+      return;
+    }
+
+    const stats = appStats[selectedApp.name];
+    const time = chartTimeRef.current++;
+
+    // Update IO chart data (keep last 20 points)
+    setIoChartData((prev) => {
+      const newData = [
+        ...prev,
+        { time, read: stats.blkio.read, write: stats.blkio.write },
+      ];
+      return newData.slice(-20);
+    });
+
+    // Update Network chart data (aggregate totals)
+    const networkRx = stats.networks?.reduce((sum, n) => sum + n.rx_bytes, 0) || 0;
+    const networkTx = stats.networks?.reduce((sum, n) => sum + n.tx_bytes, 0) || 0;
+    setNetworkChartData((prev) => {
+      const newData = [...prev, { time, rx: networkRx, tx: networkTx }];
+      return newData.slice(-20);
+    });
+  }, [appStats, selectedApp]);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -293,56 +332,154 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
               {selectedApp.state === 'RUNNING' && appStats[selectedApp.name] && (
                 <div style={styles.detailSection}>
                   <h3 style={styles.sectionTitle}>资源使用</h3>
-                  <div style={styles.resourceGrid}>
-                    <div style={styles.resourceItem}>
-                      <div style={styles.resourceHeader}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0071e3" strokeWidth="2">
-                          <rect x="4" y="4" width="16" height="16" rx="2"/>
-                          <rect x="9" y="9" width="6" height="6"/>
-                          <path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/>
-                        </svg>
-                        <span style={styles.resourceLabel}>CPU</span>
-                      </div>
-                      <span style={styles.resourceValue}>{appStats[selectedApp.name].cpu_usage.toFixed(1)}%</span>
-                      <div style={styles.resourceBar}>
-                        <div style={{ ...styles.resourceBarFill, width: `${Math.min(appStats[selectedApp.name].cpu_usage, 100)}%`, backgroundColor: '#0071e3' }} />
-                      </div>
-                    </div>
-                    <div style={styles.resourceItem}>
-                      <div style={styles.resourceHeader}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2">
-                          <rect x="2" y="6" width="20" height="12" rx="2"/>
-                          <path d="M6 12h4M14 12h4"/>
-                        </svg>
-                        <span style={styles.resourceLabel}>内存</span>
-                      </div>
-                      <span style={styles.resourceValue}>{formatBytes(appStats[selectedApp.name].memory)}</span>
-                      <div style={styles.resourceBar}>
-                        <div style={{ ...styles.resourceBarFill, width: `${Math.min((appStats[selectedApp.name].memory / (4 * 1024 * 1024 * 1024)) * 100, 100)}%`, backgroundColor: '#34c759' }} />
+
+                  {/* CPU & Memory - Circular Progress */}
+                  <div style={styles.circularWrapper}>
+                    {/* CPU */}
+                    <div style={styles.circularItem}>
+                      <svg width="120" height="120" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#f0f0f5" strokeWidth="10" />
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
+                          fill="none"
+                          stroke="#0071e3"
+                          strokeWidth="10"
+                          strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 50}`}
+                          strokeDashoffset={`${2 * Math.PI * 50 * (1 - Math.min(appStats[selectedApp.name].cpu_usage / 100, 1))}`}
+                          transform="rotate(-90 60 60)"
+                          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                        />
+                      </svg>
+                      <div style={styles.circularTextBelow}>
+                        <span style={styles.circularValue}>{appStats[selectedApp.name].cpu_usage.toFixed(0)}%</span>
+                        <span style={styles.circularLabel}>CPU</span>
                       </div>
                     </div>
-                    <div style={styles.resourceItem}>
-                      <div style={styles.resourceHeader}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2">
-                          <rect x="2" y="4" width="20" height="16" rx="2"/>
-                          <path d="M6 8h4M14 8h4M6 16h4M14 16h4"/>
-                        </svg>
-                        <span style={styles.resourceLabel}>块 I/O</span>
+
+                    {/* Memory */}
+                    <div style={styles.circularItem}>
+                      <svg width="120" height="120" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="50" fill="none" stroke="#f0f0f5" strokeWidth="10" />
+                        <circle
+                          cx="60"
+                          cy="60"
+                          r="50"
+                          fill="none"
+                          stroke="#34c759"
+                          strokeWidth="10"
+                          strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 50}`}
+                          strokeDashoffset={`${2 * Math.PI * 50 * (1 - Math.min((appStats[selectedApp.name].memory / (4 * 1024 * 1024 * 1024)), 1))}`}
+                          transform="rotate(-90 60 60)"
+                          style={{ transition: 'stroke-dashoffset 0.5s ease' }}
+                        />
+                      </svg>
+                      <div style={styles.circularTextBelow}>
+                        <span style={styles.circularValue}>{formatBytes(appStats[selectedApp.name].memory)}</span>
+                        <span style={styles.circularLabel}>内存</span>
                       </div>
-                      <span style={styles.resourceValue}>
-                        读 {formatBytes(appStats[selectedApp.name].blkio.read)} / 写 {formatBytes(appStats[selectedApp.name].blkio.write)}
+                    </div>
+                  </div>
+
+                  {/* Block I/O Chart */}
+                  <div style={styles.chartCard}>
+                    <div style={styles.chartCardHeader}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2">
+                        <rect x="2" y="4" width="20" height="16" rx="2"/>
+                        <path d="M6 8h4M14 8h4M6 16h4M14 16h4"/>
+                      </svg>
+                      <span style={styles.chartCardTitle}>块 I/O</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={100}>
+                      <LineChart data={ioChartData}>
+                        <XAxis dataKey="time" hide />
+                        <YAxis hide domain={[0, 'auto']} />
+                        <Tooltip
+                          formatter={(value: number) => formatBytes(value)}
+                          contentStyle={styles.chartTooltip}
+                          labelStyle={{ display: 'none' }}
+                        />
+                        <Line
+                          type="basis"
+                          dataKey="read"
+                          stroke="#0071e3"
+                          strokeWidth={2}
+                          dot={false}
+                          name="读"
+                          animationDuration={0}
+                        />
+                        <Line
+                          type="basis"
+                          dataKey="write"
+                          stroke="#ff9500"
+                          strokeWidth={2}
+                          dot={false}
+                          name="写"
+                          animationDuration={0}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div style={styles.chartLegend}>
+                      <span style={styles.chartLegendItem}>
+                        <span style={{ ...styles.legendDot, backgroundColor: '#0071e3' }} />
+                        读 {formatBytes(appStats[selectedApp.name]?.blkio?.read || 0)}/s
+                      </span>
+                      <span style={styles.chartLegendItem}>
+                        <span style={{ ...styles.legendDot, backgroundColor: '#ff9500' }} />
+                        写 {formatBytes(appStats[selectedApp.name]?.blkio?.write || 0)}/s
                       </span>
                     </div>
-                    <div style={styles.resourceItem}>
-                      <div style={styles.resourceHeader}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#af52de" strokeWidth="2">
-                          <circle cx="12" cy="12" r="10"/>
-                          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                        </svg>
-                        <span style={styles.resourceLabel}>网络</span>
-                      </div>
-                      <span style={styles.resourceValue}>
-                        ↓ {formatNetworkSpeed(getNetworkTotals().rx)} / ↑ {formatNetworkSpeed(getNetworkTotals().tx)}
+                  </div>
+
+                  {/* Network Chart */}
+                  <div style={styles.chartCard}>
+                    <div style={styles.chartCardHeader}>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#34c759" strokeWidth="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                      </svg>
+                      <span style={styles.chartCardTitle}>网络</span>
+                    </div>
+                    <ResponsiveContainer width="100%" height={100}>
+                      <LineChart data={networkChartData}>
+                        <XAxis dataKey="time" hide />
+                        <YAxis hide domain={[0, 'auto']} />
+                        <Tooltip
+                          formatter={(value: number) => formatNetworkSpeed(value)}
+                          contentStyle={styles.chartTooltip}
+                          labelStyle={{ display: 'none' }}
+                        />
+                        <Line
+                          type="basis"
+                          dataKey="rx"
+                          stroke="#34c759"
+                          strokeWidth={2}
+                          dot={false}
+                          name="入"
+                          animationDuration={0}
+                        />
+                        <Line
+                          type="basis"
+                          dataKey="tx"
+                          stroke="#af52de"
+                          strokeWidth={2}
+                          dot={false}
+                          name="出"
+                          animationDuration={0}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div style={styles.chartLegend}>
+                      <span style={styles.chartLegendItem}>
+                        <span style={{ ...styles.legendDot, backgroundColor: '#34c759' }} />
+                        入 {formatNetworkSpeed(getNetworkTotals().rx)}
+                      </span>
+                      <span style={styles.chartLegendItem}>
+                        <span style={{ ...styles.legendDot, backgroundColor: '#af52de' }} />
+                        出 {formatNetworkSpeed(getNetworkTotals().tx)}
                       </span>
                     </div>
                   </div>
@@ -973,6 +1110,89 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100%',
     borderRadius: 2,
     transition: 'width 0.3s ease',
+  },
+  // Circular Progress Wrapper
+  circularWrapper: {
+    display: 'flex',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    padding: '24px 16px',
+    marginBottom: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 16,
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+  },
+  circularItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    width: 120,
+  },
+  circularTextBelow: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  circularValue: {
+    fontSize: 20,
+    fontWeight: 600,
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif",
+  },
+  circularLabel: {
+    fontSize: 12,
+    fontWeight: 500,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+    marginTop: 2,
+  },
+  // Chart Card
+  chartCard: {
+    padding: 16,
+    marginBottom: 12,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+  },
+  chartCardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  chartCardTitle: {
+    fontSize: 14,
+    fontWeight: 600,
+    color: '#1d1d1f',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  chartTooltip: {
+    backgroundColor: '#1d1d1f',
+    border: 'none',
+    borderRadius: 8,
+    fontSize: 12,
+    color: '#ffffff',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  chartLegend: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 4,
+  },
+  chartLegendItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    fontSize: 11,
+    color: '#86868b',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  legendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: '50%',
   },
   // Collapsible
   collapsibleHeader: {
