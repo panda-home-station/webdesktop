@@ -41,6 +41,27 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const formatNetworkSpeed = (bytesPerSec: number) => {
+    if (bytesPerSec === 0) return '0 B/s';
+    const bitsPerSec = bytesPerSec * 8;
+    const k = 1000;
+    const sizes = ['bps', 'Kbps', 'Mbps', 'Gbps'];
+    const i = Math.floor(Math.log(bitsPerSec) / Math.log(k));
+    return parseFloat((bitsPerSec / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const getNetworkTotals = () => {
+    const stats = appStats[selectedApp.name];
+    if (!stats?.networks) return { rx: 0, tx: 0 };
+    return stats.networks.reduce(
+      (acc, net) => ({
+        rx: acc.rx + net.rx_bytes,
+        tx: acc.tx + net.tx_bytes,
+      }),
+      { rx: 0, tx: 0 }
+    );
+  };
+
   const filteredApps = installedApps.filter((app) =>
     app.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -299,6 +320,30 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                       <div style={styles.resourceBar}>
                         <div style={{ ...styles.resourceBarFill, width: `${Math.min((appStats[selectedApp.name].memory / (4 * 1024 * 1024 * 1024)) * 100, 100)}%`, backgroundColor: '#34c759' }} />
                       </div>
+                    </div>
+                    <div style={styles.resourceItem}>
+                      <div style={styles.resourceHeader}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff9500" strokeWidth="2">
+                          <rect x="2" y="4" width="20" height="16" rx="2"/>
+                          <path d="M6 8h4M14 8h4M6 16h4M14 16h4"/>
+                        </svg>
+                        <span style={styles.resourceLabel}>块 I/O</span>
+                      </div>
+                      <span style={styles.resourceValue}>
+                        读 {formatBytes(appStats[selectedApp.name].blkio.read)} / 写 {formatBytes(appStats[selectedApp.name].blkio.write)}
+                      </span>
+                    </div>
+                    <div style={styles.resourceItem}>
+                      <div style={styles.resourceHeader}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#af52de" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                        </svg>
+                        <span style={styles.resourceLabel}>网络</span>
+                      </div>
+                      <span style={styles.resourceValue}>
+                        ↓ {formatNetworkSpeed(getNetworkTotals().rx)} / ↑ {formatNetworkSpeed(getNetworkTotals().tx)}
+                      </span>
                     </div>
                   </div>
                 </div>
