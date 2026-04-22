@@ -37,7 +37,6 @@ interface AppsState {
   loadCategories: () => Promise<void>;
   loadContainerImages: () => Promise<void>;
   loadRegistries: () => Promise<void>;
-  loadAppStats: (name: string) => Promise<void>;
 
   startApp: (name: string) => Promise<void>;
   stopApp: (name: string) => Promise<void>;
@@ -146,18 +145,6 @@ export const useAppsStore = create<AppsState>((set, get) => ({
     }
   },
 
-  // Actions - Load App Stats
-  loadAppStats: async (name) => {
-    try {
-      const stats = await appService.getStats(name);
-      set((state) => ({
-        appStats: { ...state.appStats, [name]: stats },
-      }));
-    } catch (error) {
-      console.error(`Failed to load stats for ${name}:`, error);
-    }
-  },
-
   // Actions - Start App
   startApp: async (name) => {
     await appService.start(name);
@@ -235,9 +222,21 @@ export const useAppsStore = create<AppsState>((set, get) => ({
       ['app.start', 'app.stop', 'app.redeploy', 'app.delete', 'app.upgrade', 'app.create']
     );
 
+    // Subscribe to app stats updates
+    const unsubscribeStats = appService.subscribeStats((statsArray) => {
+      const statsMap: Record<string, AppStats> = {};
+      for (const stats of statsArray) {
+        statsMap[stats.app_name] = stats;
+      }
+      set((state) => ({
+        appStats: { ...state.appStats, ...statsMap },
+      }));
+    });
+
     return () => {
       unsubscribe();
       unsubscribeJobs();
+      unsubscribeStats();
     };
   },
 }));

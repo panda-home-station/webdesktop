@@ -164,10 +164,16 @@ export class AppService {
   }
 
   /**
-   * Get app stats
+   * Subscribe to app stats updates
+   * The event source streams stats for all running apps as an array
    */
-  async getStats(name: string): Promise<AppStats> {
-    return truenasApi.call('app.statistics', [name]) as Promise<AppStats>;
+  subscribeStats(callback: (stats: AppStats[]) => void): () => void {
+    return truenasApi.subscribe('app.stats', (data) => {
+      const event = data as { fields?: AppStats[] };
+      if (event.fields) {
+        callback(event.fields);
+      }
+    });
   }
 
   /**

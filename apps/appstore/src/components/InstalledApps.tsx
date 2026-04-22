@@ -17,7 +17,6 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
     installedApps,
     installedAppsLoading,
     loadInstalledApps,
-    loadAppStats,
     appStats,
     startApp,
     stopApp,
@@ -33,16 +32,6 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
   useEffect(() => {
     loadInstalledApps();
   }, [loadInstalledApps]);
-
-  useEffect(() => {
-    if (selectedApp && selectedApp.state === 'RUNNING') {
-      loadAppStats(selectedApp.name);
-      const interval = setInterval(() => {
-        loadAppStats(selectedApp.name);
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [selectedApp, loadAppStats]);
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -293,9 +282,9 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                         </svg>
                         <span style={styles.resourceLabel}>CPU</span>
                       </div>
-                      <span style={styles.resourceValue}>{appStats[selectedApp.name].cpu.toFixed(1)}%</span>
+                      <span style={styles.resourceValue}>{appStats[selectedApp.name].cpu_usage.toFixed(1)}%</span>
                       <div style={styles.resourceBar}>
-                        <div style={{ ...styles.resourceBarFill, width: `${Math.min(appStats[selectedApp.name].cpu, 100)}%`, backgroundColor: '#0071e3' }} />
+                        <div style={{ ...styles.resourceBarFill, width: `${Math.min(appStats[selectedApp.name].cpu_usage, 100)}%`, backgroundColor: '#0071e3' }} />
                       </div>
                     </div>
                     <div style={styles.resourceItem}>

@@ -127,14 +127,18 @@ export interface DockerRegistry {
 }
 
 // App Stats
+export interface AppNetworkStats {
+  interface_name: string;
+  rx_bytes: number;
+  tx_bytes: number;
+}
+
 export interface AppStats {
-  cpu: number;
+  app_name: string;
+  cpu_usage: number;
   memory: number;
-  network: {
-    rx: number;
-    tx: number;
-  };
-  disks: {
+  networks: AppNetworkStats[];
+  blkio: {
     read: number;
     write: number;
   };

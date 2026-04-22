@@ -20,6 +20,7 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
     availableApps,
     availableAppsLoading,
     loadAvailableApps,
+    installedApps,
   } = useAppsStore();
 
   const [selectedApp, setSelectedApp] = useState<AvailableApp | null>(null);
@@ -32,6 +33,16 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
   useEffect(() => {
     setSelectedApp(null);
   }, [category]);
+
+  // Check if an app is installed
+  const isAppInstalled = (app: AvailableApp): boolean => {
+    return installedApps.some(
+      (installed) =>
+        installed.name === app.name &&
+        installed.metadata?.train === app.train &&
+        installed.metadata?.catalog === app.catalog
+    );
+  };
 
   const filteredApps = availableApps.filter((app) => {
     const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -256,7 +267,9 @@ export function AvailableApps({ category = 'all', searchQuery = '', onAppInstall
                 <div style={styles.cardRight}>
                   <div style={styles.cardHeader}>
                     <h3 style={styles.cardTitle}>{app.title || app.name}</h3>
-                    <span style={styles.cardVersion}>{app.latest_version || app.version}</span>
+                    {isAppInstalled(app) && (
+                      <span style={styles.installedBadge}>已安装</span>
+                    )}
                   </div>
                   <p style={styles.cardDescription}>
                     {app.description || '暂无描述'}
@@ -398,6 +411,12 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#34c759',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
     marginTop: 4,
+  },
+  installedBadge: {
+    fontSize: 10,
+    fontWeight: 600,
+    color: '#0071e3',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   // Detail View - Apple App Store Style
   detailWrapper: {

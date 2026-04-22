@@ -23,9 +23,10 @@ export function AppInstallPage({ app, onBack, onSuccess }: AppInstallPageProps) 
 
   return (
     <div style={styles.container}>
-      <div style={styles.body}>
-        {/* App Header - Back Button + App Info */}
-        <div style={styles.appHeader}>
+      <div style={styles.detailBody}>
+        {/* Header Section */}
+        <div style={styles.detailHero}>
+          {/* Back Button */}
           <button
             style={styles.backButton}
             onClick={onBack}
@@ -42,9 +43,9 @@ export function AppInstallPage({ app, onBack, onSuccess }: AppInstallPageProps) 
             返回
           </button>
 
-          {/* App Info */}
-          <div style={styles.appInfoSection}>
-            <div style={styles.appIcon}>
+          {/* Header Content */}
+          <div style={styles.detailHeader}>
+            <div style={styles.detailIcon}>
               {getIconUrl(app) ? (
                 <img
                   src={getIconUrl(app)!}
@@ -61,8 +62,8 @@ export function AppInstallPage({ app, onBack, onSuccess }: AppInstallPageProps) 
                 </svg>
               )}
             </div>
-            <div style={styles.appInfo}>
-              <h2 style={styles.appTitle}>{app.title || app.name}</h2>
+            <div style={styles.detailHeaderInfo}>
+              <h2 style={styles.detailTitle}>{app.title || app.name}</h2>
               <p style={styles.appMeta}>
                 {app.latest_version || app.version} · {app.train}
               </p>
@@ -70,16 +71,16 @@ export function AppInstallPage({ app, onBack, onSuccess }: AppInstallPageProps) 
           </div>
         </div>
 
-      {/* Wizard Section */}
-      <div style={styles.wizardSection}>
-        <AppWizard
-          app={app}
-          onClose={onBack}
-          onSuccess={onSuccess}
-          isPage={true}
-          showHeader={false}
-        />
-      </div>
+        {/* Wizard Section */}
+        <div style={styles.wizardSection}>
+          <AppWizard
+            app={app}
+            onClose={onBack}
+            onSuccess={onSuccess}
+            isPage={true}
+            showHeader={false}
+          />
+        </div>
       </div>
     </div>
   );
@@ -88,28 +89,27 @@ export function AppInstallPage({ app, onBack, onSuccess }: AppInstallPageProps) 
 const styles: Record<string, React.CSSProperties> = {
   container: {
     height: '100%',
-    display: 'flex',
-    flexDirection: 'column',
-    backgroundColor: '#f5f5f7',
     overflow: 'auto',
+    backgroundColor: '#f5f5f7',
   },
-  body: {
+  detailBody: {
     maxWidth: 1200,
     marginLeft: 'auto',
     marginRight: 'auto',
     boxSizing: 'border-box',
     width: '100%',
   },
-  appHeader: {
+  detailHero: {
     backgroundColor: '#f5f5f7',
-    flexShrink: 0,
+    padding: '32px 40px 28px',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.04)',
   },
   backButton: {
     display: 'inline-flex',
     alignItems: 'center',
     gap: 6,
     padding: '6px 12px',
-    margin: '32px 40px 20px',
+    marginBottom: 20,
     border: 'none',
     borderRadius: 6,
     backgroundColor: 'rgba(0, 0, 0, 0.04)',
@@ -120,15 +120,12 @@ const styles: Record<string, React.CSSProperties> = {
     transition: 'all 0.2s ease',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
-  appInfoSection: {
+  detailHeader: {
     display: 'flex',
     alignItems: 'flex-start',
     gap: 24,
-    padding: '0 40px 28px',
-    backgroundColor: '#f5f5f7',
-    flexShrink: 0,
   },
-  appIcon: {
+  detailIcon: {
     width: 100,
     height: 100,
     borderRadius: 22,
@@ -145,12 +142,12 @@ const styles: Record<string, React.CSSProperties> = {
     height: '100%',
     objectFit: 'contain',
   },
-  appInfo: {
+  detailHeaderInfo: {
     flex: 1,
     paddingTop: 4,
     paddingRight: 120,
   },
-  appTitle: {
+  detailTitle: {
     fontSize: 32,
     fontWeight: 700,
     color: '#1d1d1f',
@@ -165,6 +162,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   wizardSection: {
-    padding: '32px 40px',
+    padding: '28px 40px',
   },
 };
