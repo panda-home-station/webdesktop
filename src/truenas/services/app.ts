@@ -18,10 +18,6 @@ import {
   Pool,
 } from '../../shared/types/app-types';
 
-// TODO: Remove this ignore when we have proper config
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const window = (globalThis as any).window;
-
 /**
  * App Service
  * Handles all Docker Apps related API calls
@@ -34,7 +30,6 @@ export class AppService {
     return truenasApi.call('app.query', filters || [], {
       extra: {
         retrieve_config: true,
-        host_ip: window?.location?.hostname || 'localhost',
         ...extra,
       },
     }) as Promise<App[]>;
@@ -48,7 +43,6 @@ export class AppService {
       extra: {
         include_app_schema: true,
         retrieve_config: true,
-        host_ip: window?.location?.hostname || 'localhost',
       },
     }) as Promise<App[]>;
   }

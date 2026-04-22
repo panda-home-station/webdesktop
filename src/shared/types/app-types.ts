@@ -39,6 +39,7 @@ export interface App {
   control_port: number;
   chart_sources: string[];
   custom_compose_config: string | null;
+  portals: Record<string, string>;
 }
 
 export interface AppMetadata {

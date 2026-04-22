@@ -650,10 +650,30 @@ export function InstalledApps({ onAppSelect }: InstalledAppsProps) {
                 <div style={styles.cardRight}>
                   <div style={styles.cardHeader}>
                     <h3 style={styles.cardTitle}>{app.name}</h3>
-                    {app.upgrade_available && (
-                      <span style={styles.updateBadge}>更新</span>
+                    {app.portals && Object.keys(app.portals).length > 0 && (
+                      <button
+                        style={styles.openButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const portalKey = Object.keys(app.portals).find(k => k.toLowerCase() === 'web ui') || Object.keys(app.portals)[0];
+                          const portalUrl = app.portals[portalKey];
+                          if (portalUrl) {
+                            window.open(portalUrl, '_blank');
+                          }
+                        }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                          <polyline points="15,3 21,3 21,9"/>
+                          <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                        打开
+                      </button>
                     )}
                   </div>
+                  {app.upgrade_available && (
+                    <span style={styles.updateBadge}>更新</span>
+                  )}
                   <p style={styles.cardVersion}>
                     v{app.metadata?.human_version || app.version}
                   </p>
@@ -825,6 +845,21 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: 10,
     fontWeight: 600,
     color: '#ff9f0a',
+    fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
+  },
+  openButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '4px 10px',
+    backgroundColor: '#0071e3',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: 6,
+    fontSize: 11,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif",
   },
   // Detail View - Apple App Store Style
