@@ -28,6 +28,53 @@ import type {
 
 const customApp = 'ix-custom';
 
+/**
+ * Serialize form values for submission
+ * Similar to webui's serializeFormValue function
+ * Removes hidden fields and fields that should not be submitted
+ */
+function serializeFormValues(
+  values: FormValues,
+  sections: DynamicSection[]
+): FormValues {
+  const result = { ...values };
+
+  // Traverse all fields in sections to find hidden or conditional fields
+  sections.forEach((section) => {
+    section.schema.forEach((field) => {
+      if (isFieldHidden(field, result)) {
+        // Remove hidden fields from result
+        const path = field.controlName;
+        if (path.includes('.')) {
+          const parts = path.split('.');
+          let current = result;
+          for (let i = 0; i < parts.length - 1; i++) {
+            if (current && typeof current === 'object' && parts[i] in current) {
+              current = (current as Record<string, unknown>)[parts[i]];
+            }
+          }
+          if (current && typeof current === 'object' && parts[parts.length - 1] in current) {
+            delete (current as Record<string, unknown>)[parts[parts.length - 1]];
+          }
+        } else if (path in result) {
+          delete (result as Record<string, unknown>)[path];
+        }
+      }
+    });
+  });
+
+  // Special handling for ix_volume config
+  // When acl_enable is false, acl_entries should not be sent
+  if (result.storage?.config?.ix_volume_config?.acl_enable === false) {
+    delete result.storage.config.ix_volume_config.acl_entries;
+  }
+  if (result.storage?.config?.host_path_config?.acl_enable === false) {
+    delete result.storage.config.host_path_config.acl_entries;
+  }
+
+  return result;
+}
+
 export function useWizard({ app, editingApp, onClose, onSuccess }: WizardProps) {
   const isNew = !editingApp;
   const { installApp, loadInstalledApps } = useAppsStore();
@@ -340,13 +387,15 @@ export function useWizard({ app, editingApp, onClose, onSuccess }: WizardProps) 
         const version = selectedVersion || catalogApp.latest_version;
 
         if (isNew) {
-          await installApp({
+          const serializedValues = serializeFormValues(formValues, dynamicSection);
+          const installParams = {
             app_name: releaseName,
             catalog_app: catalogApp.name,
             train: app?.train || 'stable',
             version,
-            values: formValues,
-          } as AppCreate);
+            values: serializedValues,
+          } as AppCreate;
+          await installApp(installParams);
         } else {
           useToastStore.getState().showError('更新功能尚未实现');
           setSubmitting(false);
