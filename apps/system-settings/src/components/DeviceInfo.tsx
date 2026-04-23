@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Server, Cpu, MemoryStick, Copy } from 'lucide-react'
+import { Server, Cpu, MemoryStick } from 'lucide-react'
 import type { SystemInfo, ReportingRealtimeUpdate } from '@truenas/types/system-types'
 import type { Pool } from '@shared/types/pool-types'
 import type { Disk } from '@shared/types/disk-types'
 import { SpecGroup, SpecRow, PoolRow } from './shared'
-import { formatBytes, getCpuUsage, getNetworkInfo, formatUptime, parseSystemDatetime, formatDatetime } from '../utils/system'
+import { formatBytes, getNetworkInfo, formatUptime, parseSystemDatetime, formatDatetime } from '../utils/system'
 import type { NetworkInterfaceFromApi } from '../utils/system'
 
 interface DeviceInfoProps {
@@ -19,7 +19,7 @@ interface DeviceInfoProps {
 
 export function DeviceInfo({
   systemInfo,
-  realtime,
+  realtime: _realtime,
   networkInterfaces,
   pools,
   disks,
@@ -27,7 +27,6 @@ export function DeviceInfo({
   error,
 }: DeviceInfoProps) {
   const [displayTime, setDisplayTime] = useState('')
-  const [copied, setCopied] = useState(false)
 
   // Live clock from system time
   useEffect(() => {
@@ -43,14 +42,6 @@ export function DeviceInfo({
     }, 1000)
     return () => clearInterval(timer)
   }, [systemInfo])
-
-  const copyId = () => {
-    if (systemInfo?.system_serial) {
-      navigator.clipboard.writeText(systemInfo.system_serial)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
 
   if (loading) {
     return (
@@ -70,7 +61,6 @@ export function DeviceInfo({
     )
   }
 
-  const cpuUsage = getCpuUsage(realtime)
   const networkInfo = getNetworkInfo(networkInterfaces)
   const physmemGb = (systemInfo.physmem / (1024 ** 3)).toFixed(1)
   const uptime = formatUptime(systemInfo.uptime_seconds || 0)
@@ -118,7 +108,7 @@ export function DeviceInfo({
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#111827' }}>{systemInfo.hostname || 'Panda Home Station'}</h1>
           <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
-              <Cpu size={14} /> {cpuUsage}
+              <Cpu size={14} /> {systemInfo.cores} cores
             </span>
             <span style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 4, transform: 'translateZ(0)' }}>
               <MemoryStick size={14} /> {physmemGb} GB
@@ -133,33 +123,7 @@ export function DeviceInfo({
         <SpecRow label="内存" value={`${physmemGb} GB`} />
         <SpecRow label="ECC 内存" value={systemInfo.ecc_memory ? '是' : '否'} />
         <SpecRow label="系统产品" value={systemInfo.system_product || 'N/A'} />
-        <SpecRow
-          label="设备 ID"
-          value={systemInfo.system_serial || 'N/A'}
-          action={
-            <button
-              onClick={copyId}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: copied ? '#059669' : '#6b7280',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 4,
-                fontSize: 12,
-                padding: '4px 8px',
-                borderRadius: 4,
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={e => !copied && (e.currentTarget.style.color = '#374151')}
-              onMouseLeave={e => !copied && (e.currentTarget.style.color = '#6b7280')}
-            >
-              {copied ? '已复制' : '复制'}
-              {!copied && <Copy size={14} />}
-            </button>
-          }
-        />
+        <SpecRow label="设备 ID" value={systemInfo.system_serial?.replace(/\s+/g, '') || 'N/A'} />
       </SpecGroup>
 
       <SpecGroup title="系统规格">
