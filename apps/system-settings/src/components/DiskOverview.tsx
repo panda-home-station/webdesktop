@@ -116,14 +116,14 @@ export function DiskOverview({ disks, onDiskUpdate }: DiskOverviewProps) {
       {/* Stats Overview */}
       <div style={styles.statsGrid}>
         <StatCard
-          label="Total Disks"
+          label="磁盘总数"
           value={stats.totalDisks.toString()}
           subValue={formatBytes(stats.totalCapacity)}
         />
         <StatCard
-          label="Unassigned"
+          label="未分配"
           value={stats.unassignedDisks.toString()}
-          subValue="Available for use"
+          subValue="可用"
         />
         <StatCard
           label="HDD"
@@ -159,7 +159,7 @@ export function DiskOverview({ disks, onDiskUpdate }: DiskOverviewProps) {
       {/* Results count */}
       {filteredDisks.length !== disks.length && (
         <div style={styles.resultsCount}>
-          Showing {filteredDisks.length} of {disks.length} disks
+          显示 {filteredDisks.length} / {disks.length} 个磁盘
         </div>
       )}
     </div>

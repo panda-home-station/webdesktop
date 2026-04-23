@@ -25,37 +25,40 @@ export function DiskDetails({ disk, onBack, onEdit }: DiskDetailsProps) {
       {/* Header */}
       <div style={styles.header}>
         <button style={styles.backButton} onClick={onBack}>
-          ← Back
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          返回
         </button>
         <h2 style={styles.title}>{displayName}</h2>
         <TypeBadge type={disk.type} />
         {onEdit && (
           <button style={styles.editButton} onClick={onEdit}>
-            Edit
+            编辑
           </button>
         )}
       </div>
 
       {/* Basic Info */}
       <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Basic Information</h3>
+        <h3 style={styles.sectionTitle}>基本信息</h3>
         <div style={styles.grid}>
-          <InfoRow label="Device Name" value={disk.devname} />
-          <InfoRow label="Model" value={disk.model || 'Unknown'} />
-          <InfoRow label="Serial" value={disk.serial || 'Unknown'} />
-          <InfoRow label="Capacity" value={formatBytes(disk.size)} />
-          <InfoRow label="Bus" value={disk.bus} />
-          <InfoRow label="Type" value={disk.type} />
+          <InfoRow label="设备名称" value={disk.devname} />
+          <InfoRow label="型号" value={disk.model || '未知'} />
+          <InfoRow label="序列号" value={disk.serial || '未知'} />
+          <InfoRow label="容量" value={formatBytes(disk.size)} />
+          <InfoRow label="总线" value={disk.bus} />
+          <InfoRow label="类型" value={disk.type} />
         </div>
       </div>
 
       {/* Pool Info */}
       <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Pool Information</h3>
+        <h3 style={styles.sectionTitle}>存储池信息</h3>
         <div style={styles.grid}>
           <InfoRow
-            label="Pool"
-            value={disk.pool || 'Not assigned'}
+            label="存储池"
+            value={disk.pool || '未分配'}
             highlight={!disk.pool}
           />
           <InfoRow label="ZFS GUID" value={disk.zfs_guid || 'N/A'} />
@@ -65,35 +68,35 @@ export function DiskDetails({ disk, onBack, onEdit }: DiskDetailsProps) {
       {/* SED Info */}
       {isSed && (
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Self-Encrypting Drive (SED)</h3>
+          <h3 style={styles.sectionTitle}>自加密磁盘 (SED)</h3>
           <div style={styles.grid}>
             <InfoRow
-              label="Status"
-              value={disk.sed_status || 'Unknown'}
+              label="状态"
+              value={disk.sed_status || '未知'}
               valueColor={isUnlocked ? colors.success : colors.warning}
             />
-            <InfoRow label="Password Set" value={disk.passwd ? 'Yes' : 'No'} />
+            <InfoRow label="已设置密码" value={disk.passwd ? '是' : '否'} />
           </div>
         </div>
       )}
 
       {/* Power Management */}
       <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Power Management</h3>
+        <h3 style={styles.sectionTitle}>电源管理</h3>
         <div style={styles.grid}>
-          <InfoRow label="Power Mode" value={disk.advpowermgmt || 'Unknown'} />
-          <InfoRow label="Standby" value={disk.hddstandby || 'Unknown'} />
-          <InfoRow label="Transfer Mode" value={disk.transfermode || 'Unknown'} />
+          <InfoRow label="电源模式" value={disk.advpowermgmt || '未知'} />
+          <InfoRow label="待机时间" value={disk.hddstandby || '未知'} />
+          <InfoRow label="传输模式" value={disk.transfermode || '未知'} />
         </div>
       </div>
 
       {/* Additional Info */}
       <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>Additional Information</h3>
+        <h3 style={styles.sectionTitle}>附加信息</h3>
         <div style={styles.grid}>
-          <InfoRow label="Rotation Rate" value={disk.rotationrate ? `${disk.rotationrate} RPM` : 'N/A'} />
-          <InfoRow label="Subsystem" value={disk.subsystem || 'Unknown'} />
-          <InfoRow label="Description" value={disk.description || 'None'} />
+          <InfoRow label="转速" value={disk.rotationrate ? `${disk.rotationrate} 转/分` : 'N/A'} />
+          <InfoRow label="子系统" value={disk.subsystem || '未知'} />
+          <InfoRow label="描述" value={disk.description || '无'} />
         </div>
       </div>
     </div>
@@ -164,13 +167,18 @@ const styles = {
     marginBottom: 24,
   },
   backButton: {
-    padding: '8px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 16px',
     backgroundColor: colors.cardBg,
     border: `1px solid ${colors.border}`,
-    borderRadius: 8,
+    borderRadius: 10,
     cursor: 'pointer',
     fontSize: 14,
+    fontWeight: 500,
     color: colors.primary,
+    flexShrink: 0,
   },
   title: {
     margin: 0,

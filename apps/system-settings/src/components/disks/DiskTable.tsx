@@ -8,6 +8,27 @@ import { DiskType } from '@truenas/types/disk-type-enum-types'
 import { formatBytes } from '@truenas/utils/storage.utils'
 import { colors } from '../../styles/theme'
 
+/**
+ * Check if disk is a system disk (boot pool disk)
+ */
+function isSystemDisk(disk: Disk): boolean {
+  return disk.pool === 'freenas-boot' || disk.pool === 'boot-pool'
+}
+
+/**
+ * System disk badge component
+ */
+function SystemDiskBadge() {
+  return (
+    <span style={styles.systemBadge}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+      </svg>
+      系统盘
+    </span>
+  )
+}
+
 interface DiskTableProps {
   disks: Disk[]
   onDiskClick?: (disk: Disk) => void
@@ -17,7 +38,7 @@ export function DiskTable({ disks, onDiskClick }: DiskTableProps) {
   if (disks.length === 0) {
     return (
       <div style={styles.emptyState}>
-        <p style={styles.emptyText}>No disks found</p>
+        <p style={styles.emptyText}>未找到磁盘</p>
       </div>
     )
   }
@@ -27,13 +48,13 @@ export function DiskTable({ disks, onDiskClick }: DiskTableProps) {
       <table style={styles.table}>
         <thead>
           <tr style={styles.headerRow}>
-            <th style={styles.headerCell}>Name</th>
-            <th style={styles.headerCell}>Type</th>
-            <th style={styles.headerCell}>Capacity</th>
-            <th style={styles.headerCell}>Bus</th>
-            <th style={styles.headerCell}>Model</th>
-            <th style={styles.headerCell}>Pool</th>
-            <th style={styles.headerCell}>Status</th>
+            <th style={styles.headerCell}>名称</th>
+            <th style={styles.headerCell}>类型</th>
+            <th style={styles.headerCell}>容量</th>
+            <th style={styles.headerCell}>总线</th>
+            <th style={styles.headerCell}>型号</th>
+            <th style={styles.headerCell}>存储池</th>
+            <th style={styles.headerCell}>状态</th>
           </tr>
         </thead>
         <tbody>
@@ -44,7 +65,10 @@ export function DiskTable({ disks, onDiskClick }: DiskTableProps) {
               onClick={() => onDiskClick?.(disk)}
             >
               <td style={styles.cell}>
-                <span style={styles.diskName}>{disk.name}</span>
+                <div style={styles.diskNameContainer}>
+                  <span style={styles.diskName}>{disk.name}</span>
+                  {isSystemDisk(disk) && <SystemDiskBadge />}
+                </div>
               </td>
               <td style={styles.cell}>
                 <TypeBadge type={disk.type} />
@@ -60,7 +84,7 @@ export function DiskTable({ disks, onDiskClick }: DiskTableProps) {
                 {disk.pool ? (
                   <span style={styles.poolBadge}>{disk.pool}</span>
                 ) : (
-                  <span style={styles.unassignedText}>Unassigned</span>
+                  <span style={styles.unassignedText}>未分配</span>
                 )}
               </td>
               <td style={styles.cell}>
@@ -113,7 +137,7 @@ function StatusIndicator({ online }: { online: boolean }) {
         }}
       />
       <span style={styles.statusText}>
-        {online ? 'Available' : 'In Pool'}
+        {online ? '可用' : '存储池中'}
       </span>
     </div>
   )
@@ -154,6 +178,22 @@ const styles = {
   diskName: {
     fontWeight: 600,
     fontFamily: 'monospace',
+  },
+  diskNameContainer: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  },
+  systemBadge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    padding: '2px 8px',
+    backgroundColor: '#ff9500',
+    color: 'white',
+    borderRadius: 4,
+    fontSize: 11,
+    fontWeight: 600,
   },
   modelText: {
     maxWidth: 150,

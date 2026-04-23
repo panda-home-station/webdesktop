@@ -31,7 +31,7 @@ export function DiskFilters({
       <SearchInput
         value={searchQuery}
         onChange={onSearchChange}
-        placeholder="Search disks..."
+        placeholder="搜索磁盘..."
         style={styles.search}
       />
 
@@ -41,7 +41,7 @@ export function DiskFilters({
           onChange={(e) => onTypeFilterChange(e.target.value as DiskType | 'all')}
           style={styles.select}
         >
-          <option value="all">All Types</option>
+          <option value="all">所有类型</option>
           <option value={DiskType.Hdd}>HDD</option>
           <option value={DiskType.Ssd}>SSD</option>
           <option value={DiskType.Nvme}>NVMe</option>
@@ -53,8 +53,8 @@ export function DiskFilters({
           onChange={(e) => onPoolFilterChange(e.target.value)}
           style={styles.select}
         >
-          <option value="">All Pools</option>
-          <option value="unassigned">Unassigned</option>
+          <option value="">所有存储池</option>
+          <option value="unassigned">未分配</option>
           {pools.map((pool) => (
             <option key={pool} value={pool}>
               {pool}

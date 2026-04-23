@@ -43,7 +43,7 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
         ...updateData,
       })
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update disk settings')
+      setError(err instanceof Error ? err.message : '更新磁盘设置失败')
     } finally {
       setIsLoading(false)
     }
@@ -54,9 +54,12 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
       {/* Header */}
       <div style={styles.header}>
         <button style={styles.backButton} onClick={onCancel}>
-          ← Back
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          返回
         </button>
-        <h2 style={styles.title}>Edit Disk: {disk.name}</h2>
+        <h2 style={styles.title}>编辑磁盘: {disk.name}</h2>
       </div>
 
       <form onSubmit={handleSubmit} style={styles.form}>
@@ -68,10 +71,10 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
 
         {/* Read-only Info */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Disk Information (Read-only)</h3>
+          <h3 style={styles.sectionTitle}>磁盘信息 (只读)</h3>
 
           <div style={styles.field}>
-            <label style={styles.label}>Name</label>
+            <label style={styles.label}>名称</label>
             <input
               type="text"
               value={disk.name}
@@ -81,20 +84,20 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Serial Number</label>
+            <label style={styles.label}>序列号</label>
             <input
               type="text"
-              value={disk.serial || 'Unknown'}
+              value={disk.serial || '未知'}
               disabled
               style={styles.inputDisabled}
             />
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Model</label>
+            <label style={styles.label}>型号</label>
             <input
               type="text"
-              value={disk.model || 'Unknown'}
+              value={disk.model || '未知'}
               disabled
               style={styles.inputDisabled}
             />
@@ -103,21 +106,21 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
 
         {/* Editable Settings */}
         <div style={styles.section}>
-          <h3 style={styles.sectionTitle}>Settings</h3>
+          <h3 style={styles.sectionTitle}>设置</h3>
 
           <div style={styles.field}>
-            <label style={styles.label}>Description</label>
+            <label style={styles.label}>描述</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter description"
+              placeholder="输入描述"
               style={styles.input}
             />
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>HDD Standby</label>
+            <label style={styles.label}>HDD 待机</label>
             <select
               value={hddstandby}
               onChange={(e) => setHddstandby(e.target.value as DiskStandby)}
@@ -129,11 +132,11 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
                 </option>
               ))}
             </select>
-            <span style={styles.hint}>Time until hard drive enters standby mode</span>
+            <span style={styles.hint}>硬盘进入待机模式的时间</span>
           </div>
 
           <div style={styles.field}>
-            <label style={styles.label}>Advanced Power Management</label>
+            <label style={styles.label}>高级电源管理</label>
             <select
               value={advpowermgmt}
               onChange={(e) => setAdvpowermgmt(e.target.value as DiskPowerLevel)}
@@ -145,7 +148,7 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
                 </option>
               ))}
             </select>
-            <span style={styles.hint}>Controls the Advanced Power Management feature</span>
+            <span style={styles.hint}>控制高级电源管理功能</span>
           </div>
         </div>
 
@@ -157,14 +160,14 @@ export function DiskEditForm({ disk, onSave, onCancel }: DiskEditFormProps) {
             style={styles.cancelButton}
             disabled={isLoading}
           >
-            Cancel
+            取消
           </button>
           <button
             type="submit"
             style={styles.saveButton}
             disabled={isLoading}
           >
-            {isLoading ? 'Saving...' : 'Save Changes'}
+            {isLoading ? '保存中...' : '保存更改'}
           </button>
         </div>
       </form>
@@ -183,13 +186,18 @@ const styles = {
     marginBottom: 24,
   },
   backButton: {
-    padding: '8px 16px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '10px 16px',
     backgroundColor: colors.cardBg,
     border: `1px solid ${colors.border}`,
-    borderRadius: 8,
+    borderRadius: 10,
     cursor: 'pointer',
     fontSize: 14,
+    fontWeight: 500,
     color: colors.primary,
+    flexShrink: 0,
   },
   title: {
     margin: 0,
