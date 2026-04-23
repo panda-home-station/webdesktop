@@ -1,18 +1,34 @@
-import { Section, Row } from './shared'
+/**
+ * Network Settings Component
+ * Main container for network settings page
+ */
 
-export function NetworkSettings() {
+import { useState, useCallback } from 'react'
+import { PendingChangesBanner } from './network/PendingChangesBanner'
+import { InterfacesCard } from './network/InterfacesCard'
+import { NetworkConfigurationCard } from './network/NetworkConfigurationCard'
+import { StaticRoutesCard } from './network/StaticRoutesCard'
+import { IpmiCard } from './network/IpmiCard'
+
+interface NetworkSettingsProps {
+  // Props for future extension if needed
+  [key: string]: unknown
+}
+
+export function NetworkSettings(_props: NetworkSettingsProps) {
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const handleRefresh = useCallback(() => {
+    setRefreshKey((k) => k + 1)
+  }, [])
+
   return (
     <div>
-      <Section title="以太网">
-        <Row label="接口" value="eth0" />
-        <Row label="状态" value={<span style={{ color: '#34c759' }}>已连接</span>} />
-        <Row label="IP 地址" value="192.168.1.100" />
-        <Row label="MAC 地址" value="00:11:22:33:44:55" border={false} />
-      </Section>
-
-      <Section title="DNS">
-        <Row label="DNS 服务器" value="自动 (8.8.8.8)" onClick={() => {}} border={false} />
-      </Section>
+      <PendingChangesBanner onRefresh={handleRefresh} key={`pending-${refreshKey}`} />
+      <InterfacesCard onRefresh={handleRefresh} key={`interfaces-${refreshKey}`} />
+      <NetworkConfigurationCard onRefresh={handleRefresh} key={`config-${refreshKey}`} />
+      <StaticRoutesCard onRefresh={handleRefresh} key={`routes-${refreshKey}`} />
+      <IpmiCard onRefresh={handleRefresh} key={`ipmi-${refreshKey}`} />
     </div>
   )
 }
