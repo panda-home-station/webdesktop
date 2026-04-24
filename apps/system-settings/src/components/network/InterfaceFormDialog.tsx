@@ -617,7 +617,7 @@ const styles: Record<string, React.CSSProperties> = {
   formBody: {
     display: 'flex',
     gap: 20,
-    padding: '20px 24px 24px',
+    padding: '16px 20px 20px',
     overflowY: 'auto' as const,
     flex: 1,
     borderTop: `1px solid ${colors2.border}`,
@@ -625,12 +625,12 @@ const styles: Record<string, React.CSSProperties> = {
   column: {
     flex: 1,
     minWidth: 0,
-    paddingTop: 20,
+    paddingTop: 12,
   },
   columnRight: {
     flex: 1,
     minWidth: 0,
-    paddingTop: 20,
+    paddingTop: 12,
     borderLeft: `1px solid ${colors2.border}`,
     paddingLeft: 20,
   },
@@ -652,7 +652,7 @@ const styles: Record<string, React.CSSProperties> = {
     animation: 'spin 0.8s linear infinite',
   },
   section: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   typeHelpCard: {
     background: colors2.cardBg,
@@ -667,13 +667,13 @@ const styles: Record<string, React.CSSProperties> = {
     color: colors2.textSecondary,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.5px',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   staticIpHeader: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   field: {
     marginBottom: 14,
@@ -688,7 +688,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   input: {
     width: '100%',
-    padding: '10px 12px',
+    padding: '8px 10px',
     fontSize: 14,
     border: `1px solid ${colors2.border}`,
     borderRadius: 10,
@@ -753,7 +753,7 @@ const styles: Record<string, React.CSSProperties> = {
   compactSection: {
     display: 'flex',
     flexDirection: 'column' as const,
-    gap: 12,
+    gap: 8,
   },
   togglePills: {
     display: 'flex',
@@ -792,7 +792,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   aliasInputCompact: {
     flex: 1,
-    padding: '10px 12px',
+    padding: '8px 10px',
     fontSize: 13,
     border: `1px solid ${colors2.border}`,
     borderRadius: 10,
@@ -802,7 +802,7 @@ const styles: Record<string, React.CSSProperties> = {
     background: colors2.cardBg,
   },
   aliasTypeSelectSmall: {
-    padding: '10px',
+    padding: '8px',
     fontSize: 12,
     border: `1px solid ${colors2.border}`,
     borderRadius: 10,
@@ -853,7 +853,7 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 12,
-    padding: '11px 14px',
+    padding: '8px 12px',
     background: colors2.background,
     borderRadius: 10,
     cursor: 'pointer',
@@ -892,12 +892,12 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     gap: 12,
     justifyContent: 'flex-end',
-    padding: '16px 24px',
+    padding: '12px 20px',
     borderTop: `1px solid ${colors2.border}`,
     background: colors2.background,
   },
   cancelButton: {
-    padding: '11px 22px',
+    padding: '9px 20px',
     fontSize: 14,
     background: colors2.cardBg,
     border: `1px solid ${colors2.border}`,
@@ -907,7 +907,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 500,
   },
   saveButton: {
-    padding: '11px 28px',
+    padding: '9px 24px',
     fontSize: 14,
     fontWeight: 600,
     background: colors2.primary,
