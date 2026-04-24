@@ -24,8 +24,10 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [interfaceStats, setInterfaceStats] = useState<Record<string, NetworkInterfaceUpdate>>({})
   const unsubscribeRef = useRef<(() => void) | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const loadInterfaces = useCallback(async () => {
+    setIsRefreshing(true)
     try {
       const [ifaces, ha] = await Promise.all([
         networkService.queryInterfaces(),
@@ -36,7 +38,7 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
     } catch (error) {
       console.error('Failed to load interfaces:', error)
     } finally {
-      setLoading(false)
+      setTimeout(() => setIsRefreshing(false), 500)
     }
   }, [])
 
@@ -95,8 +97,8 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
       <div style={styles.header}>
         <h3 style={styles.sectionTitle}>网络接口</h3>
         <div style={styles.headerActions}>
-          <button onClick={loadInterfaces} style={styles.iconButton}>
-            <RefreshCw size={16} />
+          <button onClick={loadInterfaces} style={styles.iconButton} disabled={isRefreshing}>
+            <RefreshCw size={16} style={isRefreshing ? { animation: 'spin 0.8s ease-in-out' } : undefined} />
           </button>
           <button style={styles.addButton}>
             <Plus size={16} />
