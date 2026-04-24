@@ -348,7 +348,7 @@ export function InterfaceFormDialog({
                 </div>
 
                 {/* IP Settings - Compact Toggle Pills */}
-                <div style={styles.section}>
+                <div style={{ ...styles.section, marginTop: 12 }}>
                   <div style={styles.fieldRow}>
                     <span style={styles.labelInline}>IP 配置</span>
                     <div style={styles.togglePills}>
@@ -383,7 +383,13 @@ export function InterfaceFormDialog({
                 {/* Static IPs - Compact */}
                 {!form.ipv4_dhcp && (
                   <div style={styles.section}>
-                    <div style={styles.sectionLabel}>静态 IP</div>
+                    <div style={styles.staticIpHeader}>
+                      <span style={styles.sectionLabel}>静态 IP</span>
+                      <button onClick={addAlias} style={styles.addButtonSmall}>
+                        <Plus size={12} />
+                        添加
+                      </button>
+                    </div>
                     <div style={styles.aliasList}>
                       {form.aliases.map((alias, i) => (
                         <div key={i} style={styles.aliasCompactRow}>
@@ -408,10 +414,6 @@ export function InterfaceFormDialog({
                         </div>
                       ))}
                     </div>
-                    <button onClick={addAlias} style={styles.addButtonSmall}>
-                      <Plus size={12} />
-                      添加
-                    </button>
                   </div>
                 )}
               </div>
@@ -667,6 +669,12 @@ const styles: Record<string, React.CSSProperties> = {
     letterSpacing: '0.5px',
     marginBottom: 12,
   },
+  staticIpHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
   field: {
     marginBottom: 14,
     flex: 1,
@@ -754,10 +762,10 @@ const styles: Record<string, React.CSSProperties> = {
   togglePill: {
     display: 'flex',
     alignItems: 'center',
-    padding: '9px 16px',
+    padding: '6px 14px',
     background: colors2.background,
     border: `1px solid ${colors2.border}`,
-    borderRadius: 22,
+    borderRadius: 20,
     cursor: 'pointer',
     fontSize: 13,
     fontWeight: 500,
@@ -820,15 +828,14 @@ const styles: Record<string, React.CSSProperties> = {
     display: 'flex',
     alignItems: 'center',
     gap: 6,
-    padding: '10px 14px',
+    padding: '6px 14px',
     fontSize: 13,
     fontWeight: 500,
     background: 'transparent',
     border: `1.5px dashed ${colors2.primary}`,
-    borderRadius: 10,
+    borderRadius: 20,
     cursor: 'pointer',
     color: colors2.primary,
-    marginTop: 8,
     transition: 'all 0.2s',
   },
   checkboxGroup: {
