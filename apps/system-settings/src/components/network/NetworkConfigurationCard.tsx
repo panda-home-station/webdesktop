@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react'
-import { Globe, Server, Wifi, Shield, Edit } from 'lucide-react'
+import { Globe, ChevronsLeftRightEllipsis, Shield, Edit, Network } from 'lucide-react'
 import { networkService } from '@truenas/services/network'
 import type { NetworkConfigurationConfig, NetworkSummary } from '@truenas/types/network-types'
 import { colors } from '../../styles/theme'
@@ -90,7 +90,7 @@ export function NetworkConfigurationCard({ onRefresh: _onRefresh }: NetworkConfi
         {/* Hostname Section */}
         <div style={styles.section}>
           <div style={styles.iconBox}>
-            <Server size={20} />
+            <ChevronsLeftRightEllipsis size={20} />
           </div>
           <div style={styles.sectionContent}>
             <div style={styles.mainValue}>{config.hostname}</div>
@@ -122,7 +122,7 @@ export function NetworkConfigurationCard({ onRefresh: _onRefresh }: NetworkConfi
           {/* IPv4 Gateway */}
           <div style={styles.gridItem}>
             <div style={styles.gridLabel}>
-              <Wifi size={14} />
+              <Network size={14} />
               IPv4 默认网关
             </div>
             <div style={styles.gridValue}>{config.ipv4gateway || '-'}</div>
@@ -131,7 +131,7 @@ export function NetworkConfigurationCard({ onRefresh: _onRefresh }: NetworkConfi
           {/* IPv6 Gateway */}
           <div style={styles.gridItem}>
             <div style={styles.gridLabel}>
-              <Wifi size={14} />
+              <Network size={14} />
               IPv6 默认网关
             </div>
             <div style={styles.gridValue}>{config.ipv6gateway || '-'}</div>
