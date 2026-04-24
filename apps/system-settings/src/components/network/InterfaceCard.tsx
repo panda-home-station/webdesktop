@@ -7,13 +7,13 @@ import React, { useState } from 'react'
 import { NetworkInterface, NetworkInterfaceType, LinkState } from '@truenas/types/network-types'
 import type { NetworkInterfaceUpdate } from '@truenas/types/system-types'
 import { colors } from '../../styles/theme'
-import { Edit, RotateCw, Trash2, Network, Link2, Radio, ArrowDown, ArrowUp, Copy, Check, ChevronDown, ChevronUp, EthernetPort } from 'lucide-react'
+import { Edit, Trash2, Network, Link2, Radio, ArrowDown, ArrowUp, Copy, Check, ChevronDown, ChevronUp, EthernetPort } from 'lucide-react'
 
 interface InterfaceCardProps {
   interface_: NetworkInterface
   stats?: NetworkInterfaceUpdate
   onEdit?: (iface: NetworkInterface) => void
-  onReset?: (iface: NetworkInterface) => void
+  _onReset?: (iface: NetworkInterface) => void
   onDelete?: (iface: NetworkInterface) => void
   isHaEnabled?: boolean
 }
@@ -53,7 +53,7 @@ export function InterfaceCard({
   interface_: iface,
   stats,
   onEdit,
-  onReset,
+  _onReset,
   onDelete,
   isHaEnabled = false,
 }: InterfaceCardProps) {
@@ -120,36 +120,10 @@ export function InterfaceCard({
           }}>
             {getTypeIcon()}
           </div>
-          <div>
-            <div style={styles.nameRow}>
-              <span style={styles.name}>{iface.name}</span>
-              {iface.description && (
-                <span style={styles.description}>{iface.description}</span>
-              )}
-            </div>
+          <div style={styles.nameContent}>
+            <span style={styles.name}>{iface.name}</span>
             <span style={styles.typeLabel}>{getTypeLabel()}</span>
           </div>
-        </div>
-
-        <div style={styles.topRight}>
-          {/* Speed + Traffic Stats */}
-          <div style={styles.trafficStats}>
-            {stats?.speed && (
-              <div style={styles.speedInfo}>
-                <span style={styles.speedLabel}>速率</span>
-                <span style={styles.speedValue}>{stats.speed / 1000} Mbps</span>
-              </div>
-            )}
-            <div style={styles.trafficItem}>
-              <ArrowDown size={14} color={colors.success} />
-              <span style={styles.trafficValue}>{formatBytes(stats?.received_bytes_rate || 0)}</span>
-            </div>
-            <div style={styles.trafficItem}>
-              <ArrowUp size={14} color={colors.primary} />
-              <span style={styles.trafficValue}>{formatBytes(stats?.sent_bytes_rate || 0)}</span>
-            </div>
-          </div>
-
           <span style={{
             ...styles.statusBadge,
             backgroundColor: isUp ? colors.success + '15' : colors.danger + '15',
@@ -161,7 +135,19 @@ export function InterfaceCard({
             }} />
             {isUp ? '已连接' : '未连接'}
           </span>
+          <div style={styles.trafficStats}>
+            <div style={styles.trafficItem}>
+              <ArrowDown size={14} color={colors.success} />
+              <span style={styles.trafficValue}>{formatBytes(stats?.received_bytes_rate || 0)}</span>
+            </div>
+            <div style={styles.trafficItem}>
+              <ArrowUp size={14} color={colors.primary} />
+              <span style={styles.trafficValue}>{formatBytes(stats?.sent_bytes_rate || 0)}</span>
+            </div>
+          </div>
+        </div>
 
+        <div style={styles.topRight}>
           <div style={styles.actions}>
             <button
               onClick={() => onEdit?.(iface)}
@@ -170,15 +156,6 @@ export function InterfaceCard({
             >
               <Edit size={14} />
             </button>
-            {!isPhysical && !isHaEnabled && (
-              <button
-                onClick={() => onReset?.(iface)}
-                style={styles.actionButton}
-                title="重置配置"
-              >
-                <RotateCw size={14} />
-              </button>
-            )}
             {!isPhysical && !isHaEnabled && (
               <button
                 onClick={() => onDelete?.(iface)}
@@ -248,6 +225,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+    gap: 16,
   } as React.CSSProperties,
   nameSection: {
     display: 'flex',
@@ -267,6 +245,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: 8,
+  } as React.CSSProperties,
+  nameContent: {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    gap: 2,
   } as React.CSSProperties,
   name: {
     fontSize: 16,
@@ -431,8 +414,8 @@ const styles = {
   trafficStats: {
     display: 'flex',
     alignItems: 'center',
-    gap: 12,
-    padding: '4px 12px',
+    gap: 8,
+    padding: '4px 10px',
     backgroundColor: colors.background,
     borderRadius: 8,
   } as React.CSSProperties,

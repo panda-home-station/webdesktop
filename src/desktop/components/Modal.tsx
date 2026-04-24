@@ -83,7 +83,6 @@ export function Modal({
             background: '#f9f9f9',
             borderTop: '1px solid #e5e5ea',
             flexShrink: 0,
-            borderRadius: '0 0 20px 20px',
           }}>
             {footer}
           </div>

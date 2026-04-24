@@ -888,7 +888,6 @@ const styles: Record<string, React.CSSProperties> = {
     padding: '16px 24px',
     borderTop: `1px solid ${colors2.border}`,
     background: colors2.background,
-    borderRadius: '0 0 20px 20px',
   },
   cancelButton: {
     padding: '11px 22px',
