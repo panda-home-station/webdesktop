@@ -11,24 +11,26 @@ export interface ModalProps {
   style?: React.CSSProperties
   bodyStyle?: React.CSSProperties
   headerExtra?: React.ReactNode
+  contentStyle?: React.CSSProperties
 }
 
-export function Modal({ 
-  open, 
-  onClose, 
-  title, 
-  width = 500, 
-  children, 
-  footer, 
-  className, 
+export function Modal({
+  open,
+  onClose,
+  title,
+  width = 500,
+  children,
+  footer,
+  className,
   style,
   bodyStyle,
-  headerExtra 
+  headerExtra,
+  contentStyle,
 }: ModalProps) {
   if (!open) return null
 
   return (
-    <div 
+    <div
       className={className}
       style={{
         position: 'absolute',
@@ -54,7 +56,8 @@ export function Modal({
         display: 'flex',
         flexDirection: 'column',
         maxHeight: '90vh',
-        animation: 'modal-pop 0.2s ease-out'
+        animation: 'modal-pop 0.2s ease-out',
+        ...contentStyle
       }}>
         {(title || headerExtra) && (
           <div style={{
@@ -79,7 +82,8 @@ export function Modal({
             padding: '12px 16px',
             background: '#f9f9f9',
             borderTop: '1px solid #e5e5ea',
-            flexShrink: 0
+            flexShrink: 0,
+            borderRadius: '0 0 20px 20px',
           }}>
             {footer}
           </div>

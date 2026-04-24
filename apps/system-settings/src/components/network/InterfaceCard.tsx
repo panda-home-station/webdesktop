@@ -7,7 +7,7 @@ import React, { useState } from 'react'
 import { NetworkInterface, NetworkInterfaceType, LinkState } from '@truenas/types/network-types'
 import type { NetworkInterfaceUpdate } from '@truenas/types/system-types'
 import { colors } from '../../styles/theme'
-import { Wifi, WifiOff, Edit, RotateCw, Trash2, Network, Link2, Radio, ArrowDown, ArrowUp, Copy, Check, ChevronDown, ChevronUp, EthernetPort } from 'lucide-react'
+import { Edit, RotateCw, Trash2, Network, Link2, Radio, ArrowDown, ArrowUp, Copy, Check, ChevronDown, ChevronUp, EthernetPort } from 'lucide-react'
 
 interface InterfaceCardProps {
   interface_: NetworkInterface

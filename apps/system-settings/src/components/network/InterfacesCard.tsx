@@ -9,6 +9,7 @@ import { networkService } from '@truenas/services/network'
 import type { NetworkInterface } from '@truenas/types/network-types'
 import type { NetworkInterfaceUpdate } from '@truenas/types/system-types'
 import { InterfaceCard } from './InterfaceCard'
+import { InterfaceFormDialog } from './InterfaceFormDialog'
 import { ConfirmDialog } from '@desktop/components/ConfirmDialog'
 import { colors } from '../../styles/theme'
 
@@ -22,12 +23,16 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
   const [isHaEnabled, setIsHaEnabled] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<NetworkInterface | null>(null)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [showFormDialog, setShowFormDialog] = useState(false)
+  const [editTarget, setEditTarget] = useState<NetworkInterface | null>(null)
   const [interfaceStats, setInterfaceStats] = useState<Record<string, NetworkInterfaceUpdate>>({})
   const unsubscribeRef = useRef<(() => void) | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const loadInterfaces = useCallback(async () => {
-    setIsRefreshing(true)
+  const loadInterfaces = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setIsRefreshing(true)
+    }
     try {
       const [ifaces, ha] = await Promise.all([
         networkService.queryInterfaces(),
@@ -38,7 +43,10 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
     } catch (error) {
       console.error('Failed to load interfaces:', error)
     } finally {
-      setTimeout(() => setIsRefreshing(false), 500)
+      setLoading(false)
+      if (isManualRefresh) {
+        setTimeout(() => setIsRefreshing(false), 500)
+      }
     }
   }, [])
 
@@ -97,10 +105,13 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
       <div style={styles.header}>
         <h3 style={styles.sectionTitle}>网络接口</h3>
         <div style={styles.headerActions}>
-          <button onClick={loadInterfaces} style={styles.iconButton} disabled={isRefreshing}>
+          <button onClick={() => loadInterfaces(true)} style={styles.iconButton} disabled={isRefreshing}>
             <RefreshCw size={16} style={isRefreshing ? { animation: 'spin 0.8s ease-in-out' } : undefined} />
           </button>
-          <button style={styles.addButton}>
+          <button onClick={() => {
+              setEditTarget(null)
+              setShowFormDialog(true)
+            }} style={styles.addButton}>
             <Plus size={16} />
             添加接口
           </button>
@@ -116,7 +127,10 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
               interface_={iface}
               stats={interfaceStats[iface.name]}
               isHaEnabled={isHaEnabled}
-              onEdit={(_i) => { /* TODO: Open edit dialog */ }}
+              onEdit={(i) => {
+                setEditTarget(i)
+                setShowFormDialog(true)
+              }}
               onReset={(_i) => { /* TODO: Reset interface */ }}
               onDelete={(i) => {
                 setDeleteTarget(i)
@@ -145,6 +159,22 @@ export function InterfacesCard({ onRefresh }: InterfacesCardProps) {
           setShowDeleteDialog(false)
           setDeleteTarget(null)
         }}
+      />
+
+      {/* Interface Form Dialog */}
+      <InterfaceFormDialog
+        open={showFormDialog}
+        onClose={() => {
+          setShowFormDialog(false)
+          setEditTarget(null)
+        }}
+        onSaved={() => {
+          setShowFormDialog(false)
+          setEditTarget(null)
+          loadInterfaces()
+        }}
+        editInterface={editTarget}
+        existingInterfaces={interfaces}
       />
 
       <style>{`
